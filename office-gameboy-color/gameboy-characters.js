@@ -679,7 +679,7 @@ class GameBoyCharacterManager {
     }
     
     triggerMissionSequence(mission) {
-        const hunter = this.characters.find(c => c.canonicalId === 'hunter');
+        const hunter = this.characters.find(c => c?.canonicalId === 'hunter');
         const missionBoard = this.officeMap?.locations?.missionBoard;
         
         if (hunter && missionBoard) {
@@ -787,24 +787,25 @@ class GameBoyCharacterManager {
     
     findCharacterByRole(role) {
         if (!role) return null;
+        const roleLower = String(role).toLowerCase();
         return this.characters.find(char => 
-            (char.role || '').toLowerCase() === role.toLowerCase() ||
-            (char.role || '').toLowerCase().includes(role.toLowerCase())
+            (char?.role || '').toLowerCase() === roleLower ||
+            (char?.role || '').toLowerCase().includes(roleLower)
         );
     }
     
     findCharacterByName(name) {
         if (!name) return null;
-        const lower = name.toLowerCase();
+        const lower = String(name).toLowerCase();
         return this.characters.find(char => 
-            char.canonicalId === lower ||
-            (char.name || '').toLowerCase() === lower ||
-            (char.name || '').toLowerCase().includes(lower)
+            (char?.canonicalId || '') === lower ||
+            (char?.name || '').toLowerCase() === lower ||
+            (char?.name || '').toLowerCase().includes(lower)
         );
     }
     
     hasSubagent(subagentId) {
-        return this.subAgents.some(sub => sub.subagentId === subagentId);
+        return this.subAgents.some(sub => sub?.subagentId === subagentId);
     }
     
     createStagiaire(subagentId, name, position) {
