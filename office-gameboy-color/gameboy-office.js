@@ -386,7 +386,7 @@ class GameBoyVirtualOffice {
     
     // Developer cheat codes (GameBoy style)
     triggerCheatCode(code) {
-        switch (code.toLowerCase()) {
+        switch (String(code || '').toLowerCase()) {
             case 'konami':
                 // Spawn extra sub-agents
                 for (let i = 0; i < 5; i++) {

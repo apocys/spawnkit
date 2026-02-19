@@ -311,25 +311,25 @@
 
     _pos(charId) {
       if (!this._theme?.getCharacterPosition) return { x: 0, y: 0 };
-      try { return this._theme.getCharacterPosition(charId) || { x: 0, y: 0 }; }
+      try { return this._theme?.getCharacterPosition(charId) || { x: 0, y: 0 }; }
       catch { return { x: 0, y: 0 }; }
     },
 
     _objPos(objectId) {
       if (!this._theme?.getObjectPosition) return { x: 0, y: 0 };
-      try { return this._theme.getObjectPosition(objectId) || { x: 0, y: 0 }; }
+      try { return this._theme?.getObjectPosition(objectId) || { x: 0, y: 0 }; }
       catch { return { x: 0, y: 0 }; }
     },
 
     _agents() {
       if (!this._theme?.getAgentIds) return [];
-      try { return this._theme.getAgentIds() || []; }
+      try { return this._theme?.getAgentIds() || []; }
       catch { return []; }
     },
 
     _ceo() {
       if (!this._theme?.getCeoId) return 'kira';
-      try { return this._theme.getCeoId() || 'kira'; }
+      try { return this._theme?.getCeoId() || 'kira'; }
       catch { return 'kira'; }
     },
 

@@ -260,6 +260,7 @@ window.OpenClawHelpers = (() => {
 
   function fuzzyMatch(query, text) {
     if (!query) return true;
+    if (!text) return false;
     const q = query.toLowerCase();
     const t = text.toLowerCase();
 

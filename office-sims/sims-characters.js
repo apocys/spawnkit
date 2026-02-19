@@ -542,7 +542,7 @@ class SimsCharacterManager {
 
     findCharacterByRole(role) {
         if (!role) return null;
-        const roleStr = (role || '').toLowerCase();
+        const roleStr = String(role).toLowerCase();
         return this.characters.find(c => {
             const charRole = (c?.role || '').toLowerCase();
             return charRole === roleStr || charRole.includes(roleStr);
@@ -551,7 +551,7 @@ class SimsCharacterManager {
 
     findCharacterByName(name) {
         if (!name) return null;
-        const lower = (name || '').toLowerCase();
+        const lower = String(name).toLowerCase();
         return this.characters.find(c => {
             const charName = (c?.name || '').toLowerCase();
             const charId = (c?.canonicalId || '').toLowerCase();

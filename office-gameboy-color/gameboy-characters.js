@@ -762,6 +762,7 @@ class GameBoyCharacterManager {
         }
         
         this.characters.forEach((char, index) => {
+            if (!char) return;
             setTimeout(() => char.setState('celebrating'), index * 200);
         });
         this.showGameBoyConfetti();

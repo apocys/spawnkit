@@ -131,7 +131,7 @@ class GameBoyOfficeMap {
     }
     
     getMissionBoardPosition() {
-        return this.locations.missionBoard;
+        return this.locations?.missionBoard || { x: 4, y: 6 };
     }
     
     triggerMailboxFlash() {
