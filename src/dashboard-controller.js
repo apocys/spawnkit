@@ -72,9 +72,10 @@
   /** @param {Object} msg Payload to send to theme iframe */
   function postToTheme(msg) {
     if (!_iframe || !msg || typeof msg !== 'object') return;
-    try { _iframe.contentWindow && _iframe.contentWindow.postMessage({ type: PFX + 'sync', payload: msg }, '*'); } catch (_) {}
+    try { _iframe.contentWindow && _iframe.contentWindow.postMessage({ type: PFX + 'sync', payload: msg }, location.origin); } catch (_) {}
   }
   function onMsg(e) {
+    if (e.origin !== location.origin) return;
     var d = e && e.data; if (!d || typeof d !== 'object' || typeof d.type !== 'string' || d.type.indexOf(PFX) !== 0) return;
     for (var i = 0; i < _th.length; i++) { try { _th[i](d.payload || d, e); } catch (_) {} }
     var p = d.payload; if (!p || typeof p !== 'object') return;

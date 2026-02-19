@@ -1199,7 +1199,7 @@
             var detail = document.createElement('div');
             detail.className = 'agent-detail';
             detail.id = 'detail-' + agent.id;
-            detail.textContent = agent.name + ' is your ' + agent.role.toLowerCase()
+            detail.textContent = agent.name + ' is your ' + (agent.role || '').toLowerCase()
                 + '. Level progress: ' + Math.round(agent.level * 100) + '%.';
 
             $agentList.appendChild(item);

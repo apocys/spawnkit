@@ -211,20 +211,26 @@
     var row = document.createElement('div');
     row.className = 'test-row test-' + status;
     var icon = status === 'pass' ? '✅' : status === 'fail' ? '❌' : '⏭️';
-    row.innerHTML = '<span class="test-icon">' + icon + '</span>'
-      + '<span class="test-id">' + id + '</span>'
-      + '<span class="test-desc">' + desc + '</span>'
-      + (error ? '<span class="test-error">' + error + '</span>' : '');
+    function sp(cls, txt) { var s = document.createElement('span'); s.className = cls; s.textContent = txt; return s; }
+    row.appendChild(sp('test-icon', icon));
+    row.appendChild(sp('test-id', id));
+    row.appendChild(sp('test-desc', desc));
+    if (error) row.appendChild(sp('test-error', String(error)));
     container.appendChild(row);
   }
 
   function updateVisualReport(elapsed) {
     var summary = document.getElementById('testSummary');
     if (!summary) return;
-    summary.innerHTML = '<span class="summary-pass">' + results.pass + ' passed</span>'
-      + ' · <span class="summary-fail">' + results.fail + ' failed</span>'
-      + ' · <span class="summary-skip">' + results.skip + ' skipped</span>'
-      + ' · <span class="summary-time">' + (elapsed || 0) + 'ms</span>';
+    summary.textContent = '';
+    function ss(cls, txt) { var s = document.createElement('span'); s.className = cls; s.textContent = txt; return s; }
+    summary.appendChild(ss('summary-pass', results.pass + ' passed'));
+    summary.appendChild(document.createTextNode(' · '));
+    summary.appendChild(ss('summary-fail', results.fail + ' failed'));
+    summary.appendChild(document.createTextNode(' · '));
+    summary.appendChild(ss('summary-skip', results.skip + ' skipped'));
+    summary.appendChild(document.createTextNode(' · '));
+    summary.appendChild(ss('summary-time', (elapsed || 0) + 'ms'));
     summary.className = 'test-summary ' + (results.fail > 0 ? 'has-failures' : 'all-pass');
   }
 
