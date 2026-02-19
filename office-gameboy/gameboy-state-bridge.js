@@ -54,15 +54,15 @@ class GameBoyStateBridge {
         }
         
         const data = FleetKit.data;
-        this.updateAgentStatuses(data.agents);
-        this.updateMissionBoard(data.missions);
-        this.updateSubagents(data.subagents);
+        this.updateAgentStatuses(data.agents || []);
+        this.updateMissionBoard(data.missions || []);
+        this.updateSubagents(data.subagents || []);
         this.lastDataSync = Date.now();
         console.log('🎮 GameBoy State Bridge: Synced with FleetKit data');
     }
     
     updateAgentStatuses(agents) {
-        agents.forEach(agent => {
+        (agents || []).forEach(agent => {
             const character = this.characterManager.findCharacterByRole(agent.role) ||
                             this.characterManager.findCharacterByName(agent.name);
             
@@ -97,10 +97,10 @@ class GameBoyStateBridge {
     }
     
     updateMissionBoard(missions) {
-        this.displayedMissions = missions.slice(0, 3);
+        this.displayedMissions = (missions || []).slice(0, 3);
         this.updateMissionBoardUI();
         
-        missions.forEach(mission => {
+        (missions || []).forEach(mission => {
             if (mission.status === 'in_progress' && Math.random() > 0.8) {
                 this.triggerMissionActivity(mission);
             }
@@ -163,14 +163,14 @@ class GameBoyStateBridge {
                 </div>
             `;
         } else {
-            this.displayedMissions.forEach(mission => {
-                const progressPercent = Math.round((mission.progress || 0) * 100);
+            this.displayedMissions.filter(m => m != null).forEach(mission => {
+                const progressPercent = Math.round((mission?.progress || 0) * 100);
                 const hpClass = progressPercent > 50 ? 'hp-green' : progressPercent > 25 ? 'hp-yellow' : progressPercent > 10 ? 'hp-orange' : 'hp-red';
                 
                 html += `
                     <div class="mission-item">
-                        <div>${(mission.title || 'UNKNOWN MISSION').toUpperCase()}</div>
-                        <div style="font-size: 5px; margin: 2px 0;">${mission.priority?.toUpperCase() || 'NORMAL'}</div>
+                        <div>${(String(mission?.title || 'UNKNOWN MISSION')).toUpperCase()}</div>
+                        <div style="font-size: 5px; margin: 2px 0;">${(String(mission?.priority || 'NORMAL')).toUpperCase()}</div>
                         <div class="hp-bar">
                             <div class="hp-fill ${hpClass}" style="width: ${progressPercent}%"></div>
                         </div>

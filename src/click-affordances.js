@@ -1019,7 +1019,7 @@ window.ClickAffordances = (() => {
     if (window.gameboyOffice?.stateBridge) {
       const status = window.gameboyOffice.stateBridge?.getMissionStatus?.();
       if (status) {
-        return (status?.active || []).length + (status?.pending || []).length;
+        return (status?.active || 0) + (status?.queued || 0);
       }
     }
     return 0;

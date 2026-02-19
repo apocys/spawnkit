@@ -110,7 +110,7 @@ class GameBoyOfficeMap {
         if (x < 0 || x >= this.gridWidth || y < 0 || y >= this.gridHeight) {
             return false;
         }
-        return this.walkable[y][x];
+        return this.walkable[y]?.[x] ?? false;
     }
     
     getRandomWalkablePosition() {
@@ -127,7 +127,7 @@ class GameBoyOfficeMap {
     }
     
     getMeetingPositions() {
-        return this.areas.meetingRoom || [this.locations.meetingRoom];
+        return this.areas?.meetingRoom || [this.locations?.meetingRoom || { x: 8, y: 6 }];
     }
     
     getMissionBoardPosition() {
@@ -166,7 +166,7 @@ class GameBoyOfficeMap {
      * Check if a position is in the meeting area (tall grass)
      */
     isInMeetingArea(x, y) {
-        return this.areas.meetingRoom.some(pos => pos.x === x && pos.y === y);
+        return (this.areas?.meetingRoom || []).some(pos => pos.x === x && pos.y === y);
     }
     
     createDitheredTile(graphics, x, y, baseColor) {

@@ -1344,7 +1344,7 @@ window.OpenClawHelpers = (() => {
     const names = window.FleetKitNames;
 
     return agentIds.map(id => {
-      const displayName = names ? names.resolve(_theme, id) : id;
+      const displayName = names?.resolve ? names.resolve(_theme, id) : id;
       return { id, displayName };
     });
   }
@@ -1410,7 +1410,7 @@ window.OpenClawHelpers = (() => {
     closeMissionForm();
 
     // Fire mission via FleetKit event bus
-    if (typeof FleetKit !== 'undefined' && FleetKit.emit) {
+    if (typeof FleetKit !== 'undefined' && FleetKit?.emit) {
       FleetKit.emit('mission:new', {
         text: text,
         assignedTo: assignedTo,
@@ -1419,7 +1419,7 @@ window.OpenClawHelpers = (() => {
     }
 
     // Also try MissionController directly
-    if (typeof MissionController !== 'undefined' && MissionController.executeMission) {
+    if (typeof MissionController !== 'undefined' && MissionController?.executeMission) {
       MissionController.executeMission({
         text: text,
         assignedTo: assignedTo,
@@ -1656,10 +1656,10 @@ window.OpenClawHelpers = (() => {
     let streakText = '';
     let rankText = '';
     if (typeof FleetKitAchievements !== 'undefined') {
-      const stats = FleetKitAchievements.getStats ? FleetKitAchievements.getStats() : null;
+      const stats = FleetKitAchievements?.getStats ? FleetKitAchievements.getStats() : null;
       if (stats) {
-        if (stats.streak > 0) streakText = `🔥 ${stats.streak}-day streak`;
-        if (stats.rank) rankText = `${stats.rank.icon || '💎'} ${stats.rank.name || 'Diamond'}`;
+        if (stats?.streak > 0) streakText = `🔥 ${stats.streak}-day streak`;
+        if (stats?.rank) rankText = `${stats.rank?.icon || '💎'} ${stats.rank?.name || 'Diamond'}`;
       }
     }
 
@@ -1798,9 +1798,9 @@ window.OpenClawHelpers = (() => {
     let msg = messages[Math.floor(Math.random() * messages.length)];
 
     // Replace placeholders
-    const data = (typeof FleetKit !== 'undefined' && FleetKit.data) ? FleetKit.data : null;
-    const pendingMissions = data && data.missions
-      ? data.missions.filter(m => m.status === 'in_progress' || m.status === 'pending').length
+    const data = (typeof FleetKit !== 'undefined' && FleetKit?.data) ? FleetKit.data : null;
+    const pendingMissions = data?.missions
+      ? data.missions.filter(m => m?.status === 'in_progress' || m?.status === 'pending').length
       : 0;
     msg = msg.replace('{missions}', pendingMissions);
     msg = msg.replace('{s}', pendingMissions !== 1 ? 's' : '');
@@ -1855,7 +1855,7 @@ window.OpenClawHelpers = (() => {
     const body = document.createElement('div');
     body.className = 'oc-panel-body';
 
-    const agents = (typeof FleetKit !== 'undefined' && FleetKit.data) ? FleetKit.data.agents : [];
+    const agents = (typeof FleetKit !== 'undefined' && FleetKit?.data?.agents) ? FleetKit.data.agents : [];
     const names = window.FleetKitNames;
 
     if (agents.length === 0) {
@@ -1865,9 +1865,9 @@ window.OpenClawHelpers = (() => {
       list.className = 'oc-team-list';
 
       agents.forEach(agent => {
-        const themeInfo = names ? names[_theme]?.[agent.id] : null;
-        const displayName = themeInfo?.name || agent.name;
-        const emoji = themeInfo?.emoji || agent.emoji || '🤖';
+        const themeInfo = names?.[_theme]?.[agent?.id] || null;
+        const displayName = themeInfo?.name || agent?.name || 'Unknown';
+        const emoji = themeInfo?.emoji || agent?.emoji || '🤖';
 
         const li = document.createElement('li');
         li.className = 'oc-team-member';
@@ -1875,8 +1875,8 @@ window.OpenClawHelpers = (() => {
         li.innerHTML = `
           <span class="oc-team-emoji">${emoji}</span>
           <span class="oc-team-name">${escapeHtml(displayName)}</span>
-          <span class="oc-status-badge"><span class="oc-status-dot"></span>${escapeHtml(formatStatus(agent.status))}</span>
-          <span class="oc-team-task">${escapeHtml(agent.currentTask || 'Idle')}</span>
+          <span class="oc-status-badge"><span class="oc-status-dot"></span>${escapeHtml(formatStatus(agent?.status))}</span>
+          <span class="oc-team-task">${escapeHtml(agent?.currentTask || 'Idle')}</span>
         `;
 
         li.addEventListener('click', () => {
@@ -1891,7 +1891,7 @@ window.OpenClawHelpers = (() => {
     }
 
     // Subagents section
-    const subagents = (typeof FleetKit !== 'undefined' && FleetKit.data) ? FleetKit.data.subagents : [];
+    const subagents = (typeof FleetKit !== 'undefined' && FleetKit?.data?.subagents) ? FleetKit.data.subagents : [];
     if (subagents.length > 0) {
       const subLabel = document.createElement('div');
       subLabel.className = 'oc-section-label';
@@ -1904,8 +1904,8 @@ window.OpenClawHelpers = (() => {
         item.className = 'oc-team-member';
         item.innerHTML = `
           <span class="oc-team-emoji">⚡</span>
-          <span class="oc-team-name">${escapeHtml(sa.name)}</span>
-          <span class="oc-team-task">${escapeHtml(sa.task || '')}</span>
+          <span class="oc-team-name">${escapeHtml(sa?.name || '')}</span>
+          <span class="oc-team-task">${escapeHtml(sa?.task || '')}</span>
         `;
         body.appendChild(item);
       });
@@ -1961,7 +1961,7 @@ window.OpenClawHelpers = (() => {
     const body = document.createElement('div');
     body.className = 'oc-panel-body';
 
-    const missions = (typeof FleetKit !== 'undefined' && FleetKit.data) ? FleetKit.data.missions : [];
+    const missions = (typeof FleetKit !== 'undefined' && FleetKit?.data?.missions) ? FleetKit.data.missions : [];
 
     if (missions.length === 0) {
       body.innerHTML = '<div style="text-align:center;padding:20px;opacity:0.6;">No missions yet. Press X to create one!</div>';
@@ -1970,13 +1970,13 @@ window.OpenClawHelpers = (() => {
         const item = document.createElement('div');
         item.style.cssText = 'padding: 10px 0; border-bottom: 1px solid ' + P().border + '20;';
 
-        const priorityIcon = mission.priority === 'high' ? '🟡' : (mission.priority === 'critical' ? '🔴' : '🟢');
-        const progressPct = Math.round((mission.progress || 0) * 100);
+        const priorityIcon = mission?.priority === 'high' ? '🟡' : (mission?.priority === 'critical' ? '🔴' : '🟢');
+        const progressPct = Math.round((mission?.progress || 0) * 100);
 
         item.innerHTML = `
           <div style="display:flex;align-items:center;gap:8px;">
             <span>${priorityIcon}</span>
-            <span style="flex:1;color:${P().fg}">${escapeHtml(mission.title)}</span>
+            <span style="flex:1;color:${P().fg}">${escapeHtml(mission?.title || mission?.name || 'Untitled')}</span>
             <span style="color:${P().fgDim};font-size:calc(${P().fontSize} - 2px)">${progressPct}%</span>
           </div>
           <div style="margin-top:4px;height:4px;background:${P().bgAlt};border-radius:2px;overflow:hidden;">
@@ -2031,7 +2031,7 @@ window.OpenClawHelpers = (() => {
   function handleMemoryAction() {
     showToast('🧠 Checking team knowledge base...');
     // In real OpenClaw integration, this would read MEMORY.md
-    if (typeof FleetKit !== 'undefined' && FleetKit.emit) {
+    if (typeof FleetKit !== 'undefined' && FleetKit?.emit) {
       FleetKit.emit('mission:new', {
         text: 'Review recent team knowledge and summarize key context',
         assignedTo: ['atlas'],
@@ -2047,7 +2047,7 @@ window.OpenClawHelpers = (() => {
 
   function handleEmailAction() {
     showToast('📧 Checking inbox...');
-    if (typeof FleetKit !== 'undefined' && FleetKit.emit) {
+    if (typeof FleetKit !== 'undefined' && FleetKit?.emit) {
       FleetKit.emit('mission:new', {
         text: 'Check email inbox for urgent messages and upcoming calendar events',
         assignedTo: ['atlas'],
@@ -2125,7 +2125,7 @@ window.OpenClawHelpers = (() => {
       idle: 'Idle',
       offline: 'Offline',
     };
-    return map[status] || (status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown');
+    return map[status] || (status ? (status || '').charAt(0).toUpperCase() + (status || '').slice(1) : 'Unknown');
   }
 
   function timeSince(date) {
@@ -2137,8 +2137,8 @@ window.OpenClawHelpers = (() => {
   }
 
   function countAgentMissions(agentId) {
-    if (typeof FleetKit === 'undefined' || !FleetKit.data || !FleetKit.data.missions) return 0;
-    return FleetKit.data.missions.filter(m => m.assignedTo && m.assignedTo.includes(agentId)).length;
+    if (typeof FleetKit === 'undefined' || !FleetKit?.data?.missions) return 0;
+    return (FleetKit.data.missions || []).filter(m => m?.assignedTo?.includes?.(agentId)).length;
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -2148,8 +2148,8 @@ window.OpenClawHelpers = (() => {
   function setupKeyboard() {
     document.addEventListener('keydown', (e) => {
       // Don't capture when typing in our own inputs
-      const tag = (e.target.tagName || '').toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) {
+      const tag = (e?.target?.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || e?.target?.isContentEditable) {
         // Only handle ESC in inputs (to close panels)
         if (e.key === 'Escape') {
           if (isAnyPanelOpen()) {
@@ -2237,7 +2237,7 @@ window.OpenClawHelpers = (() => {
       }
 
       // 6. Listen for FleetKit data updates to refresh status bar
-      if (typeof FleetKit !== 'undefined' && FleetKit.on) {
+      if (typeof FleetKit !== 'undefined' && FleetKit?.on) {
         FleetKit.on('data:refresh', () => updateStatusBar());
         FleetKit.on('mission:new', () => {
           setTimeout(updateStatusBar, 500);

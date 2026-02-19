@@ -211,7 +211,7 @@ class GameBoyVirtualOffice {
         this.screenTimer += deltaTime;
         
         // Update systems
-        this.characterManager.update(deltaTime);
+        this.characterManager?.update(deltaTime);
         this.stateBridge?.update(deltaTime);
         
         // Update GameBoy effects
@@ -350,10 +350,10 @@ class GameBoyVirtualOffice {
     
     getOfficeStatus() {
         return {
-            characters: this.characterManager.characters.length,
+            characters: this.characterManager?.characters?.length || 0,
             fps: this.fps,
-            activities: this.characterManager.getCharacterStates(),
-            missions: this.stateBridge?.getMissionStatus() || { active: 0, queued: 0, activeMissions: [] },
+            activities: this.characterManager?.getCharacterStates?.() || [],
+            missions: this.stateBridge?.getMissionStatus?.() || { active: 0, queued: 0, activeMissions: [] },
             systemInfo: {
                 mode: 'GameBoy Retro',
                 palette: '4-Color Green',
@@ -413,11 +413,11 @@ class GameBoyVirtualOffice {
     // Save/Load state (future feature)
     saveOfficeState() {
         const state = {
-            characters: this.characterManager.characters.map(c => ({
-                name: c.name,
-                x: c.gridX,
-                y: c.gridY,
-                state: c.state
+            characters: (this.characterManager?.characters || []).map(c => ({
+                name: c?.name,
+                x: c?.gridX,
+                y: c?.gridY,
+                state: c?.state
             })),
             missions: this.stateBridge?.getMissionStatus?.()?.activeMissions || [],
             timestamp: Date.now()

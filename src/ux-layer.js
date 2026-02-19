@@ -691,7 +691,7 @@ window.FleetKitUX = (() => {
 
   function toggleSoundFromNav(btn) {
     // Try GameBoy sound system first
-    if (typeof GameBoyFX !== 'undefined' && GameBoyFX.toggleSound) {
+    if (typeof GameBoyFX !== 'undefined' && GameBoyFX?.toggleSound) {
       GameBoyFX.toggleSound();
     }
     // Update the button visual
@@ -701,7 +701,7 @@ window.FleetKitUX = (() => {
   function updateSoundBtnLabel(btn) {
     if (!btn) return;
     // Check GameBoyFX mute state
-    const isMuted = (typeof GameBoyFX !== 'undefined' && GameBoyFX.muted);
+    const isMuted = (typeof GameBoyFX !== 'undefined' && GameBoyFX?.muted);
     btn.textContent = isMuted ? '🔇' : '🔊';
     btn.setAttribute('aria-label', isMuted ? 'Sound OFF (N)' : 'Sound ON (N)');
   }
@@ -737,7 +737,7 @@ window.FleetKitUX = (() => {
 
   function isCriticalError(event) {
     // PixiJS or core engine failure
-    const msg = (event.message || '').toLowerCase();
+    const msg = (event?.message || '').toLowerCase();
     return (
       msg.includes('pixi') ||
       msg.includes('cannot read prop') ||
@@ -883,8 +883,8 @@ window.FleetKitUX = (() => {
   function setupKeyboardHandler() {
     document.addEventListener('keydown', (e) => {
       // Don't capture when typing in inputs
-      const tag = (e.target.tagName || '').toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) {
+      const tag = (e?.target?.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || e?.target?.isContentEditable) {
         // Only allow ESC in inputs
         if (e.key === 'Escape' && _helpVisible) {
           hideHelp();
