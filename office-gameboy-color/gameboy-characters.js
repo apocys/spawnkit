@@ -11,7 +11,7 @@ function resolveGB(canonicalId, field) {
     }
     // Graceful fallback
     const fallback = { hunter: 'Hunter', forge: 'Forge', echo: 'Echo', atlas: 'Atlas', sentinel: 'Sentinel' };
-    if (field === 'title') return (fallback[canonicalId] || canonicalId).toUpperCase();
+    if (field === 'title') return String(fallback[canonicalId] || canonicalId || 'AGENT').toUpperCase();
     return fallback[canonicalId] || canonicalId;
 }
 

@@ -127,7 +127,7 @@ class SimsStateBridge {
         // The HTML UI panel reads from displayedMissions directly via SimsUI
         // Fire a custom event for the UI
         if (window.simsOffice?.simsUI) {
-            window.simsOffice.simsUI.setMissions(this.displayedMissions);
+            window.simsOffice?.simsUI?.setMissions(this.displayedMissions);
         }
     }
 
@@ -178,7 +178,7 @@ class SimsStateBridge {
         this.triggerWhiteboardSession();
         // Thought bubble: new mission!
         if (window.simsOffice?.simsEffects && this.characterManager?.characters?.[0]) {
-            window.simsOffice.simsEffects.showThoughtBubble(
+            window.simsOffice?.simsEffects?.showThoughtBubble(
                 this.characterManager.characters[0], '📋'
             );
         }
@@ -228,7 +228,7 @@ class SimsStateBridge {
         });
         // Show floating text
         if (window.simsOffice?.simsEffects) {
-            window.simsOffice.simsEffects.showFloatingText(450, 250, '+Friendship!', 0x00cc00);
+            window.simsOffice?.simsEffects?.showFloatingText(450, 250, '+Friendship!', 0x00cc00);
         }
     }
 
@@ -303,7 +303,7 @@ class SimsStateBridge {
                     const a = chars[Math.floor(Math.random() * chars.length)];
                     let b = chars[Math.floor(Math.random() * chars.length)];
                     if (b === a) b = chars[(chars.indexOf(a) + 1) % chars.length];
-                    window.simsOffice.simsEffects.showSimlishChat(a, b);
+                    if (a && b) window.simsOffice?.simsEffects?.showSimlishChat(a, b);
                 }
             }
         }
