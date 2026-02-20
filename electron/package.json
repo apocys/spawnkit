@@ -49,6 +49,8 @@
       "main.js",
       "preload.js",
       "data-provider.js",
+      "settings.html",
+      "agent-builder.html",
       "renderer/**",
       "assets/**",
       "office-executive/**",
