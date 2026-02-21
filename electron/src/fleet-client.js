@@ -23,6 +23,7 @@ window.FleetClient = (function() {
             console.log('🏙️ FleetClient connected to relay');
             emit('connected');
             startHeartbeat();
+            fetchInitialState();
         };
         
         ws.onmessage = function(event) {
@@ -61,6 +62,70 @@ window.FleetClient = (function() {
                 emit('message:new', msg);
                 break;
         }
+    }
+    
+    function fetchInitialState() {
+        // Fetch current offices via REST (WS only sends updates)
+        var httpUrl = config.relayUrl.replace('wss://', 'https://').replace('ws://', 'http://').replace('/ws/fleet', '');
+        fetch(httpUrl + '/api/fleet/offices', {
+            headers: { 'Authorization': 'Bearer ' + config.token }
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.offices) {
+                var remoteIds = Object.keys(data.offices).filter(function(id) { return id !== config.officeId; });
+                console.log('🏙️ Found', remoteIds.length, 'remote offices, fetching details...');
+                
+                // Fetch full state for each remote office
+                remoteIds.forEach(function(id) {
+                    fetch(httpUrl + '/api/fleet/office/' + id, {
+                        headers: { 'Authorization': 'Bearer ' + config.token }
+                    })
+                    .then(function(res) { return res.json(); })
+                    .then(function(detail) {
+                        // Normalize field names: REST uses name/emoji, panels expect officeName/officeEmoji
+                        var officeData = detail.state || {};
+                        officeData.officeName = officeData.officeName || detail.name || id;
+                        officeData.officeEmoji = officeData.officeEmoji || detail.emoji || '🏢';
+                        officeData.status = detail.status || 'offline';
+                        officeData.agents = officeData.agents || [];
+                        officeData.activeMissions = officeData.activeMissions || 0;
+                        
+                        offices[id] = officeData;
+                        emit('office:update', { office: id, data: officeData });
+                    })
+                    .catch(function(err) {
+                        console.warn('🏙️ Failed to fetch office', id, err);
+                        // Store basic info from list
+                        offices[id] = {
+                            officeName: data.offices[id].name || id,
+                            officeEmoji: data.offices[id].emoji || '🏢',
+                            status: data.offices[id].status || 'offline',
+                            agents: []
+                        };
+                        emit('office:update', { office: id, data: offices[id] });
+                    });
+                });
+            }
+        })
+        .catch(function(err) {
+            console.warn('🏙️ Failed to fetch initial state:', err);
+        });
+        
+        // Also fetch mailbox
+        fetch(httpUrl + '/api/fleet/mailbox', {
+            headers: { 'Authorization': 'Bearer ' + config.token }
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.messages) {
+                mailbox = data.messages;
+                if (mailbox.length > 0) emit('mailbox:loaded', { count: mailbox.length });
+            }
+        })
+        .catch(function(err) {
+            console.warn('🏙️ Failed to fetch mailbox:', err);
+        });
     }
     
     function startHeartbeat() {
