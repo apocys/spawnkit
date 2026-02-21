@@ -3461,15 +3461,15 @@
             var todoData = LIVE_AGENT_DATA[agentId];
             if (todoData) {
                 body += '<div class="detail-section"><div class="detail-section-title">Current Task</div>';
-                body += '<div style="font-size:14px;font-weight:500;color:var(--text-primary)">' + (todoData.currentTask || agent.task || 'Idle') + '</div>';
+                body += '<div style="font-size:14px;font-weight:500;color:var(--text-primary)">' + esc(todoData.currentTask || agent.task || 'Idle') + '</div>';
                 body += '</div>';
 
                 if (todoData.todos && todoData.todos.length) {
                     body += '<div class="detail-section"><div class="detail-section-title">TODO List</div>';
                     todoData.todos.forEach(function(todo) {
                         body += '<div class="detail-todo-item' + (todo.status === 'done' ? ' detail-todo-item--done' : '') + '">';
-                        body += '<span class="detail-todo-icon">' + todo.icon + '</span>';
-                        body += '<span class="detail-todo-text">' + todo.text + '</span>';
+                        body += '<span class="detail-todo-icon">' + esc(todo.icon) + '</span>';
+                        body += '<span class="detail-todo-text">' + esc(todo.text) + '</span>';
                         body += '</div>';
                     });
                     body += '</div>';
@@ -3482,7 +3482,7 @@
                 body += '<div class="detail-section"><div class="detail-section-title">Skills</div>';
                 body += '<div class="detail-skill-chips" id="detailSkillChips">';
                 agentSkills.forEach(function(s, idx) {
-                    body += '<span class="detail-skill-chip" data-skill-idx="' + idx + '">' + (s.name || s) + ' <button class="skill-remove-btn" data-skill-name="' + (s.name || s) + '" title="Remove skill" style="background:none;border:none;cursor:pointer;color:var(--text-tertiary);font-size:11px;margin-left:4px;padding:0 2px;">×</button></span>';
+                    body += '<span class="detail-skill-chip" data-skill-idx="' + idx + '">' + esc(s.name || s) + ' <button class="skill-remove-btn" data-skill-name="' + esc(s.name || s) + '" title="Remove skill" style="background:none;border:none;cursor:pointer;color:var(--text-tertiary);font-size:11px;margin-left:4px;padding:0 2px;">×</button></span>';
                 });
                 body += '</div>';
                 body += '<button class="detail-add-skill-btn" id="addSkillBtn" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:1px dashed var(--border-medium);background:transparent;color:var(--exec-blue);font-size:12px;font-weight:500;cursor:pointer;">+ Add Skill</button>';
@@ -3587,9 +3587,9 @@
                     // Replace soul excerpt with inline editor
                     var editHtml = '<div class="soul-editor" style="display:flex;flex-direction:column;gap:8px;">';
                     editHtml += '<label style="font-size:11px;color:var(--text-tertiary);">Name</label>';
-                    editHtml += '<input type="text" id="editName" value="' + (agent.name || '') + '" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-medium);font-size:13px;background:var(--bg-tertiary);color:var(--text-primary);" />';
+                    editHtml += '<input type="text" id="editName" value="' + esc(agent.name || '') + '" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-medium);font-size:13px;background:var(--bg-tertiary);color:var(--text-primary);" />';
                     editHtml += '<label style="font-size:11px;color:var(--text-tertiary);">Role</label>';
-                    editHtml += '<input type="text" id="editRole" value="' + (agent.role || '') + '" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-medium);font-size:13px;background:var(--bg-tertiary);color:var(--text-primary);" />';
+                    editHtml += '<input type="text" id="editRole" value="' + esc(agent.role || '') + '" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-medium);font-size:13px;background:var(--bg-tertiary);color:var(--text-primary);" />';
                     editHtml += '<label style="font-size:11px;color:var(--text-tertiary);">Traits</label>';
                     editHtml += '<input type="text" id="editTraits" placeholder="e.g. meticulous, strategic" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-medium);font-size:13px;background:var(--bg-tertiary);color:var(--text-primary);" />';
                     editHtml += '<div style="display:flex;gap:8px;margin-top:4px;">';
@@ -4218,7 +4218,7 @@
                 div.className = 'chat-msg chat-msg--' + m.role;
                 var preview = m.text.length > 300 ? m.text.substring(0, 300) + '…' : m.text;
                 div.innerHTML = '<div>' + preview.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' +
-                    (m.time ? '<div class="chat-msg-time">' + m.time + '</div>' : '');
+                    (m.time ? '<div class="chat-msg-time">' + esc(m.time) + '</div>' : '');
                 chatMsgsEl.appendChild(div);
             });
             chatMsgsEl.scrollTop = chatMsgsEl.scrollHeight;
