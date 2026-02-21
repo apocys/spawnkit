@@ -195,7 +195,7 @@ The theme includes a robust demo mode that works without OpenClaw:
 - **Modular design:** Each system independently testable
 - **Plugin architecture:** Easy to add new building types
 - **Data abstraction:** Works with any data source
-- **Theme consistency:** Follows FleetKit v2 patterns
+- **Theme consistency:** Follows SpawnKit v2 patterns
 
 ### Minimal Complexity
 - **Single HTML file:** No build system required
@@ -217,7 +217,7 @@ The theme includes a robust demo mode that works without OpenClaw:
 - **Mobile Controls:** Basic touch support (enhanced gestures in Phase 3B)
 
 ### Integration Testing
-- **Electron:** Fully compatible with FleetKit v2 Electron app
+- **Electron:** Fully compatible with SpawnKit v2 Electron app
 - **Browser:** Complete demo mode functionality
 - **Data Bridge:** Successfully consumes SpawnKit.data format
 - **Model Identity:** Proper color/size distinction working
@@ -226,6 +226,6 @@ The theme includes a robust demo mode that works without OpenClaw:
 
 Phase 3A delivers a solid, extensible foundation for the SimCity theme that successfully transforms abstract AI agent work into an engaging city simulation. The architecture is designed for cathedral quality - built to last and grow through phases 3B and 3C.
 
-The system demonstrates excellent performance, clean architecture, and intuitive user experience while maintaining full compatibility with the existing FleetKit v2 ecosystem.
+The system demonstrates excellent performance, clean architecture, and intuitive user experience while maintaining full compatibility with the existing SpawnKit v2 ecosystem.
 
 **Ready for Phase 3B implementation.**

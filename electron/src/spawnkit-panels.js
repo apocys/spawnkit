@@ -1783,7 +1783,7 @@ window.SpawnKitPanels = (function() {
             mailbox.slice(-5).forEach(function(msg) {
                 html += '<div class="spawnkit-remote-message">';
                 html += '<div class="spawnkit-remote-message-from">' + sanitize(msg.from || 'Unknown') + ' → ' + sanitize(msg.to || 'CEO') + '</div>';
-                html += '<div class="spawnkit-remote-message-text">' + sanitize(msg.text || '') + '</div>';
+                html += '<div class="spawnkit-remote-message-text">' + sanitize(msg.text || msg.body || '') + '</div>';
                 html += '<div class="spawnkit-remote-message-time">' + formatTimeAgo(msg.timestamp || Date.now()) + '</div>';
                 html += '</div>';
             });

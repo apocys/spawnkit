@@ -7,8 +7,12 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo "🔧 Pre-build: Copying app content for packaging..."
 
-# Clean previous copies
-rm -rf "$SCRIPT_DIR/office-executive" "$SCRIPT_DIR/office-gameboy-color" "$SCRIPT_DIR/office-sims" "$SCRIPT_DIR/office-simcity" "$SCRIPT_DIR/src" "$SCRIPT_DIR/dashboard.html" "$SCRIPT_DIR/lib"
+# Clean previous copies (preserve fleet-*.js and spawnkit-panels.js in src/)
+rm -rf "$SCRIPT_DIR/office-executive" "$SCRIPT_DIR/office-gameboy-color" "$SCRIPT_DIR/office-sims" "$SCRIPT_DIR/office-simcity" "$SCRIPT_DIR/dashboard.html" "$SCRIPT_DIR/lib"
+# Backup fleet files before src/ cleanup
+mkdir -p /tmp/spawnkit-src-backup
+cp "$SCRIPT_DIR/src/fleet-client.js" "$SCRIPT_DIR/src/fleet-bootstrap.js" "$SCRIPT_DIR/src/spawnkit-panels.js" /tmp/spawnkit-src-backup/ 2>/dev/null || true
+rm -rf "$SCRIPT_DIR/src"
 
 # Copy office themes
 for theme in executive gameboy-color sims simcity green-iso; do
@@ -39,5 +43,8 @@ if [ -d "$ROOT_DIR/sprites" ]; then
   cp -R "$ROOT_DIR/sprites" "$SCRIPT_DIR/sprites"
   echo "  ✅ sprites/"
 fi
+
+# Restore fleet files
+cp /tmp/spawnkit-src-backup/fleet-client.js /tmp/spawnkit-src-backup/fleet-bootstrap.js /tmp/spawnkit-src-backup/spawnkit-panels.js "$SCRIPT_DIR/src/" 2>/dev/null || true
 
 echo "✅ Pre-build complete!"

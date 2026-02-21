@@ -1,5 +1,5 @@
 /**
- * SimCity Renderer - Phase 3A Foundation
+ * SimCity Renderer - Isometric City Engine
  * 
  * Isometric rendering system with:
  * - 2.5D isometric projection
@@ -106,7 +106,7 @@ class SimCityRenderer {
     
     initializeSprites() {
         // Create procedural sprites for buildings and agents
-        // This avoids needing external image files for Phase 3A
+        // This avoids needing external image files for City Engine
         this.createBuildingSprites();
         this.createAgentSprites();
         console.log('🖼️ Procedural sprites generated');

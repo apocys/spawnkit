@@ -1,5 +1,5 @@
 /**
- * SimCity Agents - Phase 3A Foundation
+ * SimCity Agents - Isometric City Engine
  * 
  * Agent movement system that:
  * - Maps SpawnKit subagents to city citizens
@@ -281,7 +281,7 @@ class AgentManager {
         agent.state = this.agentStates.WALKING;
         agent.lastStateChange = Date.now();
         
-        // Calculate simple path (direct line for Phase 3A)
+        // Calculate simple path (direct line for City Engine)
         agent.path = [agent.position, targetPos];
     }
     
