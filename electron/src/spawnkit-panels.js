@@ -9,6 +9,12 @@ window.SpawnKitPanels = (function() {
     var _config = {};
     var _isInitialized = false;
 
+    // XSS Sanitization function
+    function sanitize(text) {
+        if (typeof text !== 'string') return '';
+        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
     /* ═══════════════════════════════════════════════════════════════
        DEMO DATA — Realistic fallbacks when no API
        ═══════════════════════════════════════════════════════════════ */
@@ -153,12 +159,12 @@ window.SpawnKitPanels = (function() {
     };
 
     var AGENTS = {
-        ceo:      { name: 'ApoMac', role: 'CEO', color: '#007AFF', status: 'active', task: 'Orchestrating fleet operations', isSubAgent: false },
-        atlas:    { name: 'Atlas',    role: 'COO',           color: '#BF5AF2', status: 'active', task: 'Coordinating FeedCast ops', isSubAgent: false },
-        forge:    { name: 'Forge',    role: 'CTO',           color: '#FF9F0A', status: 'busy', task: 'Building Executive theme SS+', isSubAgent: false },
-        hunter:   { name: 'Hunter',   role: 'CRO',           color: '#FF453A', status: 'active', task: 'Analyzing conversion funnel', isSubAgent: false },
-        echo:     { name: 'Echo',     role: 'CMO',           color: '#0A84FF', status: 'idle', task: 'Awaiting content brief', isSubAgent: false },
-        sentinel: { name: 'Sentinel', role: 'QA & Security', color: '#30D158', status: 'active', task: 'Auditing deploy artifacts', isSubAgent: false },
+        ceo:      { name: 'ApoMac', role: 'CEO', emoji: '👑', color: '#007AFF', status: 'active', task: 'Orchestrating fleet operations', isSubAgent: false },
+        atlas:    { name: 'Atlas',    role: 'COO',           emoji: '⚡', color: '#BF5AF2', status: 'active', task: 'Coordinating FeedCast ops', isSubAgent: false },
+        forge:    { name: 'Forge',    role: 'CTO',           emoji: '🔧', color: '#FF9F0A', status: 'busy', task: 'Building Executive theme SS+', isSubAgent: false },
+        hunter:   { name: 'Hunter',   role: 'CRO',           emoji: '🎯', color: '#FF453A', status: 'active', task: 'Analyzing conversion funnel', isSubAgent: false },
+        echo:     { name: 'Echo',     role: 'CMO',           emoji: '📢', color: '#0A84FF', status: 'idle', task: 'Awaiting content brief', isSubAgent: false },
+        sentinel: { name: 'Sentinel', role: 'QA & Security', emoji: '🛡️', color: '#30D158', status: 'active', task: 'Auditing deploy artifacts', isSubAgent: false },
     };
 
     var AVATAR_MAP = {
@@ -799,6 +805,98 @@ window.SpawnKitPanels = (function() {
                 margin-top: 4px;
             }
 
+            /* Remote Office */
+            .spawnkit-remote-office {
+                padding: 16px 0;
+                border-bottom: 1px solid var(--panel-border);
+            }
+            .spawnkit-remote-office:last-child { border-bottom: none; }
+            .spawnkit-remote-office-header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 8px;
+            }
+            .spawnkit-remote-office-emoji {
+                font-size: 24px;
+                width: 40px;
+                text-align: center;
+            }
+            .spawnkit-remote-office-info { flex: 1; }
+            .spawnkit-remote-office-name {
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--panel-text);
+            }
+            .spawnkit-remote-office-status {
+                font-size: 12px;
+                font-weight: 500;
+                text-transform: uppercase;
+                margin-top: 2px;
+            }
+            .spawnkit-remote-office-status.online { color: #34C759; }
+            .spawnkit-remote-office-status.offline { color: #FF3B30; }
+            .spawnkit-remote-office-stats {
+                font-size: 12px;
+                color: var(--panel-text);
+                opacity: 0.6;
+                margin-left: 52px;
+            }
+            .spawnkit-remote-message {
+                padding: 12px 0;
+                border-bottom: 1px solid var(--panel-border);
+            }
+            .spawnkit-remote-message:last-child { border-bottom: none; }
+            .spawnkit-remote-message-from {
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--panel-text);
+                margin-bottom: 4px;
+            }
+            .spawnkit-remote-message-text {
+                font-size: 13px;
+                color: var(--panel-text);
+                margin-bottom: 4px;
+            }
+            .spawnkit-remote-message-time {
+                font-size: 11px;
+                color: var(--panel-text);
+                opacity: 0.5;
+            }
+            .spawnkit-remote-compose {
+                display: flex;
+                gap: 8px;
+                margin-top: 16px;
+            }
+            .spawnkit-remote-office-select {
+                min-width: 120px;
+                padding: 8px 12px;
+                border: 1px solid var(--panel-border);
+                border-radius: 6px;
+                background: var(--panel-bg);
+                color: var(--panel-text);
+                font-size: 13px;
+            }
+            .spawnkit-remote-message-input {
+                flex: 1;
+                padding: 8px 12px;
+                border: 1px solid var(--panel-border);
+                border-radius: 6px;
+                background: var(--panel-bg);
+                color: var(--panel-text);
+                font-size: 13px;
+            }
+            .spawnkit-remote-send-btn {
+                padding: 8px 16px;
+                border: none;
+                border-radius: 6px;
+                background: var(--panel-accent);
+                color: white;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+            }
+
             /* Settings */
             .spawnkit-settings-section {
                 margin-bottom: 24px;
@@ -1082,6 +1180,18 @@ window.SpawnKitPanels = (function() {
                 </div>
             </div>
 
+            <!-- Remote Office Panel -->
+            <div class="spawnkit-overlay" id="spawnkitRemoteOverlay" role="dialog" aria-modal="true" aria-label="Remote Offices">
+                <div class="spawnkit-backdrop" id="spawnkitRemoteBackdrop"></div>
+                <div class="spawnkit-panel" style="width: 520px;">
+                    <div class="spawnkit-panel-header">
+                        <div class="spawnkit-panel-title"><span>🏙️</span> Remote Offices</div>
+                        <button class="spawnkit-panel-close" id="spawnkitRemoteClose" aria-label="Close">×</button>
+                    </div>
+                    <div class="spawnkit-panel-body" id="spawnkitRemoteBody"></div>
+                </div>
+            </div>
+
             <!-- Navigation Toolbar -->
             <div class="spawnkit-toolbar" id="spawnkitToolbar">
                 <button class="spawnkit-toolbar-btn" data-panel="cockpit" title="CEO Cockpit"><span>👑</span><small>Cockpit</small></button>
@@ -1091,6 +1201,7 @@ window.SpawnKitPanels = (function() {
                 <button class="spawnkit-toolbar-btn" data-panel="memory" title="Memory"><span>🧠</span><small>Memory</small></button>
                 <button class="spawnkit-toolbar-btn" data-panel="mailbox" title="Mailbox"><span>📬</span><small>Mail</small></button>
                 <button class="spawnkit-toolbar-btn" data-panel="chat" title="Chat"><span>💬</span><small>Chat</small></button>
+                <button class="spawnkit-toolbar-btn" data-panel="remote" title="Remote Offices"><span>🏙️</span><small>Remote</small></button>
                 <button class="spawnkit-toolbar-btn" data-panel="settings" title="Settings"><span>⚙️</span><small>Settings</small></button>
             </div>
 
@@ -1172,7 +1283,7 @@ window.SpawnKitPanels = (function() {
                 html += `
                     <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0; ${statusStyle}">
                         <span style="font-size: 16px;">${todo.icon}</span>
-                        <span style="flex: 1; font-size: 13px;">${todo.text}</span>
+                        <span style="flex: 1; font-size: 13px;">${sanitize(todo.text)}</span>
                     </div>
                 `;
             });
@@ -1216,8 +1327,8 @@ window.SpawnKitPanels = (function() {
             var div = document.createElement('div');
             div.className = 'spawnkit-chat-msg spawnkit-chat-msg--' + msg.role;
             div.innerHTML = `
-                <div>${msg.text}</div>
-                ${msg.time ? '<div style="font-size: 10px; opacity: 0.6; margin-top: 4px;">' + msg.time + '</div>' : ''}
+                <div>${sanitize(msg.text)}</div>
+                ${msg.time ? '<div style="font-size: 10px; opacity: 0.6; margin-top: 4px;">' + sanitize(msg.time) + '</div>' : ''}
             `;
             messages.appendChild(div);
         });
@@ -1296,9 +1407,9 @@ window.SpawnKitPanels = (function() {
             
             html += `
                 <div class="spawnkit-log-entry">
-                    <span class="spawnkit-log-time">${time}</span>
-                    <span class="spawnkit-log-role ${roleClass}">${entry.role || 'system'}</span>
-                    <span class="spawnkit-log-text">${text}</span>
+                    <span class="spawnkit-log-time">${sanitize(time)}</span>
+                    <span class="spawnkit-log-role ${roleClass}">${sanitize(entry.role || 'system')}</span>
+                    <span class="spawnkit-log-text">${sanitize(text)}</span>
                 </div>
             `;
         });
@@ -1325,10 +1436,10 @@ window.SpawnKitPanels = (function() {
                 <div class="spawnkit-cron-item">
                     <span class="spawnkit-cron-item-icon">${cron.icon}</span>
                     <div class="spawnkit-cron-item-info">
-                        <div class="spawnkit-cron-item-name">${cron.name}</div>
-                        <div class="spawnkit-cron-item-schedule">${cron.schedule} • Next: ${new Date(cron.nextRun).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'})}</div>
+                        <div class="spawnkit-cron-item-name">${sanitize(cron.name)}</div>
+                        <div class="spawnkit-cron-item-schedule">${sanitize(cron.schedule)} • Next: ${new Date(cron.nextRun).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'})}</div>
                     </div>
-                    <span style="padding: 2px 6px; border-radius: 4px; font-size: 10px; background: var(--panel-tertiary);">${cron.status}</span>
+                    <span style="padding: 2px 6px; border-radius: 4px; font-size: 10px; background: var(--panel-tertiary);">${sanitize(cron.status)}</span>
                 </div>
             `;
         });
@@ -1423,9 +1534,9 @@ window.SpawnKitPanels = (function() {
                     <div class="spawnkit-mission-item">
                         <span style="font-size: 16px;">🚀</span>
                         <div style="flex: 1;">
-                            <div style="font-weight: 600; font-size: 13px;">${mission.name}</div>
-                            <div style="opacity: 0.7; font-size: 12px;">${mission.label}</div>
-                            <div style="opacity: 0.5; font-size: 11px;">${mission.parent} • ${mission.duration}</div>
+                            <div style="font-weight: 600; font-size: 13px;">${sanitize(mission.name)}</div>
+                            <div style="opacity: 0.7; font-size: 12px;">${sanitize(mission.label)}</div>
+                            <div style="opacity: 0.5; font-size: 11px;">${sanitize(mission.parent)} • ${sanitize(mission.duration)}</div>
                         </div>
                         <div style="text-align: right;">
                             <div style="font-weight: 600; color: var(--panel-accent);">${progress}%</div>
@@ -1446,8 +1557,8 @@ window.SpawnKitPanels = (function() {
                     <div class="spawnkit-mission-item" style="opacity: 0.6;">
                         <span style="font-size: 16px;">✅</span>
                         <div style="flex: 1;">
-                            <div style="font-weight: 600; font-size: 13px;">${mission.name}</div>
-                            <div style="opacity: 0.7; font-size: 12px;">${mission.label}</div>
+                            <div style="font-weight: 600; font-size: 13px;">${sanitize(mission.name)}</div>
+                            <div style="opacity: 0.7; font-size: 12px;">${sanitize(mission.label)}</div>
                         </div>
                         <div style="color: #30D158; font-size: 12px; font-weight: 600;">Done</div>
                     </div>
@@ -1505,7 +1616,7 @@ window.SpawnKitPanels = (function() {
         chatHistory.slice(-5).forEach(function(msg) {
             html += `
                 <div style="padding: 8px; margin: 4px 0; background: var(--panel-tertiary); border-radius: 8px; font-size: 12px;">
-                    <strong>${msg.role === 'user' ? 'Kira' : 'CEO'}:</strong> ${msg.text.substring(0, 100)}${msg.text.length > 100 ? '...' : ''}
+                    <strong>${msg.role === 'user' ? 'Kira' : 'CEO'}:</strong> ${sanitize(msg.text.substring(0, 100))}${msg.text.length > 100 ? '...' : ''}
                 </div>
             `;
         });
@@ -1534,8 +1645,8 @@ window.SpawnKitPanels = (function() {
             html += '<div class="spawnkit-mail-item">';
             html += '<div class="spawnkit-mail-priority ' + priorityClass + '"></div>';
             html += '<div class="spawnkit-mail-content">';
-            html += '<div class="spawnkit-mail-from">' + (msg.from || 'System') + ' → ' + (msg.to || 'CEO') + '</div>';
-            html += '<div class="spawnkit-mail-subject">' + (msg.subject || msg.text || '') + '</div>';
+            html += '<div class="spawnkit-mail-from">' + sanitize(msg.from || 'System') + ' → ' + sanitize(msg.to || 'CEO') + '</div>';
+            html += '<div class="spawnkit-mail-subject">' + sanitize(msg.subject || msg.text || '') + '</div>';
             html += '<div class="spawnkit-mail-time">' + timeAgo + '</div>';
             html += '</div></div>';
         });
@@ -1613,100 +1724,149 @@ window.SpawnKitPanels = (function() {
         body.innerHTML = html;
     }
 
+    // Feature: Remote Office Panel
+    function openRemoteOverlay() {
+        closeAllPanels();
+        var overlay = document.getElementById('spawnkitRemoteOverlay');
+        overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        renderRemote();
+    }
+
+    function renderRemote() {
+        var body = document.getElementById('spawnkitRemoteBody');
+        var html = '<div class="spawnkit-section"><div class="spawnkit-section-title">🏙️ Connected Offices</div>';
+        
+        var isConnected = window.FleetClient && window.FleetClient.isConnected();
+        var offices = isConnected ? window.FleetClient.getOffices() : {};
+        var mailbox = isConnected ? window.FleetClient.getMailbox() : [];
+        
+        // Show connected offices or demo data
+        var officeKeys = Object.keys(offices);
+        if (officeKeys.length === 0) {
+            // Demo data - Sycopa office
+            html += '<div class="spawnkit-remote-office">';
+            html += '<div class="spawnkit-remote-office-header">';
+            html += '<span class="spawnkit-remote-office-emoji">🌸</span>';
+            html += '<div class="spawnkit-remote-office-info">';
+            html += '<div class="spawnkit-remote-office-name">' + sanitize('Sycopa HQ') + '</div>';
+            html += '<div class="spawnkit-remote-office-status offline">Offline</div>';
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="spawnkit-remote-office-stats">No recent activity</div>';
+            html += '</div>';
+        } else {
+            officeKeys.forEach(function(officeId) {
+                var office = offices[officeId];
+                html += '<div class="spawnkit-remote-office">';
+                html += '<div class="spawnkit-remote-office-header">';
+                html += '<span class="spawnkit-remote-office-emoji">' + sanitize(office.officeEmoji || '🏢') + '</span>';
+                html += '<div class="spawnkit-remote-office-info">';
+                html += '<div class="spawnkit-remote-office-name">' + sanitize(office.officeName || officeId) + '</div>';
+                html += '<div class="spawnkit-remote-office-status ' + (office.status || 'offline') + '">' + (office.status === 'online' ? 'Online' : 'Offline') + '</div>';
+                html += '</div>';
+                html += '</div>';
+                if (office.agents && office.agents.length > 0) {
+                    html += '<div class="spawnkit-remote-office-stats">' + office.agents.length + ' agents • ' + (office.activeMissions || 0) + ' missions</div>';
+                } else {
+                    html += '<div class="spawnkit-remote-office-stats">No activity data</div>';
+                }
+                html += '</div>';
+            });
+        }
+        
+        html += '</div>';
+        
+        // Show mailbox messages
+        html += '<div class="spawnkit-section"><div class="spawnkit-section-title">📬 Inter-Office Messages</div>';
+        if (mailbox.length > 0) {
+            mailbox.slice(-5).forEach(function(msg) {
+                html += '<div class="spawnkit-remote-message">';
+                html += '<div class="spawnkit-remote-message-from">' + sanitize(msg.from || 'Unknown') + ' → ' + sanitize(msg.to || 'CEO') + '</div>';
+                html += '<div class="spawnkit-remote-message-text">' + sanitize(msg.text || '') + '</div>';
+                html += '<div class="spawnkit-remote-message-time">' + formatTimeAgo(msg.timestamp || Date.now()) + '</div>';
+                html += '</div>';
+            });
+        } else {
+            html += '<div style="padding: 40px; text-align: center; opacity: 0.5;">📭 No messages</div>';
+        }
+        html += '</div>';
+        
+        // Message compose form
+        html += '<div class="spawnkit-section"><div class="spawnkit-section-title">✉️ Send Message</div>';
+        html += '<div class="spawnkit-remote-compose">';
+        html += '<select class="spawnkit-remote-office-select" id="spawnkitRemoteOfficeSelect">';
+        if (officeKeys.length > 0) {
+            officeKeys.forEach(function(officeId) {
+                var office = offices[officeId];
+                html += '<option value="' + sanitize(officeId) + '">' + sanitize(office.officeName || officeId) + '</option>';
+            });
+        } else {
+            html += '<option value="sycopa">Sycopa HQ</option>';
+        }
+        html += '</select>';
+        html += '<input type="text" class="spawnkit-remote-message-input" id="spawnkitRemoteMessageInput" placeholder="Type your message..." />';
+        html += '<button class="spawnkit-remote-send-btn" id="spawnkitRemoteSend">Send</button>';
+        html += '</div>';
+        html += '</div>';
+        
+        body.innerHTML = html;
+        
+        // Attach send handler
+        var sendBtn = document.getElementById('spawnkitRemoteSend');
+        if (sendBtn) {
+            sendBtn.addEventListener('click', function() {
+                var officeSelect = document.getElementById('spawnkitRemoteOfficeSelect');
+                var messageInput = document.getElementById('spawnkitRemoteMessageInput');
+                var office = officeSelect ? officeSelect.value : '';
+                var message = messageInput ? messageInput.value.trim() : '';
+                
+                if (office && message) {
+                    if (window.FleetClient && window.FleetClient.isConnected()) {
+                        var sent = window.FleetClient.sendMessage(office, message, 'medium');
+                        if (sent) {
+                            showToast('📤 Message sent to ' + office);
+                            messageInput.value = '';
+                            // Refresh in 1 second to show the message
+                            setTimeout(renderRemote, 1000);
+                        } else {
+                            showToast('❌ Failed to send message');
+                        }
+                    } else {
+                        showToast('📶 Not connected to fleet relay');
+                    }
+                }
+            });
+        }
+        
+        var messageInput = document.getElementById('spawnkitRemoteMessageInput');
+        if (messageInput) {
+            messageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('spawnkitRemoteSend').click();
+                }
+            });
+        }
+    }
+
     /* ═══════════════════════════════════════════════════════════════
        EVENT HANDLERS
        ═══════════════════════════════════════════════════════════════ */
     function initEventHandlers() {
-        // Close buttons
-        document.getElementById('spawnkitLogsClose').addEventListener('click', function() {
-            document.getElementById('spawnkitLogsOverlay').classList.remove('open');
-            document.body.style.overflow = '';
+        // Universal close handlers
+        document.querySelectorAll('.spawnkit-panel-close').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                btn.closest('.spawnkit-overlay').classList.remove('open');
+                document.body.style.overflow = '';
+            });
         });
         
-        document.getElementById('spawnkitChatClose').addEventListener('click', function() {
-            document.getElementById('spawnkitChatOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        
-        document.getElementById('spawnkitCronClose').addEventListener('click', function() {
-            document.getElementById('spawnkitCronOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        
-        document.getElementById('spawnkitMemoryClose').addEventListener('click', function() {
-            document.getElementById('spawnkitMemoryOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        
-        document.getElementById('spawnkitDetailClose').addEventListener('click', function() {
-            document.getElementById('spawnkitDetailOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        
-        document.getElementById('spawnkitMissionsClose').addEventListener('click', function() {
-            document.getElementById('spawnkitMissionsOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        
-        document.getElementById('spawnkitCockpitClose').addEventListener('click', function() {
-            document.getElementById('spawnkitCockpitOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-
-        // Backdrop clicks
-        document.getElementById('spawnkitLogsBackdrop').addEventListener('click', function() {
-            document.getElementById('spawnkitLogsOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        
-        document.getElementById('spawnkitChatBackdrop').addEventListener('click', function() {
-            document.getElementById('spawnkitChatOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        
-        document.getElementById('spawnkitCronBackdrop').addEventListener('click', function() {
-            document.getElementById('spawnkitCronOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        
-        document.getElementById('spawnkitMemoryBackdrop').addEventListener('click', function() {
-            document.getElementById('spawnkitMemoryOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        
-        document.getElementById('spawnkitDetailBackdrop').addEventListener('click', function() {
-            document.getElementById('spawnkitDetailOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        
-        document.getElementById('spawnkitMissionsBackdrop').addEventListener('click', function() {
-            document.getElementById('spawnkitMissionsOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        
-        document.getElementById('spawnkitCockpitBackdrop').addEventListener('click', function() {
-            document.getElementById('spawnkitCockpitOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-
-        // Mailbox close + backdrop
-        document.getElementById('spawnkitMailboxClose').addEventListener('click', function() {
-            document.getElementById('spawnkitMailboxOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        document.getElementById('spawnkitMailboxBackdrop').addEventListener('click', function() {
-            document.getElementById('spawnkitMailboxOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-
-        // Settings close + backdrop
-        document.getElementById('spawnkitSettingsClose').addEventListener('click', function() {
-            document.getElementById('spawnkitSettingsOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        });
-        document.getElementById('spawnkitSettingsBackdrop').addEventListener('click', function() {
-            document.getElementById('spawnkitSettingsOverlay').classList.remove('open');
-            document.body.style.overflow = '';
+        document.querySelectorAll('.spawnkit-backdrop').forEach(function(el) {
+            el.addEventListener('click', function() {
+                el.closest('.spawnkit-overlay').classList.remove('open');
+                document.body.style.overflow = '';
+            });
         });
 
         // Toolbar navigation
@@ -1722,6 +1882,7 @@ window.SpawnKitPanels = (function() {
                     case 'memory': openMemoryOverlay(); break;
                     case 'mailbox': openMailboxOverlay(); break;
                     case 'chat': openChatOverlay(); break;
+                    case 'remote': openRemoteOverlay(); break;
                     case 'settings': openSettingsOverlay(); break;
                 }
             });
@@ -1784,6 +1945,18 @@ window.SpawnKitPanels = (function() {
             initEventHandlers();
             loadDemoData();
             
+            // Wire FleetClient events
+            if (window.FleetClient) {
+                window.FleetClient.on('office:update', function() {
+                    if (document.getElementById('spawnkitRemoteOverlay').classList.contains('open')) {
+                        renderRemote();
+                    }
+                });
+                window.FleetClient.on('message:new', function(msg) {
+                    showToast('📬 New message from ' + (msg.message.from || 'remote office'));
+                });
+            }
+            
             _isInitialized = true;
             console.log('🚀 SpawnKit Panels initialized for theme:', _config.theme);
         },
@@ -1797,6 +1970,7 @@ window.SpawnKitPanels = (function() {
         openMissionsOverlay: openMissionsOverlay,
         openCockpitOverlay: openCockpitOverlay,
         openMailboxOverlay: openMailboxOverlay,
+        openRemoteOverlay: openRemoteOverlay,
         openSettingsOverlay: openSettingsOverlay,
         
         // Utility functions
@@ -1806,6 +1980,40 @@ window.SpawnKitPanels = (function() {
         // Data access
         getAgents: function() { return AGENTS; },
         getDemoData: function() { return DEMO; },
+        setData: function(newData) {
+            // Merge newData into internal state
+            if (newData.logs) Object.assign(DEMO.logs, newData.logs);
+            if (newData.todos) Object.assign(DEMO.todos, newData.todos);
+            if (newData.agents) {
+                // Update AGENTS object
+                Object.keys(newData.agents).forEach(function(id) {
+                    if (AGENTS[id]) {
+                        Object.assign(AGENTS[id], newData.agents[id]);
+                    }
+                });
+            }
+            if (newData.missions) DEMO.missions = newData.missions;
+            if (newData.crons) DEMO.crons = newData.crons;
+            if (newData.mailMessages) LIVE_MESSAGES = newData.mailMessages;
+            if (newData.chatHistory) chatHistory = newData.chatHistory;
+            
+            // Re-render any open panel
+            var openOverlay = document.querySelector('.spawnkit-overlay.open');
+            if (openOverlay) {
+                var overlayId = openOverlay.id;
+                switch(overlayId) {
+                    case 'spawnkitLogsOverlay': renderLogs(); break;
+                    case 'spawnkitChatOverlay': renderChat(); break;
+                    case 'spawnkitCronOverlay': renderCron(); break;
+                    case 'spawnkitMemoryOverlay': renderMemory(); break;
+                    case 'spawnkitMissionsOverlay': renderMissions(); break;
+                    case 'spawnkitCockpitOverlay': renderCockpit(); break;
+                    case 'spawnkitMailboxOverlay': renderMailbox(); break;
+                    case 'spawnkitRemoteOverlay': renderRemote(); break;
+                    case 'spawnkitSettingsOverlay': renderSettings(); break;
+                }
+            }
+        },
         
         // Theme switching
         switchTheme: function(newTheme) {
