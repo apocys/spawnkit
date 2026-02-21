@@ -458,27 +458,56 @@ class SimsVirtualOffice {
     }
 
     async init() {
-        this.app = new PIXI.Application({
-            width: 900,
-            height: 560,
-            backgroundColor: 0xf0e0c0,
-            antialias: false,
-            resolution: 1,
-            autoDensity: false,
-        });
+        try {
+            this.app = new PIXI.Application({
+                width: 900,
+                height: 560,
+                backgroundColor: 0xf0e0c0,
+                antialias: false,
+                resolution: 1,
+                autoDensity: false,
+            });
 
-        PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
+            PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
 
+            const container = document.getElementById('gameContainer');
+            if (!container) { console.warn('🏠 Sims: #gameContainer not found'); return; }
+            container.appendChild(this.app.view);
+            this.app.view.style.imageRendering = 'pixelated';
+
+            this.setupContainers();
+            this.createSystems();
+            this.app.ticker.add(this.gameLoop.bind(this));
+
+            console.log('🏠 Sims Virtual Office initialized!');
+            
+        } catch (error) {
+            console.warn('🏠 Sims: PixiJS renderer failed, showing fallback', error);
+            this.showWebGLFallback();
+        }
+    }
+    
+    showWebGLFallback() {
         const container = document.getElementById('gameContainer');
-        if (!container) { console.warn('🏠 Sims: #gameContainer not found'); return; }
-        container.appendChild(this.app.view);
-        this.app.view.style.imageRendering = 'pixelated';
-
-        this.setupContainers();
-        this.createSystems();
-        this.app.ticker.add(this.gameLoop.bind(this));
-
-        console.log('🏠 Sims Virtual Office initialized!');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div style="
+                width: 900px; height: 560px; 
+                background: linear-gradient(135deg, #f0e0c0, #e8d4a0);
+                border: 4px solid #8b4513;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                font-family: 'Georgia', serif; color: #654321; text-align: center; gap: 16px;
+            ">
+                <div style="font-size: 24px; color: #8b4513;">🏠</div>
+                <div style="font-size: 16px; font-weight: bold; color: #654321;">Sims Office</div>
+                <div style="font-size: 14px; max-width: 300px; line-height: 1.5;">
+                    This theme requires WebGL support.<br>
+                    Try the <a href="../office-executive/" style="color: #cd853f; text-decoration: none;">Executive</a> 
+                    or <a href="../office-simcity/" style="color: #cd853f; text-decoration: none;">SimCity</a> themes instead.
+                </div>
+            </div>
+        `;
     }
 
     setupContainers() {

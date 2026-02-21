@@ -48,21 +48,22 @@ class GameBoyVirtualOffice {
     
     async init() {
         // Create PixiJS application with GameBoy resolution feel
-        this.app = new PIXI.Application({
-            width: 800,
-            height: 600,
-            backgroundColor: this.colors.darkest,
-            antialias: false, // Crisp pixels
-            resolution: 1, // No upscaling for authentic feel
-            autoDensity: false
-        });
-        
-        // Force nearest neighbor scaling for authentic pixel art
-        PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
-        
-        // Add canvas to DOM
-        const container = document.getElementById('gameContainer');
-        if (!container) { console.warn('🎮 GBC: #gameContainer not found'); return; }
+        try {
+            this.app = new PIXI.Application({
+                width: 800,
+                height: 600,
+                backgroundColor: this.colors.darkest,
+                antialias: false, // Crisp pixels
+                resolution: 1, // No upscaling for authentic feel
+                autoDensity: false
+            });
+            
+            // Force nearest neighbor scaling for authentic pixel art
+            PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
+            
+            // Add canvas to DOM
+            const container = document.getElementById('gameContainer');
+            if (!container) { console.warn('🎮 GBC: #gameContainer not found'); return; }
         container.appendChild(this.app.view);
         
         // Apply GameBoy screen styling
@@ -78,13 +79,41 @@ class GameBoyVirtualOffice {
         // Start game loop
         this.app.ticker.add(this.gameLoop.bind(this));
         
-        console.log('🎮 GameBoy Color Virtual Office initialized!');
+            console.log('🎮 GameBoy Color Virtual Office initialized!');
+            
+            // Wire Mission Controller into the GameBoy Color theme
+            this.initMissionController();
+            
+            // Start with a welcome message
+            this.showStartupMessage();
+            
+        } catch (error) {
+            console.warn('🎮 GameBoy Color: PixiJS renderer failed, showing fallback', error);
+            this.showWebGLFallback();
+        }
+    }
+    
+    showWebGLFallback() {
+        const container = document.getElementById('gameContainer');
+        if (!container) return;
         
-        // Wire Mission Controller into the GameBoy Color theme
-        this.initMissionController();
-        
-        // Start with a welcome message
-        this.showStartupMessage();
+        container.innerHTML = `
+            <div style="
+                width: 800px; height: 600px; 
+                background: linear-gradient(135deg, #1a472a, #064e3b);
+                border: 4px solid #374151;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                font-family: 'Courier New', monospace; color: #9ca3af; text-align: center; gap: 16px;
+            ">
+                <div style="font-size: 24px; color: #d1d5db;">🎮</div>
+                <div style="font-size: 16px; font-weight: bold; color: #e5e7eb;">GameBoy Office</div>
+                <div style="font-size: 14px; max-width: 300px; line-height: 1.5;">
+                    This theme requires WebGL support.<br>
+                    Try the <a href="../office-executive/" style="color: #60a5fa; text-decoration: none;">Executive</a> 
+                    or <a href="../office-simcity/" style="color: #60a5fa; text-decoration: none;">SimCity</a> themes instead.
+                </div>
+            </div>
+        `;
     }
     
     setupContainers() {
