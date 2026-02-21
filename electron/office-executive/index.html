@@ -2423,94 +2423,7 @@
         /* ═══════════════════════════════════════════════════
            Overlay styles for remote office (reusing cron overlay styles)
            ═══════════════════════════════════════════════════ */
-        .overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 300;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s var(--ease-smooth);
-        }
-        .overlay.open {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .overlay.open .overlay-backdrop { opacity: 1; }
-        .overlay.open .overlay-panel { transform: translateY(0); }
-        .overlay-backdrop {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.4);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            opacity: 0;
-            transition: opacity 0.35s var(--ease-smooth);
-        }
-        .overlay-panel {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, calc(-50% + 20px));
-            width: 90%;
-            max-width: 520px;
-            max-height: 85vh;
-            background: var(--bg-secondary);
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            transition: transform 0.4s var(--ease-spring);
-        }
-        .overlay-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--border-subtle);
-            flex-shrink: 0;
-        }
-        .overlay-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .overlay-close {
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: none;
-            background: var(--bg-tertiary);
-            color: var(--text-secondary);
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 18px;
-            transition: all 0.2s var(--ease-smooth);
-            font-family: inherit;
-        }
-        .overlay-close:hover {
-            background: var(--exec-gray-200);
-            color: var(--text-primary);
-        }
-        .overlay-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px 24px;
-            scrollbar-width: thin;
-            scrollbar-color: var(--exec-gray-300) transparent;
-        }
-        .overlay-body::-webkit-scrollbar {
-            width: 6px;
-        }
-        .overlay-body::-webkit-scrollbar-thumb {
-            background: var(--exec-gray-300);
-            border-radius: 3px;
-        }
+        /* Remote Office — uses cron-overlay pattern for consistency */
 
         /* ═══════════════════════════════════════════════════
            Reduced Motion
@@ -3216,14 +3129,19 @@
     </div>
 
     <!-- ═══ Remote Offices Panel ═══ -->
-    <div class="overlay" id="remoteOverlay">
-        <div class="overlay-backdrop" onclick="closeAllOverlays()"></div>
-        <div class="overlay-panel" style="width:520px">
-            <div class="overlay-header">
-                <div class="overlay-title"><span>🏙️</span> Remote Offices</div>
-                <button class="overlay-close" onclick="document.getElementById('remoteOverlay').classList.remove('open');document.body.style.overflow=''">×</button>
+    <div class="cron-overlay" id="remoteOverlay" role="dialog" aria-modal="true" aria-label="Remote Offices">
+        <div class="cron-backdrop" id="remoteBackdrop"></div>
+        <div class="cron-panel" style="max-width:520px;">
+            <div class="cron-header">
+                <div class="cron-title">
+                    <span aria-hidden="true">🏙️</span>
+                    Remote Offices
+                </div>
+                <button class="cron-close" id="remoteClose" aria-label="Close">×</button>
             </div>
-            <div class="overlay-body" id="remoteBody"></div>
+            <div class="cron-body" id="remoteBody">
+                <div class="cron-empty">Connecting to fleet relay…</div>
+            </div>
         </div>
     </div>
 
@@ -4555,6 +4473,12 @@
         }
 
         /* Close all panels helper */
+        function closeRemotePanel() {
+            var el = document.getElementById('remoteOverlay');
+            if (el) el.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
         function closeAllPanels() {
             closeMailbox();
             closeTodoPanel();
@@ -4563,6 +4487,7 @@
             closeChatPanel();
             closeCronPanel();
             closeMemoryPanel();
+            closeRemotePanel();
         }
 
         /* ═══════════════════════════════════════════════
@@ -4926,7 +4851,7 @@
            Remote Office Panel
            ═══════════════════════════════════════════════ */
         function openRemoteOverlay() {
-            closeAllOverlays();
+            closeAllPanels();
             var overlay = document.getElementById('remoteOverlay');
             overlay.classList.add('open');
             document.body.style.overflow = 'hidden';
@@ -5043,14 +4968,10 @@
             return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
-        // Wire up remote button
+        // Wire up remote button + close handlers
         document.getElementById('remoteBtn').addEventListener('click', openRemoteOverlay);
-
-        // Close all overlays function
-        function closeAllOverlays() {
-            document.getElementById('remoteOverlay').classList.remove('open');
-            document.body.style.overflow = '';
-        }
+        document.getElementById('remoteBackdrop').addEventListener('click', closeRemotePanel);
+        document.getElementById('remoteClose').addEventListener('click', closeRemotePanel);
 
         /* ═══════════════════════════════════════════════
            Decommission Animation (NEW #7)
