@@ -699,13 +699,23 @@ try {
   ipcMain.handle('spawnkit:getCrons', () => []);
   ipcMain.handle('spawnkit:getMemory', () => ({ longTerm: null, daily: [], heartbeat: null }));
   ipcMain.handle('spawnkit:getAgentInfo', () => null);
-  ipcMain.handle('spawnkit:getMetrics', () => ({}));
-  ipcMain.handle('spawnkit:getAll', () => ({ agents: [], subagents: [], crons: [], metrics: {}, meta: { mode: 'fallback' } }));
+  ipcMain.handle('spawnkit:getMetrics', () => ({ agentBreakdown: {} }));
+  ipcMain.handle('spawnkit:getAll', () => ({ agents: [], subagents: [], crons: [], metrics: { agentBreakdown: {} }, meta: { mode: 'fallback' } }));
   ipcMain.handle('spawnkit:invalidateCache', () => true);
   ipcMain.handle('spawnkit:getTranscript', () => []);
   ipcMain.handle('spawnkit:getTodoList', () => null);
   ipcMain.handle('spawnkit:getSkills', () => []);
   ipcMain.handle('spawnkit:sendMission', () => ({ success: false, error: 'Data provider not loaded' }));
+  ipcMain.handle('spawnkit:getAgentTodos', () => ({ agentId: '', todos: [], currentTask: 'Not connected' }));
+  ipcMain.handle('spawnkit:getAgentSkills', () => []);
+  ipcMain.handle('spawnkit:getAgentMetrics', () => ({ tokens: 0, apiCalls: 0, lastActive: null, status: 'offline' }));
+  ipcMain.handle('spawnkit:getActiveSubagents', () => []);
+  ipcMain.handle('spawnkit:saveAgentSoul', () => ({ success: false, error: 'Data provider not loaded' }));
+  ipcMain.handle('spawnkit:saveAgentSkills', () => ({ success: false, error: 'Data provider not loaded' }));
+  ipcMain.handle('spawnkit:listAvailableSkills', () => []);
+  ipcMain.handle('spawnkit:getApiKeys', () => ({}));
+  ipcMain.handle('spawnkit:saveApiKey', () => ({ success: false, error: 'Data provider not loaded' }));
+  ipcMain.handle('spawnkit:deleteApiKey', () => ({ success: false, error: 'Data provider not loaded' }));
 }
 
 // --- App Lifecycle ---

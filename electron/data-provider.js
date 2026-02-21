@@ -666,6 +666,18 @@ class OpenClawDataProvider {
       }
     }
     
+    // Build per-agent breakdown
+    const agentBreakdown = {};
+    for (const agent of sessions.agents) {
+      agentBreakdown[agent.id] = {
+        tokens: agent.tokensUsed || 0,
+        apiCalls: agent.apiCalls || 0,
+        lastActive: agent.lastSeenRelative || 'unknown',
+        status: agent.status || 'offline',
+        modelUsed: agent.modelUsed || ''
+      };
+    }
+    
     const metrics = {
       // Token usage (from parsed sessions)
       tokensToday: totalTokens,
@@ -682,6 +694,9 @@ class OpenClawDataProvider {
       activeAgents: activeAgents,
       idleAgents: idleAgents,
       activeSubagents: activeSubagents,
+      
+      // Per-agent breakdown (FIX #4: display expects this)
+      agentBreakdown: agentBreakdown,
       
       // System
       uptime: uptime,
@@ -793,6 +808,401 @@ class OpenClawDataProvider {
     };
   }
   
+  // ── Per-Agent TODO (read fleet/agents/{agent}/TODO.md) ─────────────────────
+  
+  async getAgentTodos(agentId) {
+    if (!this.workspace) return null;
+    
+    const dirMap = {
+      'atlas': 'coo-atlas',
+      'forge': 'cto-forge',
+      'echo': 'cmo-echo',
+      'hunter': 'cro-hunter',
+      'sentinel': 'auditor-sentinel',
+      'ceo': null
+    };
+    
+    const dirName = dirMap[agentId];
+    let todoPath;
+    if (dirName) {
+      todoPath = path.join(this.workspace, 'fleet', 'agents', dirName, 'TODO.md');
+    } else {
+      // CEO uses workspace root TODO.md
+      todoPath = path.join(this.workspace, 'TODO.md');
+    }
+    
+    const content = safeReadText(todoPath);
+    if (!content) return { agentId, todos: [], currentTask: 'No TODO.md found' };
+    
+    // Parse TODO.md for items with status prefixes
+    const lines = content.split('\n');
+    const todos = [];
+    let currentTask = '';
+    let currentSection = '';
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Track sections (## 🔴 Active, ## 🟡 Blocked, etc.)
+      if (trimmed.startsWith('## ')) {
+        currentSection = trimmed;
+        continue;
+      }
+      
+      // Extract current task from first ### under Active section
+      if (trimmed.startsWith('### ') && currentSection.includes('Active') && !currentTask) {
+        currentTask = trimmed.replace(/^###\s*/, '').replace(/\s*\(from.*?\)\s*$/, '');
+        continue;
+      }
+      
+      // Parse TODO items with status emojis
+      const emojiMatch = trimmed.match(/^[-*]?\s*(✅|🔄|⬜|❌|🔴|🟡|🟢)\s+(.+)$/);
+      if (emojiMatch) {
+        const icon = emojiMatch[1];
+        const text = emojiMatch[2];
+        let status = 'pending';
+        if (icon === '✅' || icon === '🟢') status = 'done';
+        else if (icon === '🔄' || icon === '🔴') status = 'progress';
+        else if (icon === '❌') status = 'failed';
+        else if (icon === '🟡') status = 'blocked';
+        
+        todos.push({ text, status, icon });
+        continue;
+      }
+      
+      // Parse markdown checkbox items: - [x] done, - [ ] pending
+      const checkboxMatch = trimmed.match(/^[-*]\s*\[([ xX✓])\]\s+(.+)$/);
+      if (checkboxMatch) {
+        const checked = checkboxMatch[1] !== ' ';
+        const text = checkboxMatch[2];
+        todos.push({
+          text,
+          status: checked ? 'done' : 'pending',
+          icon: checked ? '✅' : '⬜'
+        });
+        continue;
+      }
+      
+      // Parse lines with status markers: "- **Status:** ...", "- **Goal:** ..."
+      if (trimmed.startsWith('- **Status:**')) {
+        const statusText = trimmed.replace('- **Status:**', '').trim();
+        todos.push({ text: statusText, status: 'progress', icon: '🔄' });
+        continue;
+      }
+      
+      // Parse lines starting with - under Done section
+      if (currentSection.includes('Done') && trimmed.match(/^[-*]\s+\[?\d{4}-\d{2}-\d{2}\]?\s+(.+)/)) {
+        const doneMatch = trimmed.match(/^[-*]\s+\[?\d{4}-\d{2}-\d{2}\]?\s+(.+)/);
+        if (doneMatch) {
+          todos.push({ text: doneMatch[1], status: 'done', icon: '✅' });
+        }
+        continue;
+      }
+      
+      // Parse bullet items under Active/Backlog sections
+      if (trimmed.startsWith('- ') && !trimmed.startsWith('- **')) {
+        const text = trimmed.replace(/^-\s+/, '');
+        if (text.length > 5 && text.length < 200) {
+          let status = 'pending';
+          let icon = '⬜';
+          if (currentSection.includes('Active') || currentSection.includes('🔴')) {
+            status = 'progress';
+            icon = '🔄';
+          } else if (currentSection.includes('Done') || currentSection.includes('✅')) {
+            status = 'done';
+            icon = '✅';
+          } else if (currentSection.includes('Blocked') || currentSection.includes('🟡')) {
+            status = 'blocked';
+            icon = '🟡';
+          }
+          todos.push({ text, status, icon });
+        }
+      }
+    }
+    
+    return {
+      agentId,
+      currentTask: currentTask || 'Standby',
+      todos: todos.slice(0, 15) // Limit to 15 items
+    };
+  }
+  
+  // ── Per-Agent Skills (read fleet/agents/{agent}/SKILLS.md) ─────────────────
+  
+  async getAgentSkills(agentId) {
+    if (!this.workspace) return [];
+    
+    const dirMap = {
+      'atlas': 'coo-atlas',
+      'forge': 'cto-forge',
+      'echo': 'cmo-echo',
+      'hunter': 'cro-hunter',
+      'sentinel': 'auditor-sentinel',
+      'ceo': null
+    };
+    
+    const dirName = dirMap[agentId];
+    if (!dirName) {
+      // CEO: return workspace-level skills
+      return this.getSkills();
+    }
+    
+    const skillsPath = path.join(this.workspace, 'fleet', 'agents', dirName, 'SKILLS.md');
+    const content = safeReadText(skillsPath);
+    if (!content) return [];
+    
+    const skills = [];
+    const lines = content.split('\n');
+    
+    for (const line of lines) {
+      // Parse table rows: | Skill Name | path | description |
+      const tableMatch = line.match(/^\|\s*([^|]+)\s*\|\s*`?([^|`]*)`?\s*\|\s*([^|]*)\s*\|/);
+      if (tableMatch && !line.includes('---')) {
+        const name = tableMatch[1].trim();
+        const location = tableMatch[2].trim();
+        const description = tableMatch[3].trim();
+        // Skip header row (contains "Skill" and "Path" and "Description" as column names)
+        if (name && name !== '---' && name.toLowerCase() !== 'skill' && !name.toLowerCase().startsWith('path')) {
+          skills.push({ name, description, location, enabled: true });
+        }
+        continue;
+      }
+      
+      // Parse bullet items: - Skill Name
+      // Only match bullets under "General Capabilities" or similar sections
+      const bulletMatch = line.match(/^[-*]\s+(.+)$/);
+      if (bulletMatch && !line.includes('Check TODO') && !line.includes('Read inbox') && !line.includes('Load relevant') && !line.includes('Deliver to') && !line.includes('Update skill') && !line.includes('Follow instructions')) {
+        const fullText = bulletMatch[1].trim();
+        // Skip "Skill:" lines (duplicates of table data) and numbered items
+        if (fullText.startsWith('Skill:') || /^\d+\./.test(fullText)) continue;
+        if (fullText.length > 2 && fullText.length < 80) {
+          skills.push({ name: fullText, description: '', location: '', enabled: true });
+        }
+      }
+    }
+    
+    // Also scan the skills/ subdirectory
+    const skillsDir = path.join(this.workspace, 'fleet', 'agents', dirName, 'skills');
+    if (fs.existsSync(skillsDir)) {
+      const dirs = fs.readdirSync(skillsDir).filter(d => {
+        const skillMdPath = path.join(skillsDir, d, 'SKILL.md');
+        return fs.existsSync(skillMdPath);
+      });
+      for (const dir of dirs) {
+        // Check for duplicates: normalize by removing hyphens and lowercasing
+        const dirNorm = dir.toLowerCase().replace(/-/g, ' ');
+        const isDuplicate = skills.some(s => {
+          const nameNorm = (s.name || '').toLowerCase().replace(/-/g, ' ');
+          return nameNorm.includes(dirNorm) || dirNorm.includes(nameNorm);
+        });
+        if (!isDuplicate) {
+          const skillMd = safeReadText(path.join(skillsDir, dir, 'SKILL.md'));
+          const firstLine = skillMd ? skillMd.split('\n').find(l => l.startsWith('#'))?.replace(/^#+\s*/, '') : dir;
+          skills.push({
+            name: firstLine || dir,
+            description: '',
+            location: path.join(skillsDir, dir),
+            enabled: true
+          });
+        }
+      }
+    }
+    
+    return skills;
+  }
+  
+  // ── Send Mission (write to inbox) ─────────────────────────────────────────
+  
+  async sendMission(task, targetAgent = 'ceo') {
+    if (!this.workspace) return { success: false, error: 'Workspace not found' };
+    if (!task || typeof task !== 'string' || task.trim().length === 0) {
+      return { success: false, error: 'Empty mission text' };
+    }
+    
+    try {
+      // Determine inbox directory
+      let inboxDir;
+      if (targetAgent === 'ceo' || !targetAgent) {
+        // Write to CEO's workspace inbox
+        inboxDir = path.join(this.workspace, 'fleet', 'agents', 'apomac', 'inbox');
+        // Fallback: if apomac dir doesn't exist, use a general inbox
+        if (!fs.existsSync(path.join(this.workspace, 'fleet', 'agents', 'apomac'))) {
+          inboxDir = path.join(this.workspace, 'inbox');
+        }
+      } else {
+        const dirMap = {
+          'atlas': 'coo-atlas',
+          'forge': 'cto-forge',
+          'echo': 'cmo-echo',
+          'hunter': 'cro-hunter',
+          'sentinel': 'auditor-sentinel'
+        };
+        const dirName = dirMap[targetAgent];
+        if (!dirName) return { success: false, error: `Unknown agent: ${targetAgent}` };
+        inboxDir = path.join(this.workspace, 'fleet', 'agents', dirName, 'inbox');
+      }
+      
+      // Ensure inbox directory exists
+      if (!fs.existsSync(inboxDir)) {
+        fs.mkdirSync(inboxDir, { recursive: true });
+      }
+      
+      // Generate filename with timestamp
+      const now = new Date();
+      const ts = now.toISOString().replace(/[:.]/g, '-').replace('T', '_').substring(0, 19);
+      const filename = `${ts}_mission.md`;
+      const filePath = path.join(inboxDir, filename);
+      
+      // Write mission file
+      const content = `# Mission — ${now.toISOString()}\n\n` +
+        `**From:** SpawnKit Chat\n` +
+        `**To:** ${targetAgent.charAt(0).toUpperCase() + targetAgent.slice(1)}\n` +
+        `**Time:** ${now.toLocaleString()}\n\n` +
+        `## Task\n\n${task.trim()}\n`;
+      
+      fs.writeFileSync(filePath, content, 'utf8');
+      
+      return {
+        success: true,
+        path: filePath,
+        timestamp: now.toISOString(),
+        target: targetAgent
+      };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }
+  
+  // ── Active Subagents (for meeting room) ────────────────────────────────────
+  
+  async getActiveSubagents() {
+    if (!this.openclawRoot) return [];
+    
+    const runsPath = path.join(this.openclawRoot, 'subagents', 'runs.json');
+    const runsData = safeReadJSON(runsPath);
+    if (!runsData || !runsData.runs) return [];
+    
+    const active = [];
+    for (const [runId, run] of Object.entries(runsData.runs)) {
+      if (!run.outcome) { // Still running
+        active.push({
+          id: runId.substring(0, 8),
+          label: run.label || `run-${runId.substring(0, 8)}`,
+          startTime: run.createdAt ? new Date(run.createdAt).toISOString() : null,
+          parentAgent: run.label ? run.label.split('-')[0].toLowerCase() : 'main',
+          durationMs: run.createdAt ? (Date.now() - run.createdAt) : 0
+        });
+      }
+    }
+    
+    return active;
+  }
+  
+  // ── Save Agent SOUL.md ─────────────────────────────────────────────────────
+  
+  async saveAgentSoul(agentId, data) {
+    if (!this.workspace) return { success: false, error: 'Workspace not found' };
+    
+    const dirMap = {
+      'atlas': 'coo-atlas',
+      'forge': 'cto-forge',
+      'echo': 'cmo-echo',
+      'hunter': 'cro-hunter',
+      'sentinel': 'auditor-sentinel',
+      'ceo': null
+    };
+    
+    const dirName = dirMap[agentId];
+    if (!dirName) return { success: false, error: 'Cannot edit CEO soul' };
+    
+    const soulPath = path.join(this.workspace, 'fleet', 'agents', dirName, 'SOUL.md');
+    
+    try {
+      let content = safeReadText(soulPath) || '';
+      
+      // Update name if provided
+      if (data.name) {
+        content = content.replace(/^#\s+.+$/m, `# ${data.name}`);
+      }
+      
+      // Update role if provided
+      if (data.role) {
+        content = content.replace(/\*\*Role:\*\*\s*.+/i, `**Role:** ${data.role}`);
+      }
+      
+      // Update traits if provided
+      if (data.traits) {
+        content = content.replace(/\*\*Traits:\*\*\s*.+/i, `**Traits:** ${data.traits}`);
+      }
+      
+      fs.writeFileSync(soulPath, content, 'utf8');
+      return { success: true, path: soulPath };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }
+  
+  // ── Save Agent Skills ──────────────────────────────────────────────────────
+  
+  async saveAgentSkills(agentId, skills) {
+    if (!this.workspace) return { success: false, error: 'Workspace not found' };
+    
+    const dirMap = {
+      'atlas': 'coo-atlas',
+      'forge': 'cto-forge',
+      'echo': 'cmo-echo',
+      'hunter': 'cro-hunter',
+      'sentinel': 'auditor-sentinel'
+    };
+    
+    const dirName = dirMap[agentId];
+    if (!dirName) return { success: false, error: 'Unknown agent' };
+    
+    const skillsPath = path.join(this.workspace, 'fleet', 'agents', dirName, 'SKILLS.md');
+    
+    try {
+      let content = `# ${agentId.charAt(0).toUpperCase() + agentId.slice(1)} Skills Index\n\n`;
+      content += `## Available Skills\n\n`;
+      content += `| Skill | Path | Description | Last Updated |\n`;
+      content += `|-------|------|-------------|---------------|\n`;
+      
+      for (const skill of skills) {
+        content += `| ${skill.name} | \`${skill.location || ''}\` | ${skill.description || ''} | ${new Date().toISOString().substring(0, 10)} |\n`;
+      }
+      
+      content += `\n## Skill Loading Protocol\n\n`;
+      content += `1. Check TODO.md for current task\n`;
+      content += `2. Load relevant skill\n`;
+      content += `3. Deliver to outbox/ for CEO review\n`;
+      content += `4. Update skill with lessons learned\n`;
+      
+      fs.writeFileSync(skillsPath, content, 'utf8');
+      return { success: true, path: skillsPath };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }
+  
+  // ── Per-Agent Metrics ──────────────────────────────────────────────────────
+  
+  async getAgentMetrics(agentId) {
+    // Get sessions data to extract per-agent metrics
+    const sessions = await this.getSessions();
+    const agent = sessions.agents.find(a => a.id === agentId);
+    
+    if (!agent) {
+      return { tokens: 0, apiCalls: 0, lastActive: null, status: 'offline' };
+    }
+    
+    return {
+      tokens: agent.tokensUsed || 0,
+      apiCalls: agent.apiCalls || 0,
+      lastActive: agent.lastSeenRelative || 'unknown',
+      status: agent.status || 'offline',
+      modelUsed: agent.modelUsed || ''
+    };
+  }
+  
   // ── Skills (read from OpenClaw config) ────────────────────────────────────
   
   async getSkills() {
@@ -896,6 +1306,102 @@ function registerIPC(ipcMain) {
   ipcMain.handle('spawnkit:getTranscript', (e, sessionKey, limit) => provider.getTranscript(sessionKey, limit));
   ipcMain.handle('spawnkit:getTodoList', () => provider.getTodoList());
   ipcMain.handle('spawnkit:getSkills', () => provider.getSkills());
+  
+  // FIX #2: sendMission IPC handler — actually writes to inbox
+  ipcMain.handle('spawnkit:sendMission', (e, task, targetAgent) => provider.sendMission(task, targetAgent));
+  
+  // FIX #1: Per-agent TODO reading
+  ipcMain.handle('spawnkit:getAgentTodos', (e, agentId) => provider.getAgentTodos(agentId));
+  
+  // FIX #5: Per-agent skills reading
+  ipcMain.handle('spawnkit:getAgentSkills', (e, agentId) => provider.getAgentSkills(agentId));
+  
+  // FIX #7: Active subagents for meeting room
+  ipcMain.handle('spawnkit:getActiveSubagents', () => provider.getActiveSubagents());
+  
+  // FIX #4: Per-agent metrics
+  ipcMain.handle('spawnkit:getAgentMetrics', (e, agentId) => provider.getAgentMetrics(agentId));
+  
+  // NEW #4: Save agent SOUL.md
+  ipcMain.handle('spawnkit:saveAgentSoul', (e, agentId, data) => provider.saveAgentSoul(agentId, data));
+  
+  // NEW #1: Save agent skills
+  ipcMain.handle('spawnkit:saveAgentSkills', (e, agentId, skills) => provider.saveAgentSkills(agentId, skills));
+  
+  // NEW #3: API key management
+  ipcMain.handle('spawnkit:getApiKeys', () => {
+    if (!provider.openclawRoot) return {};
+    const configPath = path.join(provider.openclawRoot, 'openclaw.json');
+    const config = safeReadJSON(configPath);
+    if (!config || !config.models || !config.models.providers) return {};
+    
+    const keys = {};
+    for (const [name, prov] of Object.entries(config.models.providers)) {
+      if (prov.apiKey) {
+        // Return masked version
+        const key = prov.apiKey;
+        keys[name] = {
+          masked: key.length > 8 ? '••••••••' + key.slice(-4) : '••••',
+          hasKey: true
+        };
+      }
+    }
+    return keys;
+  });
+  
+  ipcMain.handle('spawnkit:saveApiKey', (e, provider_name, apiKey) => {
+    if (!provider.openclawRoot) return { success: false, error: 'OpenClaw not found' };
+    const configPath = path.join(provider.openclawRoot, 'openclaw.json');
+    try {
+      const config = safeReadJSON(configPath) || {};
+      if (!config.models) config.models = {};
+      if (!config.models.providers) config.models.providers = {};
+      if (!config.models.providers[provider_name]) config.models.providers[provider_name] = {};
+      config.models.providers[provider_name].apiKey = apiKey;
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+  
+  ipcMain.handle('spawnkit:deleteApiKey', (e, provider_name) => {
+    if (!provider.openclawRoot) return { success: false, error: 'OpenClaw not found' };
+    const configPath = path.join(provider.openclawRoot, 'openclaw.json');
+    try {
+      const config = safeReadJSON(configPath) || {};
+      if (config.models?.providers?.[provider_name]) {
+        delete config.models.providers[provider_name].apiKey;
+      }
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+  
+  // NEW #1: List available skills from workspace/skills/
+  ipcMain.handle('spawnkit:listAvailableSkills', () => {
+    if (!provider.workspace) return [];
+    const skillsDir = path.join(provider.workspace, 'skills');
+    if (!fs.existsSync(skillsDir)) return [];
+    
+    const skills = [];
+    const dirs = fs.readdirSync(skillsDir).filter(d => {
+      return fs.existsSync(path.join(skillsDir, d, 'SKILL.md'));
+    });
+    for (const dir of dirs) {
+      const skillMd = safeReadText(path.join(skillsDir, dir, 'SKILL.md'));
+      const firstLine = skillMd ? skillMd.split('\n').find(l => l.startsWith('#'))?.replace(/^#+\s*/, '') : dir;
+      skills.push({
+        name: firstLine || dir,
+        dirName: dir,
+        location: path.join(skillsDir, dir),
+        description: skillMd ? skillMd.substring(0, 200) : ''
+      });
+    }
+    return skills;
+  });
   
   return provider;
 }

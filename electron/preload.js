@@ -57,9 +57,29 @@ contextBridge.exposeInMainWorld('spawnkitAPI', {
   getTranscript: (sessionKey, limit) => ipcRenderer.invoke('spawnkit:getTranscript', sessionKey, limit),
   getTodoList: () => ipcRenderer.invoke('spawnkit:getTodoList'),
   getSkills: () => ipcRenderer.invoke('spawnkit:getSkills'),
-  sendMission: (task) => ipcRenderer.invoke('spawnkit:sendMission', task),
+  sendMission: (task, targetAgent) => ipcRenderer.invoke('spawnkit:sendMission', task, targetAgent),
   invalidateCache: () => ipcRenderer.invoke('spawnkit:invalidateCache'),
-  onUpdate: (callback) => ipcRenderer.on('spawnkit:update', (_, data) => callback(data))
+  onUpdate: (callback) => ipcRenderer.on('spawnkit:update', (_, data) => callback(data)),
+  
+  // Per-agent data (FIX #1, #5)
+  getAgentTodos: (agentId) => ipcRenderer.invoke('spawnkit:getAgentTodos', agentId),
+  getAgentSkills: (agentId) => ipcRenderer.invoke('spawnkit:getAgentSkills', agentId),
+  getAgentMetrics: (agentId) => ipcRenderer.invoke('spawnkit:getAgentMetrics', agentId),
+  
+  // Active subagents (FIX #7)
+  getActiveSubagents: () => ipcRenderer.invoke('spawnkit:getActiveSubagents'),
+  
+  // Agent editing (NEW #4)
+  saveAgentSoul: (agentId, data) => ipcRenderer.invoke('spawnkit:saveAgentSoul', agentId, data),
+  
+  // Skills management (NEW #1)
+  saveAgentSkills: (agentId, skills) => ipcRenderer.invoke('spawnkit:saveAgentSkills', agentId, skills),
+  listAvailableSkills: () => ipcRenderer.invoke('spawnkit:listAvailableSkills'),
+  
+  // API key management (NEW #3)
+  getApiKeys: () => ipcRenderer.invoke('spawnkit:getApiKeys'),
+  saveApiKey: (provider, apiKey) => ipcRenderer.invoke('spawnkit:saveApiKey', provider, apiKey),
+  deleteApiKey: (provider) => ipcRenderer.invoke('spawnkit:deleteApiKey', provider)
 });
 
 // Platform detection
