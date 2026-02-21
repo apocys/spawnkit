@@ -1,5 +1,5 @@
 /**
- * SimCity Buildings - Phase 3A Foundation
+ * SimCity Buildings - Isometric City Engine
  * 
  * Building management system that:
  * - Maps SpawnKit agents to city buildings

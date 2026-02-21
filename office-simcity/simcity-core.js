@@ -1,5 +1,5 @@
 /**
- * SimCity Core - Phase 3A Foundation
+ * SimCity Core - Isometric City Engine
  * 
  * Main city simulation loop that orchestrates:
  * - Canvas rendering system
