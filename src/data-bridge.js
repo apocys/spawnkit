@@ -41,7 +41,10 @@
 
     // ── Mode Detection ──────────────────────────────────────────────────────
     const hasElectronAPI = typeof window.spawnkitAPI !== 'undefined';
-    SpawnKit.mode = hasElectronAPI ? 'live' : 'demo';
+    const hasRelayAPI = !!(window.OC_RELAY_URL || (typeof process !== 'undefined' && process.env && process.env.OC_RELAY_URL));
+    const relayURL = window.OC_RELAY_URL || (typeof process !== 'undefined' && process.env && process.env.OC_RELAY_URL) || null;
+    const relayToken = window.OC_RELAY_TOKEN || (typeof process !== 'undefined' && process.env && process.env.OC_RELAY_TOKEN) || null;
+    SpawnKit.mode = hasElectronAPI ? 'live' : (hasRelayAPI ? 'live' : 'demo');
 
     // ── Agent OS Naming System v2.0 — MINIMAL, PERFECT & EXTENSIBLE ──────────
     class AgentOSNaming {
@@ -407,6 +410,245 @@
 
     // ── Core Data ───────────────────────────────────────────────────────────
     SpawnKit.data = makeDemoData(); // Start with demo, replaced by live if available
+
+    // ── Relay API Helpers ───────────────────────────────────────────────────
+    async function relayFetch(endpoint) {
+        if (!relayURL) return null;
+        const url = relayURL.replace(/\/+$/, '') + endpoint;
+        const headers = { 'Accept': 'application/json' };
+        if (relayToken) headers['Authorization'] = 'Bearer ' + relayToken;
+        try {
+            const resp = await fetch(url, { headers, mode: 'cors' });
+            if (!resp.ok) {
+                console.warn(`[SpawnKit Relay] ${endpoint} → ${resp.status}`);
+                return null;
+            }
+            return await resp.json();
+        } catch (e) {
+            console.warn(`[SpawnKit Relay] ${endpoint} error:`, e.message);
+            return null;
+        }
+    }
+
+    async function fetchRelayData() {
+        if (!hasRelayAPI) return false;
+        try {
+            // Fetch all endpoints in parallel
+            const [sessions, crons, memory, config, agents] = await Promise.all([
+                relayFetch('/api/oc/sessions'),
+                relayFetch('/api/oc/crons'),
+                relayFetch('/api/oc/memory'),
+                relayFetch('/api/oc/config'),
+                relayFetch('/api/oc/agents')
+            ]);
+
+            if (!sessions && !crons && !memory) {
+                console.warn('[SpawnKit Relay] All endpoints failed — falling back to demo');
+                return false;
+            }
+
+            const newData = mapRelayToSpawnKit({ sessions, crons, memory, config, agents });
+
+            // Detect changes
+            const oldAgents = SpawnKit.data?.agents || [];
+            checkForStatusChanges(oldAgents, newData.agents);
+            const oldSubagents = SpawnKit.data?.subagents || [];
+            checkForNewSubagents(oldSubagents, newData.subagents);
+
+            SpawnKit.data = newData;
+            SpawnKit.mode = 'live';
+            SpawnKit.emit('data:refresh', SpawnKit.data);
+            SpawnKit.emit('mode:live', SpawnKit.data);
+            return true;
+        } catch (e) {
+            console.error('[SpawnKit Relay] fetchRelayData error:', e);
+            return false;
+        }
+    }
+
+    function mapRelayToSpawnKit(raw) {
+        const now = Date.now();
+        const sessionArray = Array.isArray(raw.sessions) ? raw.sessions : [];
+        const cronsRaw = raw.crons;
+        const cronArray = Array.isArray(cronsRaw) ? cronsRaw : (cronsRaw && Array.isArray(cronsRaw.jobs) ? cronsRaw.jobs : []);
+        const agentArray = Array.isArray(raw.agents) ? raw.agents : [];
+
+        // ── Agents ──
+        // If /api/oc/agents returned data, use it; otherwise derive from sessions
+        let mappedAgents;
+        if (agentArray.length > 0) {
+            mappedAgents = agentArray.map(a => {
+                const isActive = a.status === 'active';
+                const lastSeenMs = a.lastActive ? (typeof a.lastActive === 'number' ? a.lastActive : new Date(a.lastActive).getTime()) : null;
+                const modelIdentity = a.model ? SpawnKit.getModelIdentity(a.model) : null;
+                return {
+                    id: a.id,
+                    name: a.id.charAt(0).toUpperCase() + a.id.slice(1),
+                    role: a.isDefault ? 'Main' : 'Agent',
+                    status: a.status || 'offline',
+                    currentTask: isActive ? 'Working...' : 'Standby',
+                    emoji: getAgentEmoji(a.id),
+                    lastSeen: a.lastActive ? new Date(typeof a.lastActive === 'number' ? a.lastActive : a.lastActive).toISOString() : null,
+                    lastSeenRelative: lastSeenMs ? relativeTime(lastSeenMs) : 'unknown',
+                    lastSeenMs: lastSeenMs,
+                    tokensUsed: a.totalTokens || 0,
+                    apiCalls: 0,
+                    model: a.model,
+                    modelIdentity: modelIdentity,
+                    sessionId: a.sessionKey
+                };
+            });
+        } else {
+            // Derive from sessions: group main sessions as agents
+            const mainSessions = sessionArray.filter(s => s.kind === 'main' || s.kind === 'cron');
+            mappedAgents = [{
+                id: 'main',
+                name: 'Sycopa',
+                role: 'Worker',
+                status: mainSessions.some(s => s.status === 'active') ? 'active' : 'idle',
+                currentTask: mainSessions.find(s => s.status === 'active')?.label || 'Standby',
+                emoji: '🎭',
+                lastSeen: mainSessions[0]?.lastActive ? new Date(mainSessions[0].lastActive).toISOString() : null,
+                lastSeenRelative: mainSessions[0]?.lastActive ? relativeTime(mainSessions[0].lastActive) : 'unknown',
+                lastSeenMs: mainSessions[0]?.lastActive || null,
+                tokensUsed: mainSessions.reduce((sum, s) => sum + (s.totalTokens || 0), 0),
+                apiCalls: 0,
+                model: mainSessions[0]?.model || 'unknown',
+                modelIdentity: null,
+                sessionId: mainSessions[0]?.key
+            }];
+        }
+
+        // ── Subagents from sessions ──
+        const subagentSessions = sessionArray.filter(s => s.kind === 'subagent' || (s.key && s.key.includes('subagent')));
+        const mappedSubagents = subagentSessions.map((sa, idx) => {
+            const label = sa.label || sa.key || 'subagent';
+            // Try to extract parent from key: agent:main:subagent:xxx
+            const keyParts = (sa.key || '').split(':');
+            const parentAgent = keyParts.length >= 2 ? keyParts[1] : 'main';
+
+            let agentOSName = null;
+            let parsedName = null;
+
+            // Try legacy migration
+            agentOSName = AgentOSNaming.migrateFromLegacy(label, parentAgent);
+            if (agentOSName) parsedName = AgentOSNaming.parse(agentOSName);
+
+            const displayNames = parsedName?.isValid ? {
+                full: agentOSName,
+                abbreviated: AgentOSNaming.displayName(agentOSName, 'abbreviated')
+            } : {};
+
+            const modelIdentity = sa.model ? SpawnKit.getModelIdentity(sa.model) : null;
+
+            return {
+                id: sa.key || `sa-relay-${idx}`,
+                name: label,
+                agentOSName: agentOSName,
+                parentAgent: parentAgent,
+                parentDisplay: parsedName?.parentDisplay || parentAgent,
+                role: parsedName?.role || 'TaskRunner',
+                idStr: parsedName?.idStr || String(idx + 1).padStart(2, '0'),
+                task: label,
+                status: sa.status === 'active' ? 'running' : 'completed',
+                progress: sa.status === 'active' ? 0.5 : 1.0,
+                startTime: sa.lastActive ? new Date(sa.lastActive).toISOString() : null,
+                displayNames: displayNames,
+                legacyName: label,
+                roleInfo: parsedName?.role ? AgentOSNaming.getRoleInfo(parsedName.role) : null,
+                model: sa.model,
+                modelIdentity: modelIdentity
+            };
+        });
+
+        // ── Missions from active sessions/subagents ──
+        const missions = [];
+        const activeSessions = sessionArray.filter(s => s.status === 'active');
+        activeSessions.forEach(s => {
+            if (s.label && s.label !== s.key) {
+                missions.push({
+                    id: `m-${s.key}`,
+                    name: s.label,
+                    title: s.label,
+                    status: 'in_progress',
+                    progress: 0.5,
+                    priority: s.kind === 'cron' ? 'medium' : 'high',
+                    assignedTo: ['main'],
+                    assignedAgents: ['main'],
+                    startTime: s.lastActive ? new Date(s.lastActive).toISOString() : null
+                });
+            }
+        });
+
+        // ── Crons ──
+        const mappedCrons = cronArray.map(cron => {
+            const schedule = cron.schedule;
+            const cronExpr = schedule && schedule.expr ? schedule.expr : (typeof schedule === 'string' ? schedule : '');
+            const state = cron.state || {};
+            return {
+                id: cron.id,
+                name: cron.name || 'Unnamed cron',
+                schedule: formatCronSchedule(cronExpr),
+                nextRun: state.nextRunAtMs || null,
+                status: cron.enabled ? 'active' : 'disabled',
+                enabled: cron.enabled,
+                owner: cron.agentId || 'main',
+                emoji: getCronEmoji(cron.name || ''),
+                lastRun: state.lastRunAtMs ? new Date(state.lastRunAtMs).toISOString() : null,
+                lastStatus: state.lastStatus || null,
+                description: (cron.payload && cron.payload.text) ? cron.payload.text.substring(0, 100) + '...' : ''
+            };
+        });
+
+        // ── Memory ──
+        const memoryData = raw.memory || {};
+
+        // ── Metrics ──
+        const totalTokens = sessionArray.reduce((sum, s) => sum + (s.totalTokens || 0), 0);
+        const activeSessCount = sessionArray.filter(s => s.status === 'active').length;
+
+        return {
+            agents: mappedAgents,
+            subagents: mappedSubagents,
+            missions: missions.slice(0, 5),
+            crons: mappedCrons,
+            metrics: {
+                tokensToday: totalTokens,
+                apiCallsToday: 0,
+                sessionsActive: activeSessCount,
+                totalTokens: totalTokens,
+                totalCost: estimateCost(totalTokens),
+                uptime: 'live',
+                memoryUsage: 0,
+                cpuUsage: 0,
+                activeAgents: mappedAgents.filter(a => a.status === 'active').length,
+                activeSubagents: mappedSubagents.filter(s => s.status === 'running').length,
+                model: mappedAgents[0]?.model || 'unknown'
+            },
+            events: [],
+            memory: {
+                lastUpdated: memoryData.files && memoryData.files.length > 0 ? new Date().toISOString() : null,
+                fileCount: (memoryData.files || []).length,
+                totalSize: memoryData.main ? `${Math.round(memoryData.main.length / 1024)}KB` : '0KB',
+                longTerm: memoryData.main ? memoryData.main.substring(0, 1000) : null,
+                daily: (memoryData.files || []).slice(0, 3).map(f => ({ name: f.name, size: f.size })),
+                heartbeat: null
+            }
+        };
+    }
+
+    function getAgentEmoji(agentId) {
+        const map = { main: '🎭', forge: '🔨', atlas: '📊', hunter: '💰', echo: '📢', sentinel: '🛡️' };
+        return map[agentId] || '🤖';
+    }
+
+    function relativeTime(ms) {
+        const diff = Date.now() - (typeof ms === 'number' ? ms : new Date(ms).getTime());
+        if (diff < 60000) return Math.round(diff / 1000) + 's ago';
+        if (diff < 3600000) return Math.round(diff / 60000) + 'm ago';
+        if (diff < 86400000) return Math.round(diff / 3600000) + 'h ago';
+        return Math.round(diff / 86400000) + 'd ago';
+    }
 
     // ── Live Data Fetching (Electron) ───────────────────────────────────────
     async function fetchLiveData() {
@@ -778,6 +1020,8 @@
         
         if (hasElectronAPI) {
             await fetchLiveData();
+        } else if (hasRelayAPI) {
+            await fetchRelayData();
         } else {
             // Demo mode: simulate minor updates
             (SpawnKit.data?.agents || []).forEach(agent => {
@@ -862,9 +1106,15 @@
                 if (SpawnKit.mode === 'live' && refreshCount % 3 === 0) {
                     console.warn('⚠️  SpawnKit: Multiple live refresh failures, checking connection...');
                     try {
-                        const available = await window.spawnkitAPI?.isAvailable();
-                        if (!available) {
-                            console.log('🎮 SpawnKit: OpenClaw connection lost, falling back to demo mode');
+                        let connected = false;
+                        if (hasElectronAPI) {
+                            connected = await window.spawnkitAPI?.isAvailable();
+                        } else if (hasRelayAPI) {
+                            const health = await relayFetch('/api/oc/health');
+                            connected = !!(health && health.ok);
+                        }
+                        if (!connected) {
+                            console.log('🎮 SpawnKit: Connection lost, falling back to demo mode');
                             SpawnKit.mode = 'demo';
                             SpawnKit.data = makeDemoData();
                             showDemoBadge();
@@ -909,6 +1159,10 @@
                 if (hasElectronAPI && window.spawnkitAPI.getSessions) {
                     return await window.spawnkitAPI.getSessions();
                 }
+                if (hasRelayAPI) {
+                    const data = await relayFetch('/api/oc/sessions?all=true');
+                    return { sessions: data || [] };
+                }
                 return { sessions: (SpawnKit.data?.agents || []).concat(SpawnKit.data?.subagents || []) };
             } catch (e) {
                 console.error('SpawnKit.api.getSessions error:', e);
@@ -919,6 +1173,11 @@
             try {
                 if (hasElectronAPI && window.spawnkitAPI.getCrons) {
                     return await window.spawnkitAPI.getCrons();
+                }
+                if (hasRelayAPI) {
+                    const data = await relayFetch('/api/oc/crons');
+                    const jobs = data && data.jobs ? data.jobs : (Array.isArray(data) ? data : []);
+                    return { crons: jobs };
                 }
                 return { crons: SpawnKit.data?.crons || [] };
             } catch (e) {
@@ -931,6 +1190,10 @@
                 if (hasElectronAPI && window.spawnkitAPI.getAgentInfo) {
                     return await window.spawnkitAPI.getAgentInfo(agentId);
                 }
+                if (hasRelayAPI) {
+                    const agents = await relayFetch('/api/oc/agents');
+                    if (Array.isArray(agents)) return agents.find(a => a.id === agentId) || null;
+                }
                 return (SpawnKit.data?.agents || []).find(a => a?.id === agentId) || null;
             } catch (e) {
                 console.error('SpawnKit.api.getAgentInfo error:', e);
@@ -941,6 +1204,9 @@
             try {
                 if (hasElectronAPI && window.spawnkitAPI.getMemory) {
                     return await window.spawnkitAPI.getMemory();
+                }
+                if (hasRelayAPI) {
+                    return await relayFetch('/api/oc/memory');
                 }
                 return SpawnKit.data?.memory || null;
             } catch (e) {
@@ -1062,6 +1328,8 @@
             return {
                 mode: SpawnKit.mode,
                 hasElectronAPI: hasElectronAPI,
+                hasRelayAPI: hasRelayAPI,
+                relayURL: relayURL,
                 dataSize: JSON.stringify(SpawnKit.data || {}).length,
                 agentCount: SpawnKit.data?.agents?.length || 0,
                 subagentCount: SpawnKit.data?.subagents?.length || 0,
@@ -1091,7 +1359,7 @@
         
         const badge = document.createElement('div');
         badge.id = 'spawnkit-demo-badge';
-        badge.innerHTML = '🎮 DEMO MODE — <a href="https://spawnkit.ai" target="_blank" style="color:inherit;text-decoration:underline">Get SpawnKit</a> for live data';
+        badge.innerHTML = '🎮 DEMO MODE — Set <code>window.OC_RELAY_URL</code> or <a href="https://spawnkit.ai" target="_blank" style="color:inherit;text-decoration:underline">Get SpawnKit</a> for live data';
         badge.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);background:rgba(99,102,241,0.9);color:white;padding:6px 16px;border-radius:100px;font-size:11px;font-family:Inter,system-ui,sans-serif;z-index:999999;backdrop-filter:blur(8px);pointer-events:auto;cursor:pointer;';
         
         // Click to hide badge
@@ -1137,8 +1405,21 @@
                     SpawnKit.data = makeDemoData();
                     showDemoBadge();
                 }
+            } else if (hasRelayAPI) {
+                console.log('🔍 SpawnKit: Relay API detected (' + relayURL + '), attempting live connection...');
+                const gotRelay = await fetchRelayData();
+                if (gotRelay) {
+                    console.log('🌐 SpawnKit: Connected via Fleet Relay (live data)');
+                    console.log(`📊 SpawnKit: Found ${SpawnKit.data.agents.length} agents, ${SpawnKit.data.subagents.length} subagents, ${SpawnKit.data.crons.length} crons`);
+                    hideDemoBadge();
+                } else {
+                    console.log('🎮 SpawnKit: Relay connection failed, falling back to demo mode');
+                    SpawnKit.mode = 'demo';
+                    SpawnKit.data = makeDemoData();
+                    showDemoBadge();
+                }
             } else {
-                console.log('🎮 SpawnKit: Demo mode (browser — no Electron API)');
+                console.log('🎮 SpawnKit: Demo mode (browser — no Electron API, no Relay URL)');
                 SpawnKit.mode = 'demo';
                 SpawnKit.data = makeDemoData();
                 showDemoBadge();
