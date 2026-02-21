@@ -3747,7 +3747,7 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 if (document.getElementById('remoteOverlay').classList.contains('open')) {
-                    closeAllOverlays();
+                    closeRemotePanel();
                 } else if (document.getElementById('missionsOverlay').classList.contains('open')) {
                     closeMissionsPanel();
                 } else if (document.getElementById('settingsOverlay').classList.contains('open')) {
@@ -5071,7 +5071,6 @@
             _origCloseAll();
             closeMissionsPanel();
             closeSettingsPanel();
-            closeAllOverlays();
         };
 
         document.addEventListener('DOMContentLoaded', function() {
