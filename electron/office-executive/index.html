@@ -3174,6 +3174,7 @@
 
     (function() {
         'use strict';
+        try {
 
         /* ═══════════════════════════════════════════════
            Configuration & Mock Data
@@ -3413,9 +3414,9 @@
             var avatarId = AVATAR_MAP[agent.name];
             var avatarEl = document.getElementById('detailAvatar');
             if (avatarId) {
-                avatarEl.innerHTML = '<svg><use href="#' + avatarId + '"/></svg><div class="detail-hero-status" id="detailStatusDot"></div>';
+                avatarEl.innerHTML = '<svg><use href="#' + esc(avatarId) + '"/></svg><div class="detail-hero-status" id="detailStatusDot"></div>';
             } else {
-                avatarEl.innerHTML = '<div style="width:64px;height:64px;border-radius:50%;background:' + agent.color + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700">' + agent.name.charAt(0) + '</div>';
+                avatarEl.innerHTML = '<div style="width:64px;height:64px;border-radius:50%;background:' + esc(agent.color) + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700">' + esc(agent.name.charAt(0)) + '</div>';
             }
             var sc = (agent.status === 'active' || agent.status === 'working') ? 'var(--status-active)' :
                      (agent.status === 'busy' || agent.status === 'building') ? 'var(--status-busy)' : 'var(--status-idle)';
@@ -3907,17 +3908,17 @@
                 // Dispatch indicator
                 var dispatchHtml = '';
                 if (msg.assignedTo) {
-                    dispatchHtml = '<div class="mail-dispatch"><span>📨</span> <span class="mail-dispatch-arrow">→</span> <strong>' + msg.assignedTo + '</strong></div>';
+                    dispatchHtml = '<div class="mail-dispatch"><span>📨</span> <span class="mail-dispatch-arrow">→</span> <strong>' + esc(msg.assignedTo) + '</strong></div>';
                 }
 
                 item.innerHTML =
-                    '<div class="mail-avatar" style="background: ' + msg.color + ';" aria-hidden="true">' + avatarContent + '</div>' +
+                    '<div class="mail-avatar" style="background: ' + esc(msg.color) + ';" aria-hidden="true">' + avatarContent + '</div>' +
                     '<div class="mail-content">' +
                         '<div class="mail-header">' +
-                            '<span class="mail-sender">' + msg.sender + '</span>' +
-                            '<span class="mail-time">' + msg.time + '</span>' +
+                            '<span class="mail-sender">' + esc(msg.sender) + '</span>' +
+                            '<span class="mail-time">' + esc(msg.time) + '</span>' +
                         '</div>' +
-                        '<div class="mail-preview">' + msg.text + '</div>' +
+                        '<div class="mail-preview">' + esc(msg.text) + '</div>' +
                         '<div class="mail-flags">' + priorityFlag + '</div>' +
                         dispatchHtml +
                     '</div>' + unreadIndicator;
@@ -4324,7 +4325,7 @@
             var html = '';
             Object.keys(groups).forEach(function(owner) {
                 html += '<div class="cron-group">';
-                html += '<div class="cron-group-title">' + owner + '</div>';
+                html += '<div class="cron-group-title">' + esc(owner) + '</div>';
                 groups[owner].forEach(function(c) {
                     var statusCls = c.status === 'active' ? 'active' : c.status === 'error' ? 'error' : 'paused';
                     var icon = c.status === 'active' ? '⏰' : c.status === 'error' ? '❌' : '⏸️';
@@ -4332,12 +4333,12 @@
                     html += '<div class="cron-item">';
                     html += '<span class="cron-item-icon">' + icon + '</span>';
                     html += '<div class="cron-item-info">';
-                    html += '<div class="cron-item-name">' + (c.name || c.id || 'Unnamed') + '</div>';
+                    html += '<div class="cron-item-name">' + esc(c.name || c.id || 'Unnamed') + '</div>';
                     html += '<div class="cron-item-schedule">' + humanCron(c.schedule) + '</div>';
                     html += '<div class="cron-item-next">Next: ' + nextRun + '</div>';
                     html += '</div>';
-                    html += '<span class="cron-item-status cron-item-status--' + statusCls + '">' + (c.status || 'unknown') + '</span>';
-                    html += '<button class="cron-toggle ' + (c.status === 'active' ? 'on' : '') + '" data-cron-id="' + (c.id || '') + '" aria-label="Toggle"></button>';
+                    html += '<span class="cron-item-status cron-item-status--' + statusCls + '">' + esc(c.status || 'unknown') + '</span>';
+                    html += '<button class="cron-toggle ' + (c.status === 'active' ? 'on' : '') + '" data-cron-id="' + esc(c.id || '') + '" aria-label="Toggle"></button>';
                     html += '</div>';
                 });
                 html += '</div>';
@@ -4437,8 +4438,8 @@
                 html += '<div class="memory-daily-list">';
                 mem.daily.slice(0, 14).forEach(function(d) {
                     html += '<div class="memory-daily-item">';
-                    html += '<span class="memory-daily-item-date">' + (d.date || d.name || '—') + '</span>';
-                    html += '<span>' + (d.preview || d.description || 'Daily log') + '</span>';
+                    html += '<span class="memory-daily-item-date">' + esc(d.date || d.name || '—') + '</span>';
+                    html += '<span>' + esc(d.preview || d.description || 'Daily log') + '</span>';
                     html += '<span class="memory-daily-item-size">' + (d.size ? (d.size / 1024).toFixed(1) + ' KB' : '') + '</span>';
                     html += '</div>';
                 });
@@ -4597,9 +4598,9 @@
                             var modelIdentity = window.ModelIdentity.getIdentity(subagent.model);
                             var roleEl = card.querySelector('.sub-agent-role');
                             if (roleEl) {
-                                roleEl.innerHTML = subagent.task + ' <span class="model-badge" style="color: ' + 
-                                    modelIdentity.color + '; font-size: 8px; font-weight: 600;">(' + 
-                                    modelIdentity.level + ')</span>';
+                                roleEl.innerHTML = esc(subagent.task) + ' <span class="model-badge" style="color: ' + 
+                                    esc(modelIdentity.color) + '; font-size: 8px; font-weight: 600;">(' + 
+                                    esc(modelIdentity.level) + ')</span>';
                             }
                         }
                     }
@@ -4675,8 +4676,8 @@
                         html += '<div class="cron-item">';
                         html += '<span class="cron-item-icon">🚀</span>';
                         html += '<div class="cron-item-info">';
-                        html += '<div class="cron-item-name">' + (sa.name || sa.label || sa.id) + '</div>';
-                        html += '<div class="cron-item-schedule">Parent: ' + (sa.parentAgent || 'main') + ' • ' + duration + 'm</div>';
+                        html += '<div class="cron-item-name">' + esc(sa.name || sa.label || sa.id) + '</div>';
+                        html += '<div class="cron-item-schedule">Parent: ' + esc(sa.parentAgent || 'main') + ' • ' + duration + 'm</div>';
                         html += '<div style="margin-top:4px;height:4px;background:var(--bg-tertiary);border-radius:2px;overflow:hidden;"><div style="width:' + Math.round(progress * 100) + '%;height:100%;background:var(--exec-blue);border-radius:2px;transition:width 0.3s;"></div></div>';
                         html += '</div>';
                         html += '<span class="cron-item-status cron-item-status--active">' + Math.round(progress * 100) + '%</span>';
@@ -4692,8 +4693,8 @@
                         html += '<div class="cron-item" style="opacity:0.7">';
                         html += '<span class="cron-item-icon">✅</span>';
                         html += '<div class="cron-item-info">';
-                        html += '<div class="cron-item-name">' + (sa.name || sa.label || sa.id) + '</div>';
-                        html += '<div class="cron-item-schedule">Parent: ' + (sa.parentAgent || 'main') + '</div>';
+                        html += '<div class="cron-item-name">' + esc(sa.name || sa.label || sa.id) + '</div>';
+                        html += '<div class="cron-item-schedule">Parent: ' + esc(sa.parentAgent || 'main') + '</div>';
                         html += '</div>';
                         html += '<span class="cron-item-status" style="color:var(--status-active);">Done</span>';
                         html += '</div>';
@@ -4708,7 +4709,7 @@
                         html += '<div class="cron-item" style="opacity:0.6">';
                         html += '<span class="cron-item-icon">❌</span>';
                         html += '<div class="cron-item-info">';
-                        html += '<div class="cron-item-name">' + (sa.name || sa.label || sa.id) + '</div>';
+                        html += '<div class="cron-item-name">' + esc(sa.name || sa.label || sa.id) + '</div>';
                         html += '</div>';
                         html += '<span class="cron-item-status cron-item-status--error">Error</span>';
                         html += '</div>';
@@ -4718,7 +4719,7 @@
 
                 missionsBody.innerHTML = html;
             } catch(e) {
-                missionsBody.innerHTML = '<div class="cron-empty">Error loading missions: ' + e.message + '</div>';
+                missionsBody.innerHTML = '<div class="cron-empty">Error loading missions: ' + esc(e.message) + '</div>';
             }
         }
 
@@ -4773,7 +4774,7 @@
                 html += '<div class="cron-item" style="flex-wrap:wrap;">';
                 html += '<div class="cron-item-info" style="flex:1;min-width:150px;">';
                 html += '<div class="cron-item-name">' + providerLabels[prov] + '</div>';
-                html += '<div class="cron-item-schedule" style="font-family:monospace;font-size:11px;">' + masked + '</div>';
+                html += '<div class="cron-item-schedule" style="font-family:monospace;font-size:11px;">' + esc(masked) + '</div>';
                 html += '</div>';
                 html += '<div style="display:flex;gap:4px;align-items:center;">';
                 html += '<input type="password" id="apikey-' + prov + '" placeholder="' + (providerPrefixes[prov] || '') + '..." style="width:160px;padding:4px 8px;border-radius:6px;border:1px solid var(--border-medium);font-size:11px;font-family:monospace;background:var(--bg-tertiary);color:var(--text-primary);" />';
@@ -4803,9 +4804,9 @@
             html += '<div></div>';
             html += '<div style="font-size:10px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;">SpawnKit</div>';
             mappings.forEach(function(m) {
-                html += '<div style="font-size:13px;padding:4px 0;">' + m.icon + ' ' + m.openclaw + '</div>';
+                html += '<div style="font-size:13px;padding:4px 0;">' + m.icon + ' ' + esc(m.openclaw) + '</div>';
                 html += '<div style="font-size:12px;color:var(--exec-blue);text-align:center;">→</div>';
-                html += '<div style="font-size:13px;padding:4px 0;color:var(--text-secondary);">' + m.spawnkit + '</div>';
+                html += '<div style="font-size:13px;padding:4px 0;color:var(--text-secondary);">' + esc(m.spawnkit) + '</div>';
             });
             html += '</div>';
             html += '</div>';
@@ -5049,7 +5050,7 @@
                 if (active && active.length > 0) {
                     if (count) count.textContent = active.length;
                     preview.innerHTML = active.slice(0, 2).map(function(sa) {
-                        return '<div class="meeting-active">🔴 ' + (sa.label || 'sub-agent') + '</div>';
+                        return '<div class="meeting-active">🔴 ' + esc(sa.label || 'sub-agent') + '</div>';
                     }).join('');
                     if (active.length > 2) {
                         preview.innerHTML += '<div class="meeting-active" style="opacity:0.6">+' + (active.length - 2) + ' more</div>';
@@ -5103,6 +5104,12 @@
             }
         });
 
+        } catch(e) {
+            console.error('SpawnKit Executive initialization error:', e);
+            // Safe error message escaping (fallback if esc() fails)
+            var errorMsg = e.message ? String(e.message).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : 'Unknown error';
+            document.body.innerHTML = '<div style="padding:40px;text-align:center;font-family:system-ui"><h2>⚠️ SpawnKit failed to load</h2><p style="color:#666">Please refresh the page. Error: ' + errorMsg + '</p></div>';
+        }
     })();
     </script>
 
