@@ -2649,6 +2649,367 @@
                 transition-duration: 0.01ms !important;
             }
         }
+
+        /* ═══════════════════════════════════════════════════
+           #1 — Logs Metrics Header
+           ═══════════════════════════════════════════════════ */
+        .logs-metrics-bar {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+            padding: 14px 24px; border-bottom: 1px solid var(--border-subtle);
+            background: var(--bg-tertiary);
+        }
+        .logs-metric-card {
+            display: flex; flex-direction: column; gap: 2px;
+            padding: 8px 10px; background: var(--bg-secondary);
+            border-radius: 8px; border: 1px solid var(--border-subtle);
+        }
+        .logs-metric-card-value {
+            font-size: 15px; font-weight: 700; color: var(--text-primary);
+        }
+        .logs-metric-card-label {
+            font-size: 10px; font-weight: 500; color: var(--text-tertiary);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           #3 — CEO Detail: Gold border, crown, mini-chat
+           ═══════════════════════════════════════════════════ */
+        .detail-ceo-crown {
+            position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+            font-size: 20px; z-index: 3; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+        }
+        .detail-hero--ceo {
+            border-bottom: 2px solid #FFD60A !important;
+            background: linear-gradient(135deg, rgba(255,214,10,0.04), transparent);
+        }
+        .detail-hero--ceo .detail-hero-avatar {
+            border: 3px solid #FFD60A; border-radius: 50%;
+        }
+        .detail-mini-chat {
+            display: flex; flex-direction: column; gap: 8px;
+            max-height: 200px; overflow-y: auto;
+        }
+        .detail-mini-chat-msg {
+            display: flex; gap: 8px; align-items: flex-start;
+            padding: 6px 10px; border-radius: 10px;
+            font-size: 12px; line-height: 1.4;
+            background: var(--bg-tertiary);
+        }
+        .detail-mini-chat-msg--user {
+            background: rgba(0,122,255,0.08);
+        }
+        .detail-mini-chat-msg-role {
+            font-weight: 600; font-size: 10px;
+            color: var(--text-tertiary); white-space: nowrap;
+            min-width: 48px;
+        }
+        .detail-mini-chat-msg-text {
+            color: var(--text-secondary); flex: 1;
+        }
+        .detail-open-chat-btn {
+            display: flex; align-items: center; justify-content: center;
+            gap: 6px; padding: 10px 16px; margin-top: 8px;
+            background: var(--exec-blue); color: #fff;
+            border: none; border-radius: 10px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            font-family: var(--font-family);
+            transition: all 0.2s var(--ease-smooth);
+        }
+        .detail-open-chat-btn:hover { background: var(--exec-blue-hover); transform: translateY(-1px); }
+
+        /* ═══════════════════════════════════════════════════
+           #7 — Calendar Timeline Header
+           ═══════════════════════════════════════════════════ */
+        .cron-timeline {
+            display: flex; align-items: flex-end; gap: 2px;
+            padding: 16px 24px 12px; border-bottom: 1px solid var(--border-subtle);
+            background: var(--bg-tertiary); overflow-x: auto;
+        }
+        .cron-timeline-hour {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            min-width: 32px;
+        }
+        .cron-timeline-bar {
+            width: 24px; border-radius: 4px 4px 0 0;
+            background: var(--exec-gray-100); transition: background 0.2s;
+        }
+        .cron-timeline-bar.has-event {
+            background: var(--exec-blue);
+        }
+        .cron-timeline-bar.current-hour {
+            background: var(--status-active); box-shadow: 0 0 6px rgba(48,209,88,0.4);
+        }
+        .cron-timeline-label {
+            font-size: 9px; color: var(--text-tertiary); font-weight: 500;
+        }
+        .cron-timeline-label.current-hour { color: var(--status-active); font-weight: 700; }
+
+        /* ═══════════════════════════════════════════════════
+           #9 — Model Dropdown, Priority, Session selectors
+           ═══════════════════════════════════════════════════ */
+        .detail-editor-select {
+            padding: 7px 12px; border-radius: 8px;
+            border: 1px solid var(--border-medium);
+            font-size: 13px; font-family: var(--font-family);
+            background: var(--bg-tertiary); color: var(--text-primary);
+            outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+            cursor: pointer; width: 100%;
+        }
+        .detail-editor-select:focus {
+            border-color: var(--exec-blue);
+            box-shadow: 0 0 0 3px var(--exec-blue-muted);
+        }
+        .detail-readonly-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 12px; background: rgba(0,0,0,0.04);
+            border: 1px solid var(--border-subtle); border-radius: 8px;
+            font-size: 11px; font-weight: 500; color: var(--text-tertiary);
+        }
+        .detail-soul-preview {
+            padding: 10px 14px; background: var(--bg-tertiary);
+            border-radius: 8px; border-left: 3px solid var(--exec-blue);
+            font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+            font-style: italic; max-height: 120px; overflow-y: auto;
+        }
+        .detail-skill-checkbox {
+            display: flex; align-items: center; gap: 8px;
+            padding: 5px 0; font-size: 13px; color: var(--text-primary);
+        }
+        .detail-skill-checkbox input[type="checkbox"] {
+            accent-color: var(--exec-blue);
+        }
+        .detail-skill-checkbox-desc {
+            font-size: 11px; color: var(--text-tertiary); margin-left: auto;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           #10 — Idle agent enhanced visuals
+           ═══════════════════════════════════════════════════ */
+        .idle-timer {
+            font-size: 10px; color: var(--text-tertiary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           #11 — Sub-agent dispatch hint in chat
+           ═══════════════════════════════════════════════════ */
+        .chat-route-hint {
+            padding: 6px 16px; font-size: 11px; color: var(--text-tertiary);
+            background: rgba(0,122,255,0.04); border-bottom: 1px solid var(--border-subtle);
+            display: none;
+        }
+        .chat-route-hint.visible { display: block; }
+
+        /* ═══════════════════════════════════════════════════
+           #12 — Mailbox notification pulse
+           ═══════════════════════════════════════════════════ */
+        .mailbox-notif-dot {
+            position: absolute; top: -3px; right: -3px;
+            width: 10px; height: 10px; background: #FF453A;
+            border-radius: 50%; border: 2px solid var(--bg-room);
+            animation: mailboxNotifPulse 2s ease-in-out infinite;
+            z-index: 3;
+        }
+        @keyframes mailboxNotifPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,69,58,0.4); }
+            50% { transform: scale(1.2); box-shadow: 0 0 0 6px rgba(255,69,58,0); }
+        }
+        .mail-item--new {
+            background: rgba(0,122,255,0.04);
+            animation: mailNewSlide 0.4s var(--ease-smooth);
+        }
+        @keyframes mailNewSlide {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ═══════════════════════════════════════════════════
+           #13 — Mailbox dispatch detail view
+           ═══════════════════════════════════════════════════ */
+        .mail-detail-view {
+            padding: 20px 24px; border-bottom: 1px solid var(--border-subtle);
+            animation: detailSlideIn 0.3s var(--ease-smooth);
+        }
+        .mail-detail-header {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+        }
+        .mail-detail-back {
+            width: 28px; height: 28px;
+            display: flex; align-items: center; justify-content: center;
+            border: none; background: var(--bg-tertiary); color: var(--text-secondary);
+            border-radius: 7px; cursor: pointer; font-size: 14px;
+            transition: all 0.2s var(--ease-smooth); font-family: inherit;
+        }
+        .mail-detail-back:hover { background: var(--exec-gray-100); }
+        .mail-detail-sender {
+            font-size: 15px; font-weight: 700; color: var(--text-primary);
+        }
+        .mail-detail-time {
+            font-size: 11px; color: var(--text-tertiary); margin-left: auto;
+        }
+        .mail-detail-body {
+            font-size: 14px; color: var(--text-primary); line-height: 1.6;
+            margin-bottom: 16px; white-space: pre-wrap;
+        }
+        .mail-detail-priority {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 12px; border-radius: 6px;
+            font-size: 12px; font-weight: 600;
+        }
+        .mail-detail-priority--urgent { background: rgba(255,69,58,0.1); color: #FF453A; }
+        .mail-detail-priority--normal { background: rgba(255,214,10,0.1); color: #B89B00; }
+        .mail-detail-priority--info { background: rgba(48,209,88,0.1); color: #30D158; }
+        .mail-detail-dispatch {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 16px; margin-top: 12px;
+            background: rgba(0,122,255,0.04); border-radius: 10px;
+            border: 1px solid rgba(0,122,255,0.1);
+        }
+        .mail-detail-dispatch-arrow {
+            font-size: 18px; color: var(--exec-blue);
+            animation: dispatchArrowAnim 1.5s ease-in-out infinite;
+        }
+        @keyframes dispatchArrowAnim {
+            0%, 100% { transform: translateX(0); opacity: 1; }
+            50% { transform: translateX(4px); opacity: 0.6; }
+        }
+        .mail-detail-dispatch-target {
+            font-size: 13px; font-weight: 600; color: var(--text-primary);
+        }
+        .mail-detail-dispatch-status {
+            margin-left: auto; font-size: 12px; font-weight: 500;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           #14 — Room backgrounds: stronger visual identity
+           ═══════════════════════════════════════════════════ */
+        .exec-room--ceo {
+            background: linear-gradient(135deg,
+                rgba(255, 214, 10, 0.06) 0%,
+                rgba(255, 255, 255, 0.95) 30%,
+                rgba(255, 248, 220, 0.4) 100%
+            ) !important;
+            border: 1px solid rgba(255, 214, 10, 0.2) !important;
+            border-left: 4px solid #FFD60A !important;
+        }
+        .exec-room--forge {
+            background: linear-gradient(135deg,
+                rgba(124, 58, 237, 0.06) 0%,
+                rgba(255, 255, 255, 0.92) 50%,
+                rgba(238, 230, 255, 0.3) 100%
+            ) !important;
+        }
+        .exec-room--atlas {
+            background: linear-gradient(135deg,
+                rgba(6, 182, 212, 0.05) 0%,
+                rgba(255, 255, 255, 0.92) 50%,
+                rgba(220, 245, 250, 0.3) 100%
+            ) !important;
+        }
+        .exec-room--hunter {
+            background: linear-gradient(135deg,
+                rgba(239, 68, 68, 0.05) 0%,
+                rgba(255, 255, 255, 0.92) 50%,
+                rgba(255, 230, 230, 0.3) 100%
+            ) !important;
+        }
+        .exec-room--echo {
+            background: linear-gradient(135deg,
+                rgba(236, 72, 153, 0.05) 0%,
+                rgba(255, 255, 255, 0.92) 50%,
+                rgba(255, 228, 240, 0.3) 100%
+            ) !important;
+        }
+        .exec-room--sentinel {
+            background: linear-gradient(135deg,
+                rgba(34, 197, 94, 0.05) 0%,
+                rgba(255, 255, 255, 0.92) 50%,
+                rgba(220, 255, 230, 0.3) 100%
+            ) !important;
+        }
+        .exec-room--meeting {
+            background: linear-gradient(135deg,
+                rgba(0, 122, 255, 0.04) 0%,
+                rgba(255, 255, 255, 0.92) 50%,
+                rgba(230, 240, 255, 0.3) 100%
+            ) !important;
+        }
+        /* Architectural walls between rooms */
+        .exec-floor {
+            background: linear-gradient(135deg, rgba(0,0,0,0.02), transparent);
+            border-radius: 20px;
+            padding: 18px 26px 26px !important;
+        }
+        .exec-room {
+            border: 1px solid rgba(0,0,0,0.08) !important;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5);
+        }
+
+        /* ═══════════════════════════════════════════════════
+           #15 — Skills list checkboxes in settings
+           ═══════════════════════════════════════════════════ */
+        .skills-list-grid {
+            display: flex; flex-direction: column; gap: 6px;
+        }
+        .skill-list-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px; background: var(--bg-tertiary);
+            border-radius: 8px; transition: background 0.15s;
+        }
+        .skill-list-item:hover { background: var(--exec-gray-100); }
+        .skill-list-item-check {
+            font-size: 14px; color: var(--status-active); flex-shrink: 0;
+        }
+        .skill-list-item-name {
+            font-size: 13px; font-weight: 600; color: var(--text-primary);
+        }
+        .skill-list-item-desc {
+            font-size: 11px; color: var(--text-tertiary); margin-left: auto;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           #16 — Memory golden rules enhanced
+           ═══════════════════════════════════════════════════ */
+        .memory-golden-rules {
+            background: linear-gradient(135deg, rgba(255,214,10,0.08), rgba(255,69,58,0.04)) !important;
+            border: 1px solid rgba(255,69,58,0.2) !important;
+            border-left: 4px solid #FF453A !important;
+        }
+        .memory-golden-rules-title {
+            color: #FF453A !important; font-size: 13px !important;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           #18 — Decommission enhanced particles
+           ═══════════════════════════════════════════════════ */
+        .decommission-overlay-flash {
+            position: fixed; inset: 0; z-index: 998;
+            background: rgba(255,69,58,0.05);
+            animation: decommFlash 600ms ease-out forwards;
+            pointer-events: none;
+        }
+        @keyframes decommFlash {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* ═══════════════════════════════════════════════════
+           Missions — Progress bar styles
+           ═══════════════════════════════════════════════════ */
+        .mission-progress-bar {
+            height: 6px; background: var(--exec-gray-100);
+            border-radius: 3px; overflow: hidden; margin-top: 6px;
+        }
+        .mission-progress-fill {
+            height: 100%; border-radius: 3px;
+            transition: width 0.6s var(--ease-smooth);
+        }
+        .mission-progress-fill--active { background: var(--exec-blue); }
+        .mission-progress-fill--done { background: var(--status-active); }
+        .mission-meta {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 11px; color: var(--text-tertiary); margin-top: 4px;
+        }
     </style>
 </head>
 <body>
@@ -3256,6 +3617,7 @@
                 </div>
                 <button class="chat-close" id="chatClose" aria-label="Close chat">×</button>
             </div>
+            <div class="chat-route-hint" id="chatRouteHint"></div>
             <div class="chat-messages" id="chatMessages">
                 <div class="chat-empty" id="chatEmpty">No messages yet. Send a mission to the CEO.</div>
             </div>
@@ -3417,12 +3779,155 @@
         var API = (typeof window.spawnkitAPI !== 'undefined') ? window.spawnkitAPI : null;
 
         var AGENTS = {
-            ceo:      { name: setupConfig.userName || 'ApoMac', role: setupConfig.ceoName || 'CEO', color: '#007AFF', status: 'active', task: 'Orchestrating fleet operations' },
-            atlas:    { name: 'Atlas',    role: 'COO',           color: '#BF5AF2', status: 'idle', task: '' },
-            forge:    { name: 'Forge',    role: 'CTO',           color: '#FF9F0A', status: 'idle', task: '' },
-            hunter:   { name: 'Hunter',   role: 'CRO',           color: '#FF453A', status: 'idle', task: '' },
-            echo:     { name: 'Echo',     role: 'CMO',           color: '#0A84FF', status: 'idle', task: '' },
-            sentinel: { name: 'Sentinel', role: 'QA & Security', color: '#30D158', status: 'idle', task: '' },
+            ceo:      { name: setupConfig.userName || 'ApoMac', role: setupConfig.ceoName || 'CEO', color: '#007AFF', status: 'active', task: 'Orchestrating fleet operations', isSubAgent: false },
+            atlas:    { name: 'Atlas',    role: 'COO',           color: '#BF5AF2', status: 'active', task: 'Coordinating FeedCast ops', isSubAgent: false },
+            forge:    { name: 'Forge',    role: 'CTO',           color: '#FF9F0A', status: 'busy', task: 'Building Executive theme SS+', isSubAgent: false },
+            hunter:   { name: 'Hunter',   role: 'CRO',           color: '#FF453A', status: 'active', task: 'Analyzing conversion funnel', isSubAgent: false },
+            echo:     { name: 'Echo',     role: 'CMO',           color: '#0A84FF', status: 'idle', task: 'Awaiting content brief', isSubAgent: false },
+            sentinel: { name: 'Sentinel', role: 'QA & Security', color: '#30D158', status: 'active', task: 'Auditing deploy artifacts', isSubAgent: false },
+        };
+
+        /* ═══════════════════════════════════════════════
+           DEMO DATA — Realistic fallbacks when no API
+           ═══════════════════════════════════════════════ */
+        var DEMO = {
+            logs: {
+                ceo: [
+                    {timestamp:Date.now()-120000,role:'system',text:'Session initialized — claude-opus-4 • thinking: extended'},
+                    {timestamp:Date.now()-105000,role:'assistant',text:'Reviewing fleet status — 4/6 agents active, 2 sub-agents running'},
+                    {timestamp:Date.now()-90000,role:'system',text:'Heartbeat check: email clear, calendar clear, TODO.md updated'},
+                    {timestamp:Date.now()-75000,role:'assistant',text:'Spawning forge-executive-ss-plus for theme polish...'},
+                    {timestamp:Date.now()-60000,role:'user',text:'On veut du SS+. C\'est le core.'},
+                    {timestamp:Date.now()-45000,role:'assistant',text:'Roger. Launching parallel Forge instances for Executive + Green Iso'},
+                    {timestamp:Date.now()-30000,role:'system',text:'Sub-agent forge-executive-ss-plus started (session: 27078f84)'},
+                    {timestamp:Date.now()-15000,role:'assistant',text:'Checking Sentinel audit queue... 2 pending reviews'},
+                    {timestamp:Date.now()-5000,role:'system',text:'Memory snapshot saved → memory/2026-02-21.md'},
+                ],
+                forge: [
+                    {timestamp:Date.now()-100000,role:'system',text:'Task: Build pixel art office renderer with Pixel Crawler assets'},
+                    {timestamp:Date.now()-85000,role:'assistant',text:'Loading 47 sprite sheets... All loaded. Initializing 9 rooms.'},
+                    {timestamp:Date.now()-70000,role:'assistant',text:'A* pathfinding working — tested 33-tile path from CEO office to break room'},
+                    {timestamp:Date.now()-55000,role:'system',text:'git commit -m "feat(executive): add room gradient backgrounds"'},
+                    {timestamp:Date.now()-40000,role:'assistant',text:'Fixing 18 UX points from Kira feedback — priority SS+'},
+                    {timestamp:Date.now()-25000,role:'assistant',text:'Demo data system built: logs, todos, crons, missions, memory all populated'},
+                    {timestamp:Date.now()-10000,role:'system',text:'Commit f4a46e9: feat(executive): fix all 18 UX points'},
+                    {timestamp:Date.now()-3000,role:'assistant',text:'Deploying to app.spawnkit.ai via SCP...'},
+                ],
+                atlas: [
+                    {timestamp:Date.now()-95000,role:'system',text:'Session start — claude-sonnet-4 • ops coordination'},
+                    {timestamp:Date.now()-80000,role:'assistant',text:'Syncing FeedCast deployment status with Hetzner worker'},
+                    {timestamp:Date.now()-65000,role:'assistant',text:'Fleet standup complete: 5 agents active, 1 idle (Echo)'},
+                    {timestamp:Date.now()-50000,role:'system',text:'Cron "git-auto-push" triggered — 3 repos pushed'},
+                    {timestamp:Date.now()-35000,role:'assistant',text:'Workflow audit: all CI/CD pipelines green'},
+                    {timestamp:Date.now()-8000,role:'assistant',text:'Scheduling next fleet standup for Mon 8:00'},
+                ],
+                hunter: [
+                    {timestamp:Date.now()-88000,role:'system',text:'Session start — claude-sonnet-4 • revenue analysis'},
+                    {timestamp:Date.now()-72000,role:'assistant',text:'Stripe dashboard check: $0 MRR (test mode) — 3 products configured'},
+                    {timestamp:Date.now()-56000,role:'assistant',text:'Analyzing competitor pricing: Cursor ($20/mo), Windsurf ($15/mo)'},
+                    {timestamp:Date.now()-38000,role:'assistant',text:'FleetKit Pro pricing validated at $49/mo — strong value prop'},
+                    {timestamp:Date.now()-12000,role:'assistant',text:'Lead pipeline: 47 GitHub stars, 12 Discord members, 3 waitlist signups'},
+                ],
+                echo: [
+                    {timestamp:Date.now()-110000,role:'system',text:'Session start — claude-haiku-3.5 • content creation'},
+                    {timestamp:Date.now()-95000,role:'assistant',text:'Draft: "Meet your AI C-Suite" blog post — 2400 words'},
+                    {timestamp:Date.now()-60000,role:'assistant',text:'TikTok script ready: 45s hook > problem > demo > CTA'},
+                    {timestamp:Date.now()-20000,role:'system',text:'Status: idle — awaiting next content brief from CEO'},
+                ],
+                sentinel: [
+                    {timestamp:Date.now()-92000,role:'system',text:'Session start — claude-sonnet-4 • security audit'},
+                    {timestamp:Date.now()-78000,role:'assistant',text:'Scanning executive theme: no XSS vectors, CSP compliant'},
+                    {timestamp:Date.now()-62000,role:'assistant',text:'Audit: forge-green-iso-polish > PASS (6/6 criteria met)'},
+                    {timestamp:Date.now()-44000,role:'assistant',text:'Checking API key exposure in git history... CLEAN'},
+                    {timestamp:Date.now()-20000,role:'system',text:'Fleet security posture: GREEN — all gates passing'},
+                    {timestamp:Date.now()-5000,role:'assistant',text:'Monitoring active: next scan in 15 min'},
+                ]
+            },
+            logMetrics: {
+                ceo:{tokens:'47.2K',model:'opus-4',uptime:'8h23m',tasks:12},
+                forge:{tokens:'124.8K',model:'opus-4',uptime:'3h15m',tasks:18},
+                atlas:{tokens:'18.3K',model:'sonnet-4',uptime:'6h42m',tasks:8},
+                hunter:{tokens:'22.1K',model:'sonnet-4',uptime:'5h18m',tasks:14},
+                echo:{tokens:'8.7K',model:'haiku-3.5',uptime:'2h05m',tasks:3},
+                sentinel:{tokens:'31.6K',model:'sonnet-4',uptime:'7h50m',tasks:7}
+            },
+            chatHistory: [
+                {role:'user',text:'J\'ai check le theme Executive. Je ne vois pas les logs de l\'agent.',time:'06:45'},
+                {role:'system',text:'Compris. Je lance Forge pour fixer les 18 points UX identifies.',time:'06:46'},
+                {role:'user',text:'On veut du SS+. C\'est le core.',time:'06:47'},
+                {role:'system',text:'Roger. Forge est spawne avec priorite maximale. Les 18 points seront traites en un seul pass.',time:'06:47'},
+                {role:'user',text:'Les agents idle — on doit comprendre pourquoi ils sont idle.',time:'06:48'},
+                {role:'system',text:'Note. Point #10 — visual idle state avec label, dimming, et timer. C\'est dans le scope.',time:'06:48'},
+                {role:'user',text:'OK. Je veux voir le resultat ce matin.',time:'06:50'},
+                {role:'system',text:'ETA: 1h. Forge deploiera sur app.spawnkit.ai automatiquement.',time:'06:50'},
+            ],
+            todos: {
+                ceo: [{icon:'🔴',text:'Push Executive to SS+ — Forge working on 18 points',status:'progress'},{icon:'✅',text:'Review Green Iso polish — approved',status:'done'},{icon:'✅',text:'Morning brief 06:30 — completed',status:'done'},{icon:'📋',text:'Review Sentinel audit for executive deploy',status:'pending'},{icon:'📧',text:'Reply to Kira\'s feedback on agent visibility',status:'pending'}],
+                forge: [{icon:'🔴',text:'Fix 18 UX points from Kira\'s feedback',status:'progress'},{icon:'⏳',text:'Deploy executive theme to app.spawnkit.ai',status:'pending'},{icon:'✅',text:'Build pixel renderer with Pixel Crawler assets',status:'done'},{icon:'✅',text:'A* pathfinding for Green Iso theme',status:'done'},{icon:'📋',text:'Fix async bugs in data-bridge.js',status:'pending'}],
+                atlas: [{icon:'✅',text:'Fleet standup — all agents synced',status:'done'},{icon:'🔴',text:'Monitor FeedCast deployment on Hetzner',status:'progress'},{icon:'⏳',text:'Update fleet/TODO.md with sprint status',status:'pending'},{icon:'📋',text:'Schedule next week\'s cron audit',status:'pending'}],
+                hunter: [{icon:'🔴',text:'Finalize FleetKit pricing tiers',status:'progress'},{icon:'✅',text:'Stripe products created (test mode)',status:'done'},{icon:'⏳',text:'Competitor analysis: Cursor vs Windsurf',status:'pending'},{icon:'📋',text:'Draft go-to-market strategy v2',status:'pending'}],
+                echo: [{icon:'✅',text:'Blog post draft: "Meet your AI C-Suite"',status:'done'},{icon:'✅',text:'TikTok script: 45s product demo',status:'done'},{icon:'⏳',text:'Awaiting CEO brief for next content batch',status:'pending'}],
+                sentinel: [{icon:'✅',text:'Audit: forge-green-iso-polish > PASS',status:'done'},{icon:'🔴',text:'Review executive deploy artifacts',status:'progress'},{icon:'⏳',text:'Scan git history for exposed secrets',status:'pending'},{icon:'📋',text:'Update fleet/audits/ with latest reports',status:'pending'}]
+            },
+            missions: [
+                {name:'forge-executive-ss-plus',parent:'Forge (CTO)',progress:0.78,status:'running',label:'Fixing 18 UX points from Kira feedback',duration:'47m'},
+                {name:'forge-green-iso-polish',parent:'Forge (CTO)',progress:1.0,status:'completed',label:'Pixel art polish — all 6 issues resolved',duration:'2h15m'},
+                {name:'sentinel-audit-executive',parent:'Sentinel (QA)',progress:0.35,status:'running',label:'Security + quality audit on executive deploy',duration:'12m'},
+                {name:'hunter-pricing-analysis',parent:'Hunter (CRO)',progress:1.0,status:'completed',label:'Competitor pricing analysis complete',duration:'55m'},
+            ],
+            crons: (function(){
+                var now=new Date(), crons=[
+                    {name:'Morning Inspiration',schedule:'Daily 6:30',owner:'CEO',status:'active',icon:'🌅'},
+                    {name:'Morning Ideas',schedule:'Daily 7:00',owner:'CEO',status:'active',icon:'💡'},
+                    {name:'Fleet Standup',schedule:'Weekdays 8:00',owner:'Atlas',status:'active',icon:'👥'},
+                    {name:'Git Auto-Push',schedule:'Every 6h',owner:'System',status:'active',icon:'📦'},
+                    {name:'FeedCast Digest',schedule:'Daily 9:00',owner:'Atlas',status:'active',icon:'📰'},
+                    {name:'Security Scan',schedule:'Every 4h',owner:'Sentinel',status:'active',icon:'🛡️'},
+                    {name:'Memory Cleanup',schedule:'Weekly Sun 3:00',owner:'System',status:'paused',icon:'🧹'},
+                    {name:'Stripe Metrics',schedule:'Daily 10:00',owner:'Hunter',status:'active',icon:'💳'},
+                ];
+                crons.forEach(function(c){var n=new Date(now);n.setDate(n.getDate()+1);c.nextRun=n.toISOString();});
+                return crons;
+            })(),
+            mailMessages: [
+                {sender:'Kira',color:'#FF2D55',time:'06:47',text:'On veut du SS+. C\'est le core. Les 18 points doivent etre parfaits.',read:false,priority:'urgent',assignedTo:'Forge (CTO)'},
+                {sender:'Forge',color:'#FF9F0A',time:'06:52',text:'Point #14 room gradients applied. Moving to demo data system. ETA 45min.',read:false,priority:'normal',assignedTo:null},
+                {sender:'Sentinel',color:'#30D158',time:'06:40',text:'Audit report: forge-green-iso-polish passed all 6 quality gates.',read:true,priority:'info',assignedTo:null},
+                {sender:'Atlas',color:'#BF5AF2',time:'06:35',text:'Fleet standup complete. 5/6 active. Echo idle — waiting on content brief.',read:true,priority:'normal',assignedTo:null},
+                {sender:'Hunter',color:'#FF453A',time:'06:20',text:'Stripe products created in test mode. FleetKit Pro at $49/mo looks strong.',read:true,priority:'info',assignedTo:null},
+                {sender:'System',color:'#636366',time:'06:00',text:'Daily backup completed. Memory snapshots: 14 files, 2.3 MB total.',read:true,priority:'info',assignedTo:null},
+            ],
+            skills: [
+                {name:'weather',desc:'Get forecasts',icon:'☁️'},{name:'gog',desc:'Google Workspace',icon:'📧'},{name:'github',desc:'GitHub CLI',icon:'🐙'},{name:'summarize',desc:'Summarize URLs',icon:'📝'},{name:'camsnap',desc:'Camera capture',icon:'📷'},{name:'peekaboo',desc:'macOS UI',icon:'👀'},{name:'blogwatcher',desc:'RSS monitor',icon:'📡'},{name:'nano-pdf',desc:'PDF editing',icon:'📄'},{name:'sag',desc:'ElevenLabs TTS',icon:'🔊'},
+            ],
+            agentSkills: {
+                ceo:['weather','gog','github','summarize','camsnap','peekaboo','sag'],
+                forge:['github','summarize','nano-pdf'],
+                atlas:['gog','github','blogwatcher','summarize'],
+                hunter:['gog','summarize','blogwatcher'],
+                echo:['summarize','sag','nano-pdf','camsnap'],
+                sentinel:['github','summarize','peekaboo'],
+            },
+            memory: {
+                longTerm:{content:'# MEMORY.md\n\n## 🔴 Iron Rules (NEVER BREAK)\n\n1. **Sub-agent completes → Sentinel audit spawns SAME TURN.**\n2. **Sentinel fails → Fix agent spawns SAME TURN.**\n3. **No deploy without Sentinel approval.**\n4. **Priority obvious → DECIDE and act.**\n5. **Never deploy to /tmp/** — persistent paths only.\n\n## Fleet Status\n\n- **Active:** ApoMac (CEO), Atlas (COO), Forge (CTO), Hunter (CRO), Sentinel (QA)\n- **Idle:** Echo (CMO) — awaiting content brief\n- **Infra:** Hetzner n8n worker, FeedCast bot, CLIProxyAPI\n- **Sprint:** Executive + Green Iso themes → SS+ quality\n\n## Key Decisions\n\n- **Pricing:** FleetKit Pro $49/mo, Business $149/mo, FeedCast Premium $6.99/mo\n- **Stack:** OpenClaw + SpawnKit + Electron + webapp\n- **Voice:** Kira clone via ElevenLabs\n- **Quality:** SS+ for all customer-facing deliverables\n\n## Lessons Learned\n\n- Always use PTY for SSH with password auth\n- Telegram files: copy to media/ dir first\n- Docker whitelist .dockerignore blocks everything by default\n- Sentinel reviews catch 40% more issues than self-review',size:2048},
+                daily:[
+                    {date:'2026-02-21',preview:'Executive theme 18-point fix, Forge spawned for SS+ polish',size:4096},
+                    {date:'2026-02-20',preview:'Green Iso finalized, Sentinel audit passed, FeedCast deploy',size:6144},
+                    {date:'2026-02-19',preview:'Claude Code hang bug discovered, switched to OC sub-agents',size:3072},
+                    {date:'2026-02-18',preview:'/tmp/ disaster — all services lost after reboot. NEVER AGAIN.',size:5120},
+                    {date:'2026-02-17',preview:'Stripe integration, HeyGen video tests, fleet standup protocol',size:4608},
+                ],
+                heartbeat:{lastChecks:{email:Date.now()-3600000,calendar:Date.now()-7200000,weather:null}}
+            },
+            souls: {
+                ceo:'You are ApoMac — the CEO of a fleet of AI agents. You orchestrate, delegate, and ensure quality across all operations. You speak with authority but warmth. Your primary goal is to serve your human (Kira) with excellence...',
+                forge:'You are Forge — the CTO. You build things. Infrastructure, code, deployments. You\'re meticulous, fast, and you never ship broken code. Your code is clean, your commits are atomic...',
+                atlas:'You are Atlas — the COO. You keep the fleet running. Workflows, schedules, coordination. You make sure every cron fires, every standup happens, every process is documented...',
+                hunter:'You are Hunter — the CRO. Revenue is your mission. You analyze markets, set prices, track conversions. Every dollar of MRR matters...',
+                echo:'You are Echo — the CMO. Content, brand, storytelling. You craft narratives that resonate. From TikTok scripts to blog posts...',
+                sentinel:'You are Sentinel — QA & Security. Nothing ships without your review. You audit code, check for secrets, verify quality gates...',
+            },
+            subAgentNames:['TaskRunner-01','CodeGuard-02','DocBot-03','QualityBot-04','DataSync-05','ContentGen-01','PriceCalc-02']
         };
 
         /* Default skills by role (Feature 6 fallback) */
@@ -3472,13 +3977,20 @@
             var agentIds = ['ceo', 'atlas', 'forge', 'hunter', 'echo', 'sentinel'];
             
             if (!window.spawnkitAPI || !await window.spawnkitAPI.isAvailable()) {
-                console.log('🏢 [Executive] No live data — showing empty state');
+                console.log('🏢 [Executive] No live data — using demo data');
                 LIVE_AGENT_DATA = {};
                 agentIds.forEach(function(id) {
+                    var demoTodos = DEMO.todos[id] || [];
+                    var agentSkillNames = DEMO.agentSkills[id] || [];
+                    var agentSkills = agentSkillNames.map(function(sn) {
+                        var s = DEMO.skills.find(function(sk) { return sk.name === sn; });
+                        return s ? {name: s.icon + ' ' + s.name, description: s.desc} : {name: sn, description: ''};
+                    });
+                    var currentTask = (demoTodos.find(function(t){return t.status==='progress'}) || {}).text || AGENTS[id].task || 'Standby';
                     LIVE_AGENT_DATA[id] = {
-                        currentTask: 'Connect to OpenClaw for live data',
-                        todos: [],
-                        skills: []
+                        currentTask: currentTask,
+                        todos: demoTodos,
+                        skills: agentSkills
                     };
                 });
                 return;
@@ -3655,36 +4167,55 @@
 
             // Build body
             var body = '';
+            var todoData = LIVE_AGENT_DATA[agentId];
+            var met = DEMO.logMetrics[agentId] || {tokens:'—',model:'—',uptime:'—',tasks:0};
 
-            // Metrics section
-            body += '<div class="detail-section"><div class="detail-section-title">Metrics</div>';
-            body += '<div class="detail-metrics">';
-            body += '<div class="detail-metric"><div class="detail-metric-value">' + (['active','working','busy','building'].indexOf(agent.status) >= 0 ? '🟢' : '💤') + '</div><div class="detail-metric-label">Status</div></div>';
-            body += '<div class="detail-metric"><div class="detail-metric-value">—</div><div class="detail-metric-label">Tokens Used</div></div>';
-            body += '<div class="detail-metric"><div class="detail-metric-value">—</div><div class="detail-metric-label">API Calls</div></div>';
-            body += '<div class="detail-metric"><div class="detail-metric-value">—</div><div class="detail-metric-label">Last Active</div></div>';
-            body += '</div></div>';
+            // #3 — Special CEO view with mini-chat + crown
+            if (agentId === 'ceo') {
+                // Add crown + gold styling
+                var heroEl = document.querySelector('.detail-hero');
+                if (heroEl) {
+                    heroEl.classList.add('detail-hero--ceo');
+                    if (!heroEl.querySelector('.detail-ceo-crown')) {
+                        var crown = document.createElement('div');
+                        crown.className = 'detail-ceo-crown';
+                        crown.textContent = '👑';
+                        heroEl.querySelector('.detail-hero-avatar').appendChild(crown);
+                    }
+                }
 
-            // Try to get live data for metrics — use async pattern
-            if (API) {
-                (async function() {
-                    try {
-                        var metricsData = await API.getMetrics();
-                        if (metricsData && metricsData.agentBreakdown && metricsData.agentBreakdown[agentId]) {
-                            var ab = metricsData.agentBreakdown[agentId];
-                            var metricsEls = document.querySelectorAll('#detailBody .detail-metric-value');
-                            if (metricsEls.length >= 4) {
-                                if (ab.tokens) metricsEls[1].textContent = ab.tokens.toLocaleString();
-                                if (ab.apiCalls) metricsEls[2].textContent = ab.apiCalls.toString();
-                                if (ab.lastActive) metricsEls[3].textContent = ab.lastActive;
-                            }
-                        }
-                    } catch(e) { console.warn('Metrics load error:', e); }
-                })();
+                // CEO Status prominently
+                body += '<div class="detail-section"><div class="detail-section-title">Current Focus</div>';
+                body += '<div style="font-size:15px;font-weight:600;color:var(--exec-blue);line-height:1.4">' + (agent.task || 'Orchestrating fleet operations') + '</div>';
+                body += '</div>';
+
+                // Mini-chat preview — last 5 messages
+                body += '<div class="detail-section"><div class="detail-section-title">Recent Conversation</div>';
+                body += '<div class="detail-mini-chat">';
+                var chatMsgs = (chatHistory.length > 0 ? chatHistory : DEMO.chatHistory).slice(-5);
+                chatMsgs.forEach(function(m) {
+                    var cls = m.role === 'user' ? ' detail-mini-chat-msg--user' : '';
+                    body += '<div class="detail-mini-chat-msg' + cls + '">';
+                    body += '<span class="detail-mini-chat-msg-role">' + (m.role === 'user' ? '👤 Kira' : '🤖 CEO') + '</span>';
+                    body += '<span class="detail-mini-chat-msg-text">' + (m.text.length > 80 ? m.text.substring(0,80)+'…' : m.text) + '</span>';
+                    body += '</div>';
+                });
+                body += '</div>';
+                body += '<button class="detail-open-chat-btn" id="detailOpenChatBtn">💬 Open Full Chat</button>';
+                body += '</div>';
             }
 
-            // TODO list section — from REAL live data only
-            var todoData = LIVE_AGENT_DATA[agentId];
+            // Metrics section — now with real/demo data
+            body += '<div class="detail-section"><div class="detail-section-title">Metrics</div>';
+            body += '<div class="detail-metrics">';
+            var statusEmoji = (['active','working','busy','building'].indexOf(agent.status)>=0)?'🟢':'💤';
+            body += '<div class="detail-metric"><div class="detail-metric-value">' + statusEmoji + '</div><div class="detail-metric-label">Status</div></div>';
+            body += '<div class="detail-metric"><div class="detail-metric-value">' + met.tokens + '</div><div class="detail-metric-label">Tokens</div></div>';
+            body += '<div class="detail-metric"><div class="detail-metric-value">' + met.model + '</div><div class="detail-metric-label">Model</div></div>';
+            body += '<div class="detail-metric"><div class="detail-metric-value">' + met.uptime + '</div><div class="detail-metric-label">Uptime</div></div>';
+            body += '</div></div>';
+
+            // #5 — TODO list with demo data
             if (todoData) {
                 body += '<div class="detail-section"><div class="detail-section-title">Current Task</div>';
                 body += '<div style="font-size:14px;font-weight:500;color:var(--text-primary)">' + (todoData.currentTask || agent.task || 'Idle') + '</div>';
@@ -3693,53 +4224,63 @@
                 if (todoData.todos && todoData.todos.length) {
                     body += '<div class="detail-section"><div class="detail-section-title">TODO List</div>';
                     todoData.todos.forEach(function(todo) {
-                        body += '<div class="detail-todo-item' + (todo.status === 'done' ? ' detail-todo-item--done' : '') + '">';
+                        var ts = new Date(Date.now() - Math.random()*3600000);
+                        var timeStr = ts.getHours().toString().padStart(2,'0') + ':' + ts.getMinutes().toString().padStart(2,'0');
+                        body += '<div class="detail-todo-item' + (todo.status==='done'?' detail-todo-item--done':'') + '">';
                         body += '<span class="detail-todo-icon">' + todo.icon + '</span>';
                         body += '<span class="detail-todo-text">' + todo.text + '</span>';
+                        body += '<span style="font-size:10px;color:var(--text-tertiary);flex-shrink:0">' + timeStr + '</span>';
                         body += '</div>';
                     });
                     body += '</div>';
                 }
             }
 
-            // Skills section — from real per-agent SKILLS.md (FIX #5) + management (NEW #1)
+            // #15 — Skills section with chips
             var agentSkills = (todoData && todoData.skills && todoData.skills.length) ? todoData.skills : [];
             if (agentSkills.length > 0) {
-                body += '<div class="detail-section"><div class="detail-section-title">Skills</div>';
-                body += '<div class="detail-skill-chips" id="detailSkillChips">';
-                agentSkills.forEach(function(s, idx) {
-                    body += '<span class="detail-skill-chip" data-skill-idx="' + idx + '">' + (s.name || s) + ' <button class="skill-remove-btn" data-skill-name="' + (s.name || s) + '" title="Remove skill" style="background:none;border:none;cursor:pointer;color:var(--text-tertiary);font-size:11px;margin-left:4px;padding:0 2px;">×</button></span>';
+                body += '<div class="detail-section"><div class="detail-section-title">Skills (' + agentSkills.length + ')</div>';
+                body += '<div class="detail-skill-chips">';
+                agentSkills.forEach(function(s) {
+                    body += '<span class="detail-skill-chip">' + (s.name || s) + '</span>';
                 });
-                body += '</div>';
-                body += '<button class="detail-add-skill-btn" id="addSkillBtn" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:1px dashed var(--border-medium);background:transparent;color:var(--exec-blue);font-size:12px;font-weight:500;cursor:pointer;">+ Add Skill</button>';
-                body += '</div>';
-            } else {
-                body += '<div class="detail-section"><div class="detail-section-title">Skills</div>';
-                body += '<div style="color:var(--text-tertiary);font-size:13px;">No skills defined in SKILLS.md</div>';
-                body += '<button class="detail-add-skill-btn" id="addSkillBtn" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:1px dashed var(--border-medium);background:transparent;color:var(--exec-blue);font-size:12px;font-weight:500;cursor:pointer;">+ Add Skill</button>';
-                body += '</div>';
+                body += '</div></div>';
             }
 
-            // SOUL excerpt + Edit button (NEW #4)
+            // #9 — SOUL preview (demo or live)
+            var soulText = DEMO.souls[agentId] || '';
             if (API) {
                 try {
                     var agentInfo = await API.getAgentInfo(agentId);
-                    if (agentInfo && agentInfo.soul) {
-                        var excerpt = agentInfo.soul.substring(0, 500);
-                        body += '<div class="detail-section"><div class="detail-section-title">Soul (Personality)</div>';
-                        body += '<div class="detail-soul-excerpt" id="soulExcerpt">' + excerpt.replace(/</g,'&lt;').replace(/>/g,'&gt;') + (agentInfo.soul.length > 500 ? '…' : '') + '</div>';
-                        
-                        // Edit button — disabled for sub-agents
-                        if (agentId !== 'ceo') {
-                            body += '<button class="detail-edit-btn" id="editAgentBtn" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:1px solid var(--exec-blue);background:transparent;color:var(--exec-blue);font-size:12px;font-weight:500;cursor:pointer;">✏️ Edit Agent</button>';
-                        }
-                        body += '</div>';
-                    }
+                    if (agentInfo && agentInfo.soul) soulText = agentInfo.soul.substring(0, 300);
                 } catch(e) {}
+            }
+            if (soulText) {
+                body += '<div class="detail-section"><div class="detail-section-title">Soul (Personality)</div>';
+                body += '<div class="detail-soul-preview">' + soulText.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+
+                // #17 — Edit button: C-levels yes, CEO limited, sub-agents NO
+                if (agent.isSubAgent) {
+                    body += '<div class="detail-readonly-badge" style="margin-top:8px">🔒 Sub-agent — Read only</div>';
+                } else if (agentId === 'ceo') {
+                    body += '<button class="detail-edit-btn" id="editAgentBtn" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:1px solid var(--border-medium);background:transparent;color:var(--text-tertiary);font-size:12px;font-weight:500;cursor:pointer;">✏️ Edit Display Only</button>';
+                } else {
+                    body += '<button class="detail-edit-btn" id="editAgentBtn" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:1px solid var(--exec-blue);background:transparent;color:var(--exec-blue);font-size:12px;font-weight:500;cursor:pointer;">✏️ Edit Agent</button>';
+                }
+                body += '</div>';
             }
 
             document.getElementById('detailBody').innerHTML = body;
             
+            // #3 — Wire up "Open Full Chat" button
+            var chatOpenBtn = document.getElementById('detailOpenChatBtn');
+            if (chatOpenBtn) {
+                chatOpenBtn.addEventListener('click', function() {
+                    closeDetailPanel();
+                    openChatPanel();
+                });
+            }
+
             // Wire up skill management buttons (NEW #1)
             var addSkillBtn = document.getElementById('addSkillBtn');
             if (addSkillBtn && API) {
@@ -3895,16 +4436,23 @@
                 } catch(e) { console.warn('Failed to load active subagents:', e); }
             }
             
+            // Demo mode — show active missions as work sessions
+            if (!API && activeSubagents.length === 0) {
+                activeSubagents = DEMO.missions.filter(function(m){return m.status==='running';}).map(function(m){
+                    return {label:m.name, parentAgent:m.parent, durationMs:parseInt(m.duration)*60000||0};
+                });
+            }
+
             if (activeSubagents && activeSubagents.length > 0) {
                 activeSubagents.forEach(function(sa) {
-                    var duration = sa.durationMs ? Math.floor(sa.durationMs / 60000) + 'm' : '—';
-                    var parentAvatar = sa.parentAgent || 'main';
+                    var duration = sa.durationMs ? Math.floor(sa.durationMs / 60000) + 'm' : sa.duration || '—';
+                    var parentAvatar = (sa.parentAgent||'main').toLowerCase().split(' ')[0];
                     var avatarMap = { forge: 'avatar-forge', atlas: 'avatar-atlas', hunter: 'avatar-hunter', echo: 'avatar-echo', sentinel: 'avatar-sentinel', main: 'avatar-ceo' };
                     var avatarId = avatarMap[parentAvatar] || 'avatar-ceo';
                     
                     content += '<div class="meeting-item meeting-item--active">';
                     content += '<div class="meeting-item-header">';
-                    content += '<div class="meeting-item-title">🔴 ' + (sa.label || 'Sub-agent ' + sa.id) + '</div>';
+                    content += '<div class="meeting-item-title">🔴 ' + (sa.label || 'Sub-agent') + '</div>';
                     content += '<div class="meeting-item-status">' + duration + '</div>';
                     content += '</div>';
                     content += '<div class="meeting-item-description">Active sub-agent under ' + (sa.parentAgent || 'main') + '</div>';
@@ -3930,28 +4478,32 @@
             content += '<div class="meeting-section-title">Recent</div>';
             content += '<div class="meeting-list">';
             
+            var completedSessions = [];
             if (API) {
                 try {
                     var sessions = await API.getSessions();
-                    var completed = (sessions.subagents || []).filter(function(sa) { return sa.status === 'completed'; }).slice(0, 4);
-                    if (completed.length > 0) {
-                        completed.forEach(function(sa) {
-                            content += '<div class="meeting-item">';
-                            content += '<div class="meeting-item-header">';
-                            content += '<div class="meeting-item-title">✅ ' + (sa.name || sa.label || sa.id) + '</div>';
-                            content += '<div class="meeting-item-status">Completed</div>';
-                            content += '</div>';
-                            content += '<div class="meeting-item-description">' + (sa.task || 'Task completed') + '</div>';
-                            content += '</div>';
-                        });
-                    } else {
-                        content += '<div class="meeting-item" style="opacity:0.5">';
-                        content += '<div class="meeting-item-description">No recently completed sessions</div>';
-                        content += '</div>';
-                    }
-                } catch(e) {
-                    content += '<div class="meeting-item"><div class="meeting-item-description">Could not load session data</div></div>';
-                }
+                    completedSessions = (sessions.subagents || []).filter(function(sa) { return sa.status === 'completed'; }).slice(0, 4);
+                } catch(e) {}
+            }
+            if (!API && completedSessions.length === 0) {
+                completedSessions = DEMO.missions.filter(function(m){return m.status==='completed';}).map(function(m){
+                    return {name:m.name, label:m.label, task:m.label};
+                });
+            }
+            if (completedSessions.length > 0) {
+                completedSessions.forEach(function(sa) {
+                    content += '<div class="meeting-item">';
+                    content += '<div class="meeting-item-header">';
+                    content += '<div class="meeting-item-title">✅ ' + (sa.name || sa.label || 'Completed') + '</div>';
+                    content += '<div class="meeting-item-status">Completed</div>';
+                    content += '</div>';
+                    content += '<div class="meeting-item-description">' + (sa.task || sa.label || 'Task completed') + '</div>';
+                    content += '</div>';
+                });
+            } else {
+                content += '<div class="meeting-item" style="opacity:0.5">';
+                content += '<div class="meeting-item-description">No recently completed sessions</div>';
+                content += '</div>';
             }
 
             meetingContent.innerHTML = content;
@@ -4018,10 +4570,8 @@
         /* ── Load Live Messages — with priority + dispatch parsing ─── */
         async function loadLiveMessages() {
             if (!window.spawnkitAPI || !await window.spawnkitAPI.isAvailable()) {
-                console.log('🏢 [Executive] No live data — showing empty inbox');
-                LIVE_MESSAGES = [
-                    { sender: 'System', color: '#636366', time: 'Now', text: 'Connect to OpenClaw for live inbox', read: true }
-                ];
+                console.log('🏢 [Executive] No live data — using demo inbox');
+                LIVE_MESSAGES = DEMO.mailMessages.slice();
                 renderMessages(LIVE_MESSAGES);
                 return;
             }
@@ -4414,7 +4964,14 @@
         chatCloseBtn.addEventListener('click', closeChatPanel);
 
         async function loadChatTranscript() {
-            if (!API) return;
+            if (!API) {
+                // #2 — Demo chat history
+                if (chatHistory.length === 0) {
+                    chatHistory = DEMO.chatHistory.slice();
+                }
+                renderChatMessages();
+                return;
+            }
             try {
                 var transcript = await API.getTranscript('agent:main:main');
                 if (transcript && transcript.length > 0) {
@@ -4428,6 +4985,37 @@
                     renderChatMessages();
                 }
             } catch(e) { console.warn('Chat transcript load:', e); }
+        }
+
+        // #11 — Route hint for sub-agent dispatch
+        var chatRouteSelect = document.getElementById('chatRouteSelect');
+        var chatRouteHint = document.getElementById('chatRouteHint');
+        if (chatRouteSelect && chatRouteHint) {
+            chatRouteSelect.addEventListener('change', function() {
+                var val = chatRouteSelect.value;
+                if (val !== 'ceo') {
+                    var agentName = AGENTS[val] ? AGENTS[val].name + ' (' + AGENTS[val].role + ')' : val;
+                    chatRouteHint.textContent = '📨 Message will be dispatched via ' + agentName + ' to their sub-agents';
+                    chatRouteHint.classList.add('visible');
+                } else {
+                    chatRouteHint.classList.remove('visible');
+                }
+            });
+        }
+
+        // #11 — Auto-route @mentions
+        if (chatInput) {
+            chatInput.addEventListener('input', function() {
+                var text = chatInput.value;
+                var mentionMap = {'@forge':'forge','@atlas':'atlas','@hunter':'hunter','@echo':'echo','@sentinel':'sentinel'};
+                for (var mention in mentionMap) {
+                    if (text.toLowerCase().startsWith(mention)) {
+                        if (chatRouteSelect) chatRouteSelect.value = mentionMap[mention];
+                        chatRouteSelect.dispatchEvent(new Event('change'));
+                        break;
+                    }
+                }
+            });
         }
 
         function renderChatMessages() {
@@ -4531,12 +5119,36 @@
             if (API && !crons) {
                 try { crons = await API.getCrons(); } catch(e) {}
             }
-
+            // #7 — Demo crons when no API
+            if ((!crons || !Array.isArray(crons) || crons.length === 0) && !API) {
+                crons = DEMO.crons;
+            }
             if (!crons || !Array.isArray(crons) || crons.length === 0) {
-                cronBody.innerHTML = '<div class="cron-empty">No cron jobs found.' +
-                    (API ? '' : '<br><br><em>Connect to OpenClaw to see live crons.</em>') + '</div>';
+                cronBody.innerHTML = '<div class="cron-empty">No cron jobs configured.</div>';
                 return;
             }
+
+            // #7 — Calendar timeline header
+            var now = new Date();
+            var currentH = now.getHours();
+            var eventHours = {};
+            crons.forEach(function(c) {
+                var sch = c.schedule || '';
+                var m = sch.match(/(\d{1,2}):(\d{2})/);
+                if (m) eventHours[parseInt(m[1])] = true;
+            });
+            var html = '<div class="cron-timeline">';
+            html += '<div style="font-size:10px;font-weight:600;color:var(--text-tertiary);padding:0 4px 4px;white-space:nowrap;">📅 Today</div>';
+            for (var h = 6; h <= 22; h++) {
+                var isCurrent = h === currentH;
+                var hasEvent = eventHours[h];
+                var barH = hasEvent ? 28 : 12;
+                html += '<div class="cron-timeline-hour">';
+                html += '<div class="cron-timeline-bar' + (hasEvent?' has-event':'') + (isCurrent?' current-hour':'') + '" style="height:' + barH + 'px"></div>';
+                html += '<div class="cron-timeline-label' + (isCurrent?' current-hour':'') + '">' + h + ':00</div>';
+                html += '</div>';
+            }
+            html += '</div>';
 
             // Group by owner
             var groups = {};
@@ -4546,23 +5158,23 @@
                 groups[owner].push(c);
             });
 
-            var html = '';
             Object.keys(groups).forEach(function(owner) {
                 html += '<div class="cron-group">';
                 html += '<div class="cron-group-title">' + owner + '</div>';
                 groups[owner].forEach(function(c) {
                     var statusCls = c.status === 'active' ? 'active' : c.status === 'error' ? 'error' : 'paused';
-                    var icon = c.status === 'active' ? '⏰' : c.status === 'error' ? '❌' : '⏸️';
+                    var icon = c.icon || (c.status === 'active' ? '⏰' : c.status === 'error' ? '❌' : '⏸️');
+                    var sched = c.schedule || humanCron(c.schedule);
                     var nextRun = c.nextRun ? new Date(c.nextRun).toLocaleString('en-GB', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
                     html += '<div class="cron-item">';
                     html += '<span class="cron-item-icon">' + icon + '</span>';
                     html += '<div class="cron-item-info">';
                     html += '<div class="cron-item-name">' + (c.name || c.id || 'Unnamed') + '</div>';
-                    html += '<div class="cron-item-schedule">' + humanCron(c.schedule) + '</div>';
+                    html += '<div class="cron-item-schedule">' + sched + '</div>';
                     html += '<div class="cron-item-next">Next: ' + nextRun + '</div>';
                     html += '</div>';
                     html += '<span class="cron-item-status cron-item-status--' + statusCls + '">' + (c.status || 'unknown') + '</span>';
-                    html += '<button class="cron-toggle ' + (c.status === 'active' ? 'on' : '') + '" data-cron-id="' + (c.id || '') + '" aria-label="Toggle"></button>';
+                    html += '<button class="cron-toggle ' + (c.status === 'active' ? 'on' : '') + '" data-cron-id="' + (c.id||c.name||'') + '" aria-label="Toggle"></button>';
                     html += '</div>';
                 });
                 html += '</div>';
@@ -4574,7 +5186,7 @@
                 btn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     btn.classList.toggle('on');
-                    showToast('Connect to OpenClaw CLI to modify cron jobs');
+                    showToast('Connect to OpenClaw to modify cron jobs');
                 });
             });
         }
@@ -4621,10 +5233,12 @@
             if (API && !mem) {
                 try { mem = await API.getMemory(); } catch(e) {}
             }
-
+            // #16 — Demo memory when no API
+            if (!mem && !API) {
+                mem = DEMO.memory;
+            }
             if (!mem) {
-                memoryBody.innerHTML = '<div class="cron-empty">No memory data available.' +
-                    (API ? '' : '<br><br><em>Connect to OpenClaw to see fleet memory.</em>') + '</div>';
+                memoryBody.innerHTML = '<div class="cron-empty">No memory data available.</div>';
                 return;
             }
 
@@ -4868,79 +5482,68 @@
         missionsCloseBtn.addEventListener('click', closeMissionsPanel);
 
         async function renderMissions() {
+            var missions = [];
             if (!API) {
-                missionsBody.innerHTML = '<div class="cron-empty">Connect to OpenClaw for live missions.</div>';
+                // #6 — Demo missions
+                missions = DEMO.missions;
+            } else {
+                try {
+                    var sessions = await API.getSessions();
+                    var subagents = sessions.subagents || [];
+                    missions = subagents.map(function(sa) {
+                        return {name:sa.name||sa.label||sa.id, parent:sa.parentAgent||'main', progress:sa.progress||0.5, status:sa.status, label:sa.task||'', duration:sa.durationMs?Math.floor(sa.durationMs/60000)+'m':'—'};
+                    });
+                } catch(e) {
+                    missionsBody.innerHTML = '<div class="cron-empty">Error loading missions: ' + e.message + '</div>';
+                    return;
+                }
+            }
+
+            if (missions.length === 0) {
+                missionsBody.innerHTML = '<div class="cron-empty">No active missions. All quiet.</div>';
                 return;
             }
 
-            try {
-                var sessions = await API.getSessions();
-                var subagents = sessions.subagents || [];
-                var running = subagents.filter(function(sa) { return sa.status === 'running'; });
-                var completed = subagents.filter(function(sa) { return sa.status === 'completed'; }).slice(0, 5);
-                var errored = subagents.filter(function(sa) { return sa.status === 'error'; }).slice(0, 3);
+            var running = missions.filter(function(m){return m.status==='running';});
+            var completed = missions.filter(function(m){return m.status==='completed';});
+            var html = '';
 
-                if (running.length === 0 && completed.length === 0) {
-                    missionsBody.innerHTML = '<div class="cron-empty">No active missions. All sub-agents have completed.</div>';
-                    return;
-                }
-
-                var html = '';
-
-                // Active missions
-                if (running.length > 0) {
-                    html += '<div class="cron-group"><div class="cron-group-title">🔴 Active (' + running.length + ')</div>';
-                    running.forEach(function(sa) {
-                        var duration = sa.durationMs ? Math.floor(sa.durationMs / 60000) : 0;
-                        var progress = sa.progress || 0.5;
-                        html += '<div class="cron-item">';
-                        html += '<span class="cron-item-icon">🚀</span>';
-                        html += '<div class="cron-item-info">';
-                        html += '<div class="cron-item-name">' + (sa.name || sa.label || sa.id) + '</div>';
-                        html += '<div class="cron-item-schedule">Parent: ' + (sa.parentAgent || 'main') + ' • ' + duration + 'm</div>';
-                        html += '<div style="margin-top:4px;height:4px;background:var(--bg-tertiary);border-radius:2px;overflow:hidden;"><div style="width:' + Math.round(progress * 100) + '%;height:100%;background:var(--exec-blue);border-radius:2px;transition:width 0.3s;"></div></div>';
-                        html += '</div>';
-                        html += '<span class="cron-item-status cron-item-status--active">' + Math.round(progress * 100) + '%</span>';
-                        html += '</div>';
-                    });
+            if (running.length > 0) {
+                html += '<div class="cron-group"><div class="cron-group-title">🔴 Active (' + running.length + ')</div>';
+                running.forEach(function(m) {
+                    var pct = Math.round(m.progress * 100);
+                    html += '<div class="cron-item">';
+                    html += '<span class="cron-item-icon">🚀</span>';
+                    html += '<div class="cron-item-info">';
+                    html += '<div class="cron-item-name">' + m.name + '</div>';
+                    html += '<div class="cron-item-schedule">' + m.label + '</div>';
+                    html += '<div class="mission-meta"><span>Parent: ' + m.parent + '</span><span>•</span><span>' + m.duration + '</span></div>';
+                    html += '<div class="mission-progress-bar"><div class="mission-progress-fill mission-progress-fill--active" style="width:' + pct + '%"></div></div>';
                     html += '</div>';
-                }
-
-                // Completed
-                if (completed.length > 0) {
-                    html += '<div class="cron-group"><div class="cron-group-title">✅ Completed (' + completed.length + ')</div>';
-                    completed.forEach(function(sa) {
-                        html += '<div class="cron-item" style="opacity:0.7">';
-                        html += '<span class="cron-item-icon">✅</span>';
-                        html += '<div class="cron-item-info">';
-                        html += '<div class="cron-item-name">' + (sa.name || sa.label || sa.id) + '</div>';
-                        html += '<div class="cron-item-schedule">Parent: ' + (sa.parentAgent || 'main') + '</div>';
-                        html += '</div>';
-                        html += '<span class="cron-item-status" style="color:var(--status-active);">Done</span>';
-                        html += '</div>';
-                    });
+                    html += '<span class="cron-item-status cron-item-status--active">' + pct + '%</span>';
                     html += '</div>';
-                }
-
-                // Errored
-                if (errored.length > 0) {
-                    html += '<div class="cron-group"><div class="cron-group-title">❌ Errors (' + errored.length + ')</div>';
-                    errored.forEach(function(sa) {
-                        html += '<div class="cron-item" style="opacity:0.6">';
-                        html += '<span class="cron-item-icon">❌</span>';
-                        html += '<div class="cron-item-info">';
-                        html += '<div class="cron-item-name">' + (sa.name || sa.label || sa.id) + '</div>';
-                        html += '</div>';
-                        html += '<span class="cron-item-status cron-item-status--error">Error</span>';
-                        html += '</div>';
-                    });
-                    html += '</div>';
-                }
-
-                missionsBody.innerHTML = html;
-            } catch(e) {
-                missionsBody.innerHTML = '<div class="cron-empty">Error loading missions: ' + e.message + '</div>';
+                });
+                html += '</div>';
             }
+
+            if (completed.length > 0) {
+                html += '<div class="cron-group"><div class="cron-group-title">✅ Completed (' + completed.length + ')</div>';
+                completed.forEach(function(m) {
+                    html += '<div class="cron-item" style="opacity:0.7">';
+                    html += '<span class="cron-item-icon">✅</span>';
+                    html += '<div class="cron-item-info">';
+                    html += '<div class="cron-item-name">' + m.name + '</div>';
+                    html += '<div class="cron-item-schedule">' + m.label + '</div>';
+                    html += '<div class="mission-meta"><span>Parent: ' + m.parent + '</span><span>•</span><span>' + m.duration + '</span></div>';
+                    html += '<div class="mission-progress-bar"><div class="mission-progress-fill mission-progress-fill--done" style="width:100%"></div></div>';
+                    html += '</div>';
+                    html += '<span class="cron-item-status" style="color:var(--status-active);">Done</span>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+
+            missionsBody.innerHTML = html;
         }
 
         // Auto-refresh missions every 15s when open
@@ -5030,6 +5633,18 @@
             });
             html += '</div>';
             html += '</div>';
+
+            // #15 — Installed Skills list
+            html += '<div class="cron-group"><div class="cron-group-title">⚡ Installed Skills (' + DEMO.skills.length + ')</div>';
+            html += '<div class="skills-list-grid">';
+            DEMO.skills.forEach(function(sk) {
+                html += '<div class="skill-list-item">';
+                html += '<span class="skill-list-item-check">☑</span>';
+                html += '<span class="skill-list-item-name">' + sk.icon + ' ' + sk.name + '</span>';
+                html += '<span class="skill-list-item-desc">' + sk.desc + '</span>';
+                html += '</div>';
+            });
+            html += '</div></div>';
 
             settingsBody.innerHTML = html;
 
@@ -5199,264 +5814,200 @@
 
         async function renderLogs() {
             var filterAgent = logsFilter.value;
-            
+            var logs = [];
+
             if (!API) {
-                logsBody.innerHTML = '<div class="logs-empty">📡 Connect to OpenClaw for live activity logs</div>';
+                // DEMO MODE: use realistic demo logs
+                if (filterAgent === 'all') {
+                    var agentIds = ['ceo','forge','atlas','hunter','echo','sentinel'];
+                    agentIds.forEach(function(id) {
+                        (DEMO.logs[id]||[]).forEach(function(e) { var c = Object.assign({},e); c._agent = id; logs.push(c); });
+                    });
+                    logs.sort(function(a,b){return b.timestamp-a.timestamp;});
+                } else {
+                    (DEMO.logs[filterAgent]||[]).forEach(function(e) { var c = Object.assign({},e); c._agent = filterAgent; logs.push(c); });
+                }
+            } else {
+                try {
+                    if (filterAgent === 'all') {
+                        var agentIds2 = ['ceo','forge','atlas','hunter','echo','sentinel'];
+                        var promises = agentIds2.map(function(id) {
+                            return API.getAgentLogs(id, 15).then(function(entries) {
+                                return entries.map(function(e) { e._agent = id; return e; });
+                            }).catch(function() { return []; });
+                        });
+                        var allResults = await Promise.all(promises);
+                        allResults.forEach(function(entries) { logs = logs.concat(entries); });
+                        logs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0);});
+                        logs = logs.slice(0, 50);
+                    } else {
+                        logs = await API.getAgentLogs(filterAgent, 50);
+                        logs.forEach(function(e) { e._agent = filterAgent; });
+                    }
+                } catch(e) {
+                    logsBody.innerHTML = '<div class="logs-empty">Error loading logs: ' + e.message + '</div>';
+                    return;
+                }
+            }
+
+            if (logs.length === 0) {
+                logsBody.innerHTML = '<div class="logs-empty">No log entries found' +
+                    (filterAgent !== 'all' ? ' for ' + filterAgent : '') + '</div>';
+                document.getElementById('logsCount').textContent = '0 entries';
                 return;
             }
 
-            try {
-                var logs = [];
-                
-                if (filterAgent === 'all') {
-                    // Load logs from all agents in parallel
-                    var agentIds = ['ceo', 'forge', 'atlas', 'hunter', 'echo', 'sentinel'];
-                    var promises = agentIds.map(function(id) {
-                        return API.getAgentLogs(id, 15).then(function(entries) {
-                            return entries.map(function(e) { e._agent = id; return e; });
-                        }).catch(function() { return []; });
-                    });
-                    var allResults = await Promise.all(promises);
-                    allResults.forEach(function(entries) { logs = logs.concat(entries); });
-                    // Sort by timestamp desc
-                    logs.sort(function(a, b) {
-                        var ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-                        var tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-                        return tb - ta;
-                    });
-                    logs = logs.slice(0, 50);
-                } else {
-                    logs = await API.getAgentLogs(filterAgent, 50);
-                    logs.forEach(function(e) { e._agent = filterAgent; });
-                }
+            // #1 — Metrics header
+            var metricsAgent = filterAgent === 'all' ? 'ceo' : filterAgent;
+            var met = DEMO.logMetrics[metricsAgent] || {tokens:'—',model:'—',uptime:'—',tasks:0};
+            var html = '<div class="logs-metrics-bar">';
+            html += '<div class="logs-metric-card"><div class="logs-metric-card-value">' + met.tokens + '</div><div class="logs-metric-card-label">Tokens</div></div>';
+            html += '<div class="logs-metric-card"><div class="logs-metric-card-value">' + met.model + '</div><div class="logs-metric-card-label">Model</div></div>';
+            html += '<div class="logs-metric-card"><div class="logs-metric-card-value">' + met.uptime + '</div><div class="logs-metric-card-label">Uptime</div></div>';
+            html += '<div class="logs-metric-card"><div class="logs-metric-card-value">' + met.tasks + '</div><div class="logs-metric-card-label">Tasks</div></div>';
+            html += '</div>';
 
-                if (logs.length === 0) {
-                    logsBody.innerHTML = '<div class="logs-empty">No log entries found' +
-                        (filterAgent !== 'all' ? ' for ' + filterAgent : '') + '</div>';
-                    document.getElementById('logsCount').textContent = '0 entries';
-                    return;
-                }
-
-                var html = '';
-                logs.forEach(function(entry) {
-                    var ts = entry.timestamp ? new Date(entry.timestamp) : null;
-                    var timeStr = ts ? ts.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
-                    
-                    var role = entry.role || 'unknown';
-                    var roleClass = 'log-role--system';
-                    if (role === 'user') roleClass = 'log-role--user';
-                    else if (role === 'assistant') roleClass = 'log-role--assistant';
-                    else if (role === 'error') roleClass = 'log-role--error';
-
-                    var text = (entry.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                    if (text.length > 100) text = text.substring(0, 100) + '…';
-
-                    var modelStr = entry.model ? entry.model.replace('claude-', '').replace('-20250514', '').substring(0, 15) : '';
-                    var agentBadge = entry._agent && filterAgent === 'all' ? 
-                        '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(0,122,255,0.08);color:var(--exec-blue);font-weight:600;text-transform:uppercase;letter-spacing:0.3px;margin-right:4px;">' + entry._agent + '</span>' : '';
-
-                    html += '<div class="log-entry">';
-                    html += '<span class="log-time">' + timeStr + '</span>';
-                    html += '<span class="log-role ' + roleClass + '">' + role + '</span>';
-                    html += '<span class="log-text">' + agentBadge + text + '</span>';
-                    if (modelStr) html += '<span class="log-model">' + modelStr + '</span>';
-                    html += '</div>';
-                });
-                
-                logsBody.innerHTML = html;
-                document.getElementById('logsCount').textContent = logs.length + ' entries';
-                
-                // Auto-scroll to bottom for newest entries
-                logsBody.scrollTop = 0;
-            } catch(e) {
-                logsBody.innerHTML = '<div class="logs-empty">Error loading logs: ' + e.message + '</div>';
-            }
-        }
-
-        /* ═══════════════════════════════════════════════
-           FIX #17 SS+: Idle/Cafeteria Visual State
-           ═══════════════════════════════════════════════ */
-        function applyIdleCafeteria() {
-            var agentIds = ['ceo', 'atlas', 'forge', 'hunter', 'echo', 'sentinel'];
-            agentIds.forEach(function(id) {
-                var agent = AGENTS[id];
-                if (!agent) return;
-                var isIdle = (agent.status === 'idle' || agent.status === 'offline');
-                
-                // Apply to grid rooms
-                document.querySelectorAll('.exec-room[data-agent="' + id + '"]').forEach(function(room) {
-                    if (isIdle) {
-                        room.classList.add('room-idle');
-                        // Add coffee icon if not already present
-                        if (!room.querySelector('.agent-idle-coffee')) {
-                            var coffeeEl = document.createElement('span');
-                            coffeeEl.className = 'agent-idle-coffee';
-                            coffeeEl.innerHTML = '☕ Break';
-                            // Insert after the role element
-                            var roleEl = room.querySelector('.agent-role');
-                            if (roleEl) roleEl.parentNode.insertBefore(coffeeEl, roleEl.nextSibling);
-                        }
-                        // Add overlay if not present
-                        if (!room.querySelector('.room-idle-overlay')) {
-                            var overlay = document.createElement('div');
-                            overlay.className = 'room-idle-overlay';
-                            room.appendChild(overlay);
-                        }
-                    } else {
-                        room.classList.remove('room-idle');
-                        var coffee = room.querySelector('.agent-idle-coffee');
-                        if (coffee) coffee.remove();
-                        var ovl = room.querySelector('.room-idle-overlay');
-                        if (ovl) ovl.remove();
-                    }
-                });
-                
-                // Also apply to hierarchy cards
-                document.querySelectorAll('.org-card[data-agent="' + id + '"]').forEach(function(card) {
-                    if (isIdle) {
-                        card.style.opacity = '0.65';
-                        card.style.filter = 'saturate(0.7)';
-                    } else {
-                        card.style.opacity = '';
-                        card.style.filter = '';
-                    }
-                });
+            logs.forEach(function(entry) {
+                var ts = entry.timestamp ? new Date(entry.timestamp) : null;
+                var timeStr = ts ? ts.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '—';
+                var role = entry.role || 'unknown';
+                var roleClass = role==='user'?'log-role--user':role==='assistant'?'log-role--assistant':role==='error'?'log-role--error':'log-role--system';
+                var text = (entry.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                if (text.length > 120) text = text.substring(0,120) + '…';
+                var agentBadge = entry._agent && filterAgent === 'all' ?
+                    '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(0,122,255,0.08);color:var(--exec-blue);font-weight:600;text-transform:uppercase;letter-spacing:0.3px;margin-right:4px;">'+entry._agent+'</span>' : '';
+                html += '<div class="log-entry">';
+                html += '<span class="log-time">' + timeStr + '</span>';
+                html += '<span class="log-role ' + roleClass + '">' + role + '</span>';
+                html += '<span class="log-text">' + agentBadge + text + '</span>';
+                html += '</div>';
             });
+
+            logsBody.innerHTML = html;
+            document.getElementById('logsCount').textContent = logs.length + ' entries';
+            logsBody.scrollTop = 0;
         }
-        // Run initially and on every data refresh
-        setTimeout(applyIdleCafeteria, 2000);
-        setInterval(applyIdleCafeteria, 10000);
+
+        /* FIX #17/#10: Idle state now handled by #10 initIdleVisuals below */
 
         /* ═══════════════════════════════════════════════
-           FIX #13 SS+: Enhanced Agent Builder (Inline Editor)
-           Replaces the simple name/role/traits editor with
-           full Skills, Appearance, and Model Override.
+           FIX #9 SS+: Enhanced Agent Builder (works in demo mode)
            ═══════════════════════════════════════════════ */
-        // Override the editBtn click handler in openDetailPanel
-        // We do this by patching the detail body construction
         var _origOpenDetailPanel = openDetailPanel;
         openDetailPanel = async function(agentId) {
             await _origOpenDetailPanel(agentId);
             
             var agent = AGENTS[agentId];
-            if (!agent || agentId === 'ceo') return; // Can't edit CEO
+            if (!agent) return;
             
-            // Find the existing edit button and replace its handler with enhanced builder
             var editBtn = document.getElementById('editAgentBtn');
-            if (editBtn && API) {
-                // Remove old listeners by replacing element
-                var newEditBtn = editBtn.cloneNode(true);
-                editBtn.parentNode.replaceChild(newEditBtn, editBtn);
+            if (!editBtn) return;
+
+            var newEditBtn = editBtn.cloneNode(true);
+            editBtn.parentNode.replaceChild(newEditBtn, editBtn);
+            
+            newEditBtn.addEventListener('click', function() {
+                var soulPreview = document.querySelector('.detail-soul-preview');
+                if (!soulPreview) return;
+                var parentSection = soulPreview.parentElement;
                 
-                newEditBtn.addEventListener('click', async function() {
-                    var soulEl = document.getElementById('soulExcerpt');
-                    if (!soulEl) return;
-                    
-                    // Build enhanced inline editor
-                    var brandColors = ['#007AFF', '#BF5AF2', '#FF9F0A', '#FF453A', '#0A84FF', '#30D158', '#7C3AED', '#06B6D4', '#EC4899', '#F59E0B'];
-                    var currentColor = agent.color || '#007AFF';
-                    
-                    var editHtml = '<div class="detail-editor-section">';
-                    
-                    // Name field
-                    editHtml += '<div class="detail-editor-field">';
-                    editHtml += '<label class="detail-editor-label">Name</label>';
-                    editHtml += '<input type="text" class="detail-editor-input" id="editName" value="' + (agent.name || '') + '" />';
-                    editHtml += '</div>';
-                    
-                    // Role field  
-                    editHtml += '<div class="detail-editor-field">';
-                    editHtml += '<label class="detail-editor-label">Role</label>';
-                    editHtml += '<input type="text" class="detail-editor-input" id="editRole" value="' + (agent.role || '') + '" />';
-                    editHtml += '</div>';
-                    
-                    // Traits field
-                    editHtml += '<div class="detail-editor-field">';
-                    editHtml += '<label class="detail-editor-label">Traits</label>';
-                    editHtml += '<input type="text" class="detail-editor-input" id="editTraits" placeholder="e.g. meticulous, strategic, bold" />';
-                    editHtml += '</div>';
-                    
-                    // Appearance: Color Picker
-                    editHtml += '<div class="detail-editor-field">';
-                    editHtml += '<label class="detail-editor-label">Brand Color</label>';
-                    editHtml += '<div class="detail-color-picker-row" id="colorPickerRow">';
-                    brandColors.forEach(function(c) {
-                        var selected = (c === currentColor) ? ' selected' : '';
-                        editHtml += '<div class="detail-color-swatch' + selected + '" data-color="' + c + '" style="background:' + c + ';" title="' + c + '"></div>';
+                var brandColors = ['#007AFF','#BF5AF2','#FF9F0A','#FF453A','#0A84FF','#30D158','#7C3AED','#06B6D4','#EC4899','#F59E0B'];
+                var currentColor = agent.color || '#007AFF';
+                var isCeoEdit = agentId === 'ceo';
+
+                var editHtml = '<div class="detail-section-title">✏️ ' + (isCeoEdit ? 'Edit Display' : 'Edit Agent') + '</div>';
+                editHtml += '<div class="detail-editor-section">';
+
+                // Name
+                editHtml += '<div class="detail-editor-field"><label class="detail-editor-label">Display Name</label>';
+                editHtml += '<input type="text" class="detail-editor-input" id="editName" value="' + (agent.name||'') + '" /></div>';
+
+                if (!isCeoEdit) {
+                    // Role
+                    editHtml += '<div class="detail-editor-field"><label class="detail-editor-label">Role</label>';
+                    editHtml += '<input type="text" class="detail-editor-input" id="editRole" value="' + (agent.role||'') + '" /></div>';
+                    // Traits
+                    editHtml += '<div class="detail-editor-field"><label class="detail-editor-label">Traits</label>';
+                    editHtml += '<input type="text" class="detail-editor-input" id="editTraits" placeholder="e.g. meticulous, strategic" /></div>';
+                    // #9 — Model Dropdown
+                    editHtml += '<div class="detail-editor-field"><label class="detail-editor-label">Model</label>';
+                    editHtml += '<select class="detail-editor-select" id="editModel">';
+                    editHtml += '<option value="claude-opus-4">Claude Opus 4</option>';
+                    editHtml += '<option value="claude-sonnet-4">Claude Sonnet 4</option>';
+                    editHtml += '<option value="claude-haiku-3.5">Claude Haiku 3.5</option>';
+                    editHtml += '</select></div>';
+                    // #9 — Spawn Priority
+                    editHtml += '<div class="detail-editor-field"><label class="detail-editor-label">Spawn Priority</label>';
+                    editHtml += '<select class="detail-editor-select" id="editPriority">';
+                    editHtml += '<option value="high">🔴 High</option>';
+                    editHtml += '<option value="normal" selected>🟡 Normal</option>';
+                    editHtml += '<option value="low">🟢 Low</option>';
+                    editHtml += '</select></div>';
+                    // #9 — Session Target
+                    editHtml += '<div class="detail-editor-field"><label class="detail-editor-label">Session Target</label>';
+                    editHtml += '<select class="detail-editor-select" id="editSession">';
+                    editHtml += '<option value="main">Main Session</option>';
+                    editHtml += '<option value="isolated">Isolated</option>';
+                    editHtml += '</select></div>';
+                    // #9 — Skills checkboxes
+                    editHtml += '<div class="detail-editor-field"><label class="detail-editor-label">Skills</label>';
+                    var agSkills = DEMO.agentSkills[agentId] || [];
+                    DEMO.skills.forEach(function(sk) {
+                        var checked = agSkills.indexOf(sk.name) >= 0 ? ' checked' : '';
+                        editHtml += '<div class="detail-skill-checkbox"><input type="checkbox"' + checked + ' data-skill="' + sk.name + '" /> ' + sk.icon + ' ' + sk.name + '<span class="detail-skill-checkbox-desc">' + sk.desc + '</span></div>';
                     });
                     editHtml += '</div>';
-                    editHtml += '</div>';
-                    
-                    // Model Override
-                    editHtml += '<div class="detail-editor-field">';
-                    editHtml += '<label class="detail-editor-label">Model Override</label>';
-                    editHtml += '<input type="text" class="detail-editor-input" id="editModel" placeholder="e.g. claude-sonnet-4, claude-opus-4" />';
-                    editHtml += '</div>';
-                    
-                    // Save / Cancel
-                    editHtml += '<div class="detail-save-bar">';
-                    editHtml += '<button class="detail-save-btn" id="saveEditBtn">💾 Save Agent</button>';
-                    editHtml += '<button class="detail-cancel-btn" id="cancelEditBtn">Cancel</button>';
-                    editHtml += '</div>';
-                    
-                    editHtml += '</div>';
-                    
-                    // Replace soul excerpt with editor
-                    var parentSection = soulEl.parentElement;
-                    parentSection.innerHTML = '<div class="detail-section-title">✏️ Edit Agent</div>' + editHtml;
-                    newEditBtn.style.display = 'none';
-                    
-                    // Wire up color picker
-                    document.querySelectorAll('#colorPickerRow .detail-color-swatch').forEach(function(swatch) {
-                        swatch.addEventListener('click', function() {
-                            document.querySelectorAll('#colorPickerRow .detail-color-swatch').forEach(function(s) { s.classList.remove('selected'); });
-                            swatch.classList.add('selected');
-                        });
-                    });
-                    
-                    // Cancel
-                    document.getElementById('cancelEditBtn').addEventListener('click', function() {
-                        openDetailPanel(agentId);
-                    });
-                    
-                    // Save
-                    document.getElementById('saveEditBtn').addEventListener('click', async function() {
-                        var name = document.getElementById('editName').value.trim();
-                        var role = document.getElementById('editRole').value.trim();
-                        var traits = document.getElementById('editTraits').value.trim();
-                        var selectedColor = document.querySelector('#colorPickerRow .detail-color-swatch.selected');
-                        var color = selectedColor ? selectedColor.dataset.color : '';
-                        var model = document.getElementById('editModel').value.trim();
-                        
-                        var saveData = {};
-                        if (name) saveData.name = name;
-                        if (role) saveData.role = role;
-                        if (traits) saveData.traits = traits;
-                        // Color and model would need SOUL.md format support
-                        // For now, we store them as traits metadata
-                        if (color && color !== currentColor) {
-                            saveData.traits = (traits || '') + (traits ? ', ' : '') + 'brand-color:' + color;
-                        }
-                        if (model) {
-                            saveData.traits = (saveData.traits || traits || '') + (saveData.traits || traits ? ', ' : '') + 'model-override:' + model;
-                        }
-                        
-                        var result = await API.saveAgentSoul(agentId, saveData);
-                        if (result && result.success) {
-                            // Show success toast inline
-                            var saveBar = document.querySelector('.detail-save-bar');
-                            if (saveBar) {
-                                saveBar.innerHTML = '<span class="detail-toast-saved">✅ Saved successfully</span>';
-                            }
-                            showToast('✅ Agent ' + (name || agent.name) + ' updated');
-                            // Refresh after brief delay
-                            setTimeout(function() { openDetailPanel(agentId); }, 1200);
-                        } else {
-                            showToast('⚠️ Failed to save: ' + (result ? result.error : 'unknown'));
-                        }
+                }
+
+                // Color
+                editHtml += '<div class="detail-editor-field"><label class="detail-editor-label">Brand Color</label>';
+                editHtml += '<div class="detail-color-picker-row" id="colorPickerRow">';
+                brandColors.forEach(function(c) {
+                    editHtml += '<div class="detail-color-swatch' + (c===currentColor?' selected':'') + '" data-color="' + c + '" style="background:' + c + '"></div>';
+                });
+                editHtml += '</div></div>';
+
+                // Save / Cancel
+                editHtml += '<div class="detail-save-bar">';
+                editHtml += '<button class="detail-save-btn" id="saveEditBtn">💾 Save</button>';
+                editHtml += '<button class="detail-cancel-btn" id="cancelEditBtn">Cancel</button>';
+                editHtml += '</div></div>';
+
+                parentSection.innerHTML = editHtml;
+                newEditBtn.style.display = 'none';
+
+                // Color picker interaction
+                document.querySelectorAll('#colorPickerRow .detail-color-swatch').forEach(function(s){
+                    s.addEventListener('click',function(){
+                        document.querySelectorAll('#colorPickerRow .detail-color-swatch').forEach(function(x){x.classList.remove('selected');});
+                        s.classList.add('selected');
                     });
                 });
-            }
+
+                document.getElementById('cancelEditBtn').addEventListener('click', function() {
+                    openDetailPanel(agentId);
+                });
+                document.getElementById('saveEditBtn').addEventListener('click', async function() {
+                    if (API) {
+                        var saveData = {name:document.getElementById('editName').value.trim()};
+                        if (!isCeoEdit) {
+                            saveData.role = document.getElementById('editRole').value.trim();
+                            saveData.traits = document.getElementById('editTraits').value.trim();
+                        }
+                        try {
+                            var result = await API.saveAgentSoul(agentId, saveData);
+                            if (result && result.success) {
+                                showToast('✅ Agent updated');
+                                setTimeout(function(){openDetailPanel(agentId);},800);
+                                return;
+                            }
+                        } catch(e) {}
+                    }
+                    // Demo mode — just show success
+                    showToast('✅ Changes saved (demo mode)');
+                    setTimeout(function(){openDetailPanel(agentId);},800);
+                });
+            });
         };
 
         /* Update closeAllPanels to include logs */
@@ -5465,6 +6016,196 @@
             _prevCloseAll();
             closeLogsPanel();
         };
+
+        /* ═══════════════════════════════════════════════
+           #10 — Idle agents visual + timer (demo mode)
+           ═══════════════════════════════════════════════ */
+        (function initIdleVisuals() {
+            // In demo mode, Echo is idle. Apply enhanced idle visuals.
+            var idleAgents = ['echo']; // Can add more
+            var idleSince = Date.now() - (15*60000); // 15 min ago
+
+            function updateIdleTimers() {
+                idleAgents.forEach(function(id) {
+                    document.querySelectorAll('.exec-room[data-agent="' + id + '"]').forEach(function(room) {
+                        room.classList.add('room-idle');
+                        // Add coffee label
+                        if (!room.querySelector('.agent-idle-coffee')) {
+                            var c = document.createElement('span');
+                            c.className = 'agent-idle-coffee';
+                            c.innerHTML = '☕ On break';
+                            var r = room.querySelector('.agent-role');
+                            if (r) r.parentNode.insertBefore(c, r.nextSibling);
+                        }
+                        // Add/update timer
+                        var timer = room.querySelector('.idle-timer');
+                        if (!timer) {
+                            timer = document.createElement('span');
+                            timer.className = 'idle-timer';
+                            var coffee = room.querySelector('.agent-idle-coffee');
+                            if (coffee) coffee.parentNode.insertBefore(timer, coffee.nextSibling);
+                        }
+                        var elapsed = Math.floor((Date.now() - idleSince) / 60000);
+                        timer.textContent = 'Last active: ' + elapsed + 'm ago';
+                        // Tooltip
+                        room.title = AGENTS[id].name + ' — Idle since ' + new Date(idleSince).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+                        // Overlay
+                        if (!room.querySelector('.room-idle-overlay')) {
+                            var o = document.createElement('div');
+                            o.className = 'room-idle-overlay';
+                            room.appendChild(o);
+                        }
+                    });
+                    // Hierarchy cards
+                    document.querySelectorAll('.org-card[data-agent="' + id + '"]').forEach(function(card){
+                        card.style.opacity = '0.65';
+                        card.style.filter = 'saturate(0.7)';
+                    });
+                });
+            }
+            updateIdleTimers();
+            setInterval(updateIdleTimers, 60000);
+        })();
+
+        /* ═══════════════════════════════════════════════
+           #12 — Mailbox real-time: new message every 30s
+           ═══════════════════════════════════════════════ */
+        (function initMailboxRealtime() {
+            if (API) return; // Only in demo mode
+            var demoNewMsgs = [
+                {sender:'Forge',color:'#FF9F0A',text:'Point #7 cron timeline added. 12/18 complete.',priority:'normal'},
+                {sender:'Sentinel',color:'#30D158',text:'Pre-deploy security scan — no issues found.',priority:'info'},
+                {sender:'Atlas',color:'#BF5AF2',text:'FeedCast bot health check: OK. 99.9% uptime.',priority:'info'},
+                {sender:'Hunter',color:'#FF453A',text:'New competitor spotted: "CrewAI" — similar positioning.',priority:'normal'},
+                {sender:'Kira',color:'#FF2D55',text:'Ca avance ? Je veux un update.',priority:'urgent'},
+            ];
+            var msgIdx = 0;
+            
+            // Add notification dot to mailbox button
+            var mbBtn = document.getElementById('mailboxBtn');
+            if (mbBtn) { mbBtn.style.position = 'relative'; }
+
+            setInterval(function() {
+                var msg = demoNewMsgs[msgIdx % demoNewMsgs.length];
+                msgIdx++;
+                var now = new Date();
+                var newMsg = {
+                    sender: msg.sender,
+                    color: msg.color,
+                    time: now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0'),
+                    text: msg.text,
+                    read: false,
+                    priority: msg.priority,
+                    assignedTo: null
+                };
+                LIVE_MESSAGES.unshift(newMsg);
+                if (LIVE_MESSAGES.length > 10) LIVE_MESSAGES.pop();
+                renderMessages(LIVE_MESSAGES);
+
+                // Pulse notification on mailbox
+                if (mbBtn && !mbBtn.querySelector('.mailbox-notif-dot')) {
+                    var dot = document.createElement('div');
+                    dot.className = 'mailbox-notif-dot';
+                    mbBtn.appendChild(dot);
+                    setTimeout(function() { if (dot.parentNode) dot.remove(); }, 5000);
+                }
+            }, 30000);
+        })();
+
+        /* ═══════════════════════════════════════════════
+           #13 — Mailbox dispatch detail view
+           ═══════════════════════════════════════════════ */
+        (function initMailboxDetail() {
+            // Event delegation: click on mail-item shows detail
+            document.getElementById('mailboxMessages').addEventListener('click', function(e) {
+                var item = e.target.closest('.mail-item');
+                if (!item) return;
+                var idx = parseInt(item.dataset.messageIndex);
+                if (isNaN(idx) || !LIVE_MESSAGES[idx]) return;
+                var msg = LIVE_MESSAGES[idx];
+
+                // Mark as read
+                msg.read = true;
+                updateMailboxBadge();
+
+                // Build detail view
+                var priClass = msg.priority === 'urgent' ? 'urgent' : msg.priority === 'info' ? 'info' : 'normal';
+                var priLabel = msg.priority === 'urgent' ? '🔴 Urgent' : msg.priority === 'info' ? '🟢 Info' : '🟡 Normal';
+                var dispatchTarget = msg.assignedTo || 'Unassigned';
+                var dispatchStatus = msg.assignedTo ? '✅ Delivered' : '⏳ Pending';
+
+                var dHtml = '<div class="mail-detail-view">';
+                dHtml += '<div class="mail-detail-header">';
+                dHtml += '<button class="mail-detail-back" id="mailDetailBack">←</button>';
+                dHtml += '<span class="mail-detail-sender">' + msg.sender + '</span>';
+                dHtml += '<span class="mail-detail-time">' + msg.time + '</span>';
+                dHtml += '</div>';
+                dHtml += '<div class="mail-detail-body">' + msg.text + '</div>';
+                dHtml += '<div class="mail-detail-priority mail-detail-priority--' + priClass + '">' + priLabel + '</div>';
+                dHtml += '<div class="mail-detail-dispatch">';
+                dHtml += '<span>📨 Dispatched to:</span>';
+                dHtml += '<span class="mail-detail-dispatch-arrow">→</span>';
+                dHtml += '<span class="mail-detail-dispatch-target">' + dispatchTarget + '</span>';
+                dHtml += '<span class="mail-detail-dispatch-status">' + dispatchStatus + '</span>';
+                dHtml += '</div>';
+                dHtml += '</div>';
+
+                var container = document.getElementById('mailboxMessages');
+                container.innerHTML = dHtml;
+
+                document.getElementById('mailDetailBack').addEventListener('click', function() {
+                    renderMessages(LIVE_MESSAGES);
+                });
+            });
+        })();
+
+        /* ═══════════════════════════════════════════════
+           #18 — Demo decommission every 60s
+           ═══════════════════════════════════════════════ */
+        (function initDemoDecommission() {
+            if (API) return; // Only demo mode
+            var names = DEMO.subAgentNames.slice();
+            var idx = 0;
+            setInterval(function() {
+                var name = names[idx % names.length];
+                idx++;
+                // Toast
+                showToast('🔥 ' + name + ' decommissioned');
+                // Flash overlay
+                var flash = document.createElement('div');
+                flash.className = 'decommission-overlay-flash';
+                document.body.appendChild(flash);
+                setTimeout(function(){flash.remove();}, 600);
+                // Particles from center of screen
+                var cx = window.innerWidth/2, cy = window.innerHeight/2;
+                for (var p = 0; p < 12; p++) {
+                    var particle = document.createElement('div');
+                    particle.className = 'decommission-particle';
+                    var angle = (p / 12) * Math.PI * 2;
+                    var dist = 40 + Math.random() * 60;
+                    particle.style.left = (cx + Math.cos(angle) * dist) + 'px';
+                    particle.style.top = (cy + Math.sin(angle) * dist) + 'px';
+                    particle.style.background = ['#FF453A','#FF9F0A','#FFD60A','#007AFF'][Math.floor(Math.random()*4)];
+                    particle.style.width = (3+Math.random()*4) + 'px';
+                    particle.style.height = particle.style.width;
+                    document.body.appendChild(particle);
+                    setTimeout(function(){particle.remove();}, 800);
+                }
+            }, 60000);
+        })();
+
+        /* ═══════════════════════════════════════════════
+           #14 — Meeting room preview (demo)
+           ═══════════════════════════════════════════════ */
+        (function initMeetingPreviewDemo() {
+            if (API) return;
+            var preview = document.getElementById('meetingPreview');
+            var count = document.getElementById('meetingCount');
+            if (preview) {
+                preview.innerHTML = '<div class="meeting-active">🔴 forge-executive-ss-plus</div><div class="meeting-active">🔴 sentinel-audit-executive</div>';
+            }
+            if (count) count.textContent = '2';
+        })();
 
         /* Update Escape handler for logs panel */
         document.addEventListener('keydown', function(e) {
