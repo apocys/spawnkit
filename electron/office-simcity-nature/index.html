@@ -1065,9 +1065,25 @@ function getTinted(img, key) {
   tc.width = w; tc.height = h;
   const tctx = tc.getContext('2d');
   tctx.drawImage(img, 0, 0);
-  // Subtle warm tint only — no lightening (was washing out sprites)
+  // Lift shadows: brighten dark areas without washing out lit areas
+  // Uses 'lighter' composite to add light, then source-atop to tint
+  const id = tctx.getImageData(0, 0, w, h);
+  const px = id.data;
+  for (let i = 0; i < px.length; i += 4) {
+    if (px[i+3] === 0) continue; // skip transparent
+    const brightness = (px[i] + px[i+1] + px[i+2]) / 3;
+    if (brightness < 80) {
+      // Lift dark pixels by ~40 to reduce harsh shadows
+      const lift = Math.round(40 * (1 - brightness / 80));
+      px[i]   = Math.min(255, px[i] + lift);
+      px[i+1] = Math.min(255, px[i+1] + lift);
+      px[i+2] = Math.min(255, px[i+2] + lift);
+    }
+  }
+  tctx.putImageData(id, 0, 0);
+  // Subtle warm tint
   tctx.globalCompositeOperation = 'source-atop';
-  tctx.fillStyle = 'rgba(100, 90, 40, 0.06)';
+  tctx.fillStyle = 'rgba(100, 90, 40, 0.05)';
   tctx.fillRect(0, 0, w, h);
   tctx.globalCompositeOperation = 'source-over';
   _tintCache[key] = tc;
@@ -1450,8 +1466,8 @@ function drawChar(ch) {
   const dw = 256 * imgScale;
   const dh = 256 * imgScale;
 
-  // Position: feet at diamond center point
-  const feetScreenY = s.y + DH * scale * 0.35;
+  // Position: feet grounded at tile center
+  const feetScreenY = s.y + DH * scale * 0.5;
   const drawX = s.x - metrics.centerX * imgScale;
   const drawY = feetScreenY - metrics.feetY * imgScale;
 
