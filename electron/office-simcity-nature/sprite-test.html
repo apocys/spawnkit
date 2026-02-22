@@ -54,20 +54,22 @@ const DIRS = ['SE', 'SW', 'NW', 'NE'];
 const FRAMES = 8;
 
 // Load static previews
-document.getElementById('se').src = BASE + '/SE/frame_002.png';
-document.getElementById('sw').src = BASE + '/SW/frame_002.png';
-document.getElementById('nw').src = BASE + '/NW/frame_002.png';
-document.getElementById('ne').src = BASE + '/NE/frame_002.png';
+// Remap: SE↔SW, NE↔NW (confirmed by Kira)
+document.getElementById('se').src = BASE + '/SW/frame_002.png';
+document.getElementById('sw').src = BASE + '/SE/frame_002.png';
+document.getElementById('nw').src = BASE + '/NE/frame_002.png';
+document.getElementById('ne').src = BASE + '/NW/frame_002.png';
 
 // Animation test
 const cvs = document.getElementById('cvs');
 const ctx = cvs.getContext('2d');
 
+// dir = the sprite FOLDER to load (with remap applied)
 const walkers = [
-  { dir: 'SE', dx: 1, dy: 0.5, x: 50, y: 150, label: 'SE ↘' },
-  { dir: 'SW', dx: -1, dy: 0.5, x: 750, y: 150, label: 'SW ↙' },
-  { dir: 'NW', dx: -1, dy: -0.5, x: 750, y: 350, label: 'NW ↖' },
-  { dir: 'NE', dx: 1, dy: -0.5, x: 50, y: 350, label: 'NE ↗' },
+  { dir: 'SW', dx: 1, dy: 0.5, x: 50, y: 150, label: 'SE ↘' },   // SE movement → SW folder
+  { dir: 'SE', dx: -1, dy: 0.5, x: 750, y: 150, label: 'SW ↙' },  // SW movement → SE folder
+  { dir: 'NE', dx: -1, dy: -0.5, x: 750, y: 350, label: 'NW ↖' }, // NW movement → NE folder
+  { dir: 'NW', dx: 1, dy: -0.5, x: 50, y: 350, label: 'NE ↗' },   // NE movement → NW folder
 ];
 
 // Load all walk frames
