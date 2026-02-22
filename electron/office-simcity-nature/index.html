@@ -1492,8 +1492,16 @@ function drawChar(ch) {
   const drawX = s.x - metrics.centerX * imgScale;
   const drawY = feetScreenY - metrics.feetY * imgScale;
 
-  // Elliptical shadow snug under feet (offset up slightly to account for 25° camera angle)
-  const shadowY = feetScreenY - 3 * scale;
+  // Elliptical shadow snug under feet — per-character offset for best alignment
+  const shadowOffsets = {
+    'character-female-a': 6,   // Atlas — taller sprite, needs more lift
+    'character-female-c': 4,
+    'character-male-a': 4,
+    'character-male-c': 4,
+    'character-male-d': 4,
+    'character-male-e': 4,
+  };
+  const shadowY = feetScreenY - (shadowOffsets[ch.charName] || 4) * scale;
   ctx.save();
   const shW = 14 * scale;
   const shH = 5 * scale;
@@ -1713,27 +1721,38 @@ function render() {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, cvs.width, cvs.height);
 
-  // Pass 1: Draw all terrain and objects (ground, paths, objects)
+  // Pass 1: Draw ground tiles and flat paths (never occlude anything)
   for (let r = 0; r < MAP; r++) {
     for (let c = 0; c < MAP; c++) {
       draw(imgs['ground'], c, r);
-
       if (ground[r][c] === 1) {
         draw(imgs['path'], c, r);
-      }
-
-      const obj = objects[r][c];
-      if (obj) {
-        draw(imgs['obj:' + obj], c, r);
       }
     }
   }
 
-  // Pass 2: Draw all characters on top of terrain, sorted by iso depth
-  // Sort by (c + r) so characters further from camera are drawn first
-  const sortedChars = [...chars].sort((a, b) => (a.c + a.r) - (b.c + b.r));
-  sortedChars.forEach(ch => {
-    drawChar(ch);
+  // Pass 2: Depth-sorted draw of objects + characters together
+  // Build a list of all drawable entities with their iso depth (c + r)
+  const drawables = [];
+  for (let r = 0; r < MAP; r++) {
+    for (let c = 0; c < MAP; c++) {
+      const obj = objects[r][c];
+      if (obj) {
+        drawables.push({ type: 'obj', c, r, depth: c + r, obj });
+      }
+    }
+  }
+  chars.forEach(ch => {
+    drawables.push({ type: 'char', c: ch.c, r: ch.r, depth: ch.c + ch.r, ch });
+  });
+  // Sort by depth (back to front); for same depth, objects before characters
+  drawables.sort((a, b) => a.depth - b.depth || (a.type === 'obj' ? -1 : 1));
+  drawables.forEach(d => {
+    if (d.type === 'obj') {
+      draw(imgs['obj:' + d.obj], d.c, d.r);
+    } else {
+      drawChar(d.ch);
+    }
   });
 
   // Particles on top
