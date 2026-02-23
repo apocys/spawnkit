@@ -2185,7 +2185,7 @@ function checkReady() {
     document.getElementById('loading').style.display = 'none';
     resetView();
     requestAnimationFrame(loop);
-    initVillagePanels(); // Initialize panel system after village loads
+    if (typeof initVillagePanels === 'function') initVillagePanels(); // Initialize panel system after village loads
   } else {
     requestAnimationFrame(checkReady);
   }
@@ -3662,7 +3662,8 @@ console.log('🏢 Executive Features loaded - F1-F14 integrated with SimCity the
   // ══════════════════════════════════════════════════
   //  STATUS BAR BUTTONS + CLOCK + UPTIME
   // ══════════════════════════════════════════════════
-  document.getElementById('vsbMissions').addEventListener('click', openMissionsPanel);
+  var _vsbMissions = document.getElementById('vsbMissions');
+if (_vsbMissions) _vsbMissions.addEventListener('click', openMissionsPanel);
   document.getElementById('vsbCrons').addEventListener('click', openCronPanel);
   document.getElementById('vsbMemory').addEventListener('click', openMemoryPanel);
   document.getElementById('vsbChat').addEventListener('click', openVillageChat);
