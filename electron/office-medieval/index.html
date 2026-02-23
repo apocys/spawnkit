@@ -894,261 +894,190 @@
                 this.totalModels++;
             };
 
-            // ── Corner Towers (4 corners) ──────────────────────
-            // Each tower: base + mid + top stacked vertically
-            // Kenney models are typically ~1 unit each, we need to figure out exact stack heights
-            
-            // Tower positions (square castle layout)
-            const towerPositions = [
-                { x: -5, z: -5, label: 'NW Tower' },
-                { x:  5, z: -5, label: 'NE Tower' },
-                { x: -5, z:  5, label: 'SW Tower' },
-                { x:  5, z:  5, label: 'SE Tower' },
-            ];
+            // ═══════════════════════════════════════════════════════════
+            // FRENCH CHATEAU — Double walls, massive keep, 8+ towers
+            // ═══════════════════════════════════════════════════════════
 
-            towerPositions.forEach(tp => {
-                defs.push({ path: 'assets/castle/tower-square-base.glb', x: tp.x, y: 0, z: tp.z, ry: 0, scale: 1, label: tp.label + ' base' });
-                defs.push({ path: 'assets/castle/tower-square-mid-windows.glb', x: tp.x, y: 1, z: tp.z, ry: 0, scale: 1, label: tp.label + ' mid' });
-                defs.push({ path: 'assets/castle/tower-square-top-roof.glb', x: tp.x, y: 2, z: tp.z, ry: 0, scale: 1, label: tp.label + ' top' });
+            // ── GRAND KEEP (center, 4 stories, scale 1.8) ───────
+            const ks = 1.8;
+            defs.push({ path: 'assets/castle/tower-square-base-color.glb', x: 0, y: 0, z: 0, ry: 0, scale: ks, label: 'Keep L1' });
+            defs.push({ path: 'assets/castle/tower-square-mid-windows.glb', x: 0, y: 1*ks, z: 0, ry: 0, scale: ks, label: 'Keep L2' });
+            defs.push({ path: 'assets/castle/tower-square-mid-windows.glb', x: 0, y: 2*ks, z: 0, ry: Math.PI/4, scale: ks, label: 'Keep L3' });
+            defs.push({ path: 'assets/castle/tower-square-top-roof-high-windows.glb', x: 0, y: 3*ks, z: 0, ry: 0, scale: ks, label: 'Keep Roof' });
+            defs.push({ path: 'assets/castle/flag-banner-long.glb', x: 0, y: 4*ks, z: 0, ry: 0, scale: ks, label: 'Keep Banner' });
+
+            // ── INNER TOWERS (+-4) ──────────────────────────────
+            [[-4,-4],[4,-4],[-4,4],[4,4]].forEach(([tx,tz], i) => {
+                defs.push({ path: 'assets/castle/tower-square-base.glb', x: tx, y: 0, z: tz, ry: 0, scale: 1.1, label: 'Inner Tower' });
+                defs.push({ path: 'assets/castle/tower-square-mid-windows.glb', x: tx, y: 1.1, z: tz, ry: 0, scale: 1.1, label: 'Inner Tower' });
+                defs.push({ path: 'assets/castle/tower-square-top-roof.glb', x: tx, y: 2.2, z: tz, ry: 0, scale: 1.1, label: 'Inner Tower' });
+                defs.push({ path: i%2===0?'assets/castle/flag.glb':'assets/castle/flag-pennant.glb', x: tx, y: 3.3, z: tz, ry: 0, scale: 1, label: 'Flag' });
             });
 
-            // ── Central Keep (taller, larger — focal point) ──────
-            const ks = 1.4; // keep scale — bigger than towers
-            defs.push({ path: 'assets/castle/tower-square-base-color.glb', x: 0, y: 0, z: 0, ry: 0, scale: ks, label: 'Keep base' });
-            defs.push({ path: 'assets/castle/tower-square-mid-windows.glb', x: 0, y: 1 * ks, z: 0, ry: 0, scale: ks, label: 'Keep mid 1' });
-            defs.push({ path: 'assets/castle/tower-square-mid-windows.glb', x: 0, y: 2 * ks, z: 0, ry: 0, scale: ks, label: 'Keep mid 2' });
-            defs.push({ path: 'assets/castle/tower-square-top-roof-high.glb', x: 0, y: 3 * ks, z: 0, ry: 0, scale: ks, label: 'Keep roof' });
+            // ── INNER WALLS (+-4) ───────────────────────────────
+            for (let x = -3; x <= 3; x++) defs.push({ path: 'assets/castle/wall.glb', x, y: 0, z: -4, ry: 0, scale: 1.1, label: 'Inner N' });
+            for (let x = -3; x <= 3; x++) defs.push({ path: x===0?'assets/castle/wall-doorway.glb':'assets/castle/wall.glb', x, y: 0, z: 4, ry: 0, scale: 1.1, label: 'Inner S' });
+            for (let z = -3; z <= 3; z++) defs.push({ path: 'assets/castle/wall.glb', x: 4, y: 0, z, ry: Math.PI/2, scale: 1.1, label: 'Inner E' });
+            for (let z = -3; z <= 3; z++) defs.push({ path: 'assets/castle/wall.glb', x: -4, y: 0, z, ry: Math.PI/2, scale: 1.1, label: 'Inner W' });
 
-            // ── Walls between towers ─────────────────────────────
-            // Wall model is 1 unit wide. Towers at ±5.
-            // North wall (z = -5)
-            for (let x = -4; x <= 4; x += 1) {
-                defs.push({ path: 'assets/castle/wall.glb', x, y: 0, z: -5, ry: 0, scale: 1, label: 'North wall' });
+            // ── OUTER TOWERS (+-8) — 4 massive towers ───────────
+            [[-8,-8],[8,-8],[-8,8],[8,8]].forEach(([tx,tz], i) => {
+                defs.push({ path: 'assets/castle/tower-square-base-border.glb', x: tx, y: 0, z: tz, ry: 0, scale: 1.2, label: 'Outer Tower' });
+                defs.push({ path: 'assets/castle/tower-square-mid.glb', x: tx, y: 1.2, z: tz, ry: 0, scale: 1.2, label: 'Outer Tower' });
+                defs.push({ path: 'assets/castle/tower-square-mid-windows.glb', x: tx, y: 2.4, z: tz, ry: 0, scale: 1.2, label: 'Outer Tower' });
+                defs.push({ path: 'assets/castle/tower-square-top-roof-rounded.glb', x: tx, y: 3.6, z: tz, ry: 0, scale: 1.2, label: 'Outer Tower' });
+                defs.push({ path: 'assets/castle/flag-wide.glb', x: tx, y: 4.8, z: tz, ry: i*Math.PI/2, scale: 1.2, label: 'Banner' });
+            });
+
+            // ── HEXAGON MID-WALL TOWERS ─────────────────────────
+            [[0,-8],[-8,0],[8,0]].forEach(([tx,tz]) => {
+                defs.push({ path: 'assets/castle/tower-hexagon-base.glb', x: tx, y: 0, z: tz, ry: 0, scale: 1.0, label: 'Hex Tower' });
+                defs.push({ path: 'assets/castle/tower-hexagon-mid.glb', x: tx, y: 1.0, z: tz, ry: 0, scale: 1.0, label: 'Hex Tower' });
+                defs.push({ path: 'assets/castle/tower-hexagon-roof.glb', x: tx, y: 2.0, z: tz, ry: 0, scale: 1.0, label: 'Hex Tower' });
+                defs.push({ path: 'assets/castle/flag-banner-short.glb', x: tx, y: 3.0, z: tz, ry: 0, scale: 1, label: 'Flag' });
+            });
+
+            // ── OUTER WALLS (+-8) ───────────────────────────────
+            for (let x = -7; x <= 7; x++) { if (x===0) continue; defs.push({ path: 'assets/castle/wall.glb', x, y: 0, z: -8, ry: 0, scale: 1.2, label: 'Outer N' }); if(x%3===0) defs.push({ path: 'assets/castle/wall-stud.glb', x, y: 1.2, z: -8, ry: 0, scale: 1.2, label: 'Battlement' }); }
+            for (let x = -7; x <= 7; x++) { if (x>=-1&&x<=1) continue; defs.push({ path: 'assets/castle/wall.glb', x, y: 0, z: 8, ry: 0, scale: 1.2, label: 'Outer S' }); if(x%3===0) defs.push({ path: 'assets/castle/wall-stud.glb', x, y: 1.2, z: 8, ry: 0, scale: 1.2, label: 'Battlement' }); }
+            for (let z = -7; z <= 7; z++) { if (z===0) continue; defs.push({ path: 'assets/castle/wall.glb', x: 8, y: 0, z, ry: Math.PI/2, scale: 1.2, label: 'Outer E' }); }
+            for (let z = -7; z <= 7; z++) { if (z===0) continue; defs.push({ path: 'assets/castle/wall.glb', x: -8, y: 0, z, ry: Math.PI/2, scale: 1.2, label: 'Outer W' }); }
+            // Wall pillars
+            [[-8,-4],[-8,4],[8,-4],[8,4],[-4,-8],[4,-8],[-4,8],[4,8]].forEach(([px,pz]) => {
+                defs.push({ path: 'assets/castle/wall-pillar.glb', x: px, y: 0, z: pz, ry: 0, scale: 1.2, label: 'Pillar' });
+            });
+
+            // ── GATEHOUSE (south z=8-10) ────────────────────────
+            defs.push({ path: 'assets/castle/wall-doorway.glb', x: 0, y: 0, z: 8, ry: 0, scale: 1.3, label: 'Gate' });
+            defs.push({ path: 'assets/castle/gate.glb', x: 0, y: 0, z: 9, ry: 0, scale: 1.2, label: 'Gate' });
+            defs.push({ path: 'assets/castle/metal-gate.glb', x: 0, y: 0, z: 9.5, ry: 0, scale: 1.2, label: 'Portcullis' });
+            [[-2,9],[2,9]].forEach(([tx,tz]) => {
+                defs.push({ path: 'assets/castle/tower-square-base.glb', x: tx, y: 0, z: tz, ry: 0, scale: 1.0, label: 'Gate Tower' });
+                defs.push({ path: 'assets/castle/tower-square-mid-door.glb', x: tx, y: 1, z: tz, ry: 0, scale: 1.0, label: 'Gate Tower' });
+                defs.push({ path: 'assets/castle/tower-square-top.glb', x: tx, y: 2, z: tz, ry: 0, scale: 1.0, label: 'Gate Tower' });
+            });
+            defs.push({ path: 'assets/castle/flag-banner-long.glb', x: -2, y: 3, z: 9, ry: 0, scale: 1, label: 'Gate flag' });
+            defs.push({ path: 'assets/castle/flag-banner-long.glb', x: 2, y: 3, z: 9, ry: 0, scale: 1, label: 'Gate flag' });
+            defs.push({ path: 'assets/castle/bridge-draw.glb', x: 0, y: 0, z: 11, ry: 0, scale: 1.3, label: 'Drawbridge' });
+            defs.push({ path: 'assets/castle/stairs-stone.glb', x: 0, y: 0, z: 7.5, ry: Math.PI, scale: 1.1, label: 'Stairs' });
+            defs.push({ path: 'assets/castle/stairs-stone-square.glb', x: 0, y: 0, z: 4.5, ry: Math.PI, scale: 1.1, label: 'Stairs' });
+
+            // ── COURTYARD BUILDINGS ──────────────────────────────
+            // Barracks NW
+            defs.push({ path: 'assets/castle/wall.glb', x: -6, y: 0, z: -6, ry: 0, scale: 0.9, label: 'Barracks' });
+            defs.push({ path: 'assets/castle/wall-doorway.glb', x: -6, y: 0, z: -5, ry: 0, scale: 0.9, label: 'Barracks' });
+            defs.push({ path: 'assets/castle/wall.glb', x: -6, y: 0, z: -7, ry: 0, scale: 0.9, label: 'Barracks' });
+            defs.push({ path: 'assets/castle/tower-slant-roof.glb', x: -6, y: 0.9, z: -6, ry: 0, scale: 0.9, label: 'Barracks roof' });
+            // Chapel NE
+            defs.push({ path: 'assets/castle/tower-hexagon-base.glb', x: 6, y: 0, z: -6, ry: 0, scale: 0.9, label: 'Chapel' });
+            defs.push({ path: 'assets/castle/tower-hexagon-roof-secondary.glb', x: 6, y: 0.9, z: -6, ry: 0, scale: 0.9, label: 'Chapel' });
+            defs.push({ path: 'assets/graveyard/cross.glb', x: 6, y: 1.8, z: -6, ry: 0, scale: 0.7, label: 'Cross' });
+            // Armory SW
+            defs.push({ path: 'assets/castle/wall.glb', x: -6, y: 0, z: 6, ry: Math.PI/2, scale: 0.9, label: 'Armory' });
+            defs.push({ path: 'assets/castle/wall-half-modular.glb', x: -6, y: 0, z: 5, ry: Math.PI/2, scale: 0.9, label: 'Armory' });
+            defs.push({ path: 'assets/castle/door.glb', x: -5, y: 0, z: 6, ry: 0, scale: 0.9, label: 'Armory door' });
+            // Stables SE
+            for (let z = 5; z <= 7; z++) defs.push({ path: 'assets/castle/wall-narrow-wood.glb', x: 6, y: 0, z, ry: 0, scale: 1, label: 'Stables' });
+            defs.push({ path: 'assets/castle/wall-narrow-wood-fence.glb', x: 5, y: 0, z: 6, ry: Math.PI/2, scale: 1, label: 'Stable fence' });
+            defs.push({ path: 'assets/graveyard/hay-bale-bundled.glb', x: 5.5, y: 0, z: 5.5, ry: 0.5, scale: 1, label: 'Hay' });
+            defs.push({ path: 'assets/graveyard/hay-bale.glb', x: 5.5, y: 0, z: 6.5, ry: 1.2, scale: 1, label: 'Hay' });
+
+            // ══════════════════════════════════════════════════════
+            // ══════════════════════════════════════════════════════
+            // MASSIVE LANDSCAPE — Forest, village, graveyard, training
+            // ══════════════════════════════════════════════════════
+
+            // ── DENSE FOREST (50+ trees) ────────────────────────
+            for (let angle = 0; angle < Math.PI * 2; angle += 0.12) {
+                const r = 20 + Math.random() * 10;
+                const x = Math.cos(angle) * r;
+                const z = Math.sin(angle) * r;
+                if (z > 12 && Math.abs(x) < 8) continue;
+                defs.push({ path: Math.random()>0.3?'assets/castle/tree-large.glb':'assets/castle/tree-small.glb', x, y: 0, z, ry: Math.random()*Math.PI*2, scale: 1+Math.random(), label: 'Tree' });
             }
-            // South wall (z = 5) — with doorway in center
-            for (let x = -4; x <= 4; x += 1) {
-                if (x === 0) {
-                    defs.push({ path: 'assets/castle/wall-doorway.glb', x, y: 0, z: 5, ry: 0, scale: 1, label: 'Gate doorway' });
-                } else {
-                    defs.push({ path: 'assets/castle/wall.glb', x, y: 0, z: 5, ry: 0, scale: 1, label: 'South wall' });
-                }
-            }
-            // East wall (x = 5)
-            for (let z = -4; z <= 4; z += 1) {
-                defs.push({ path: 'assets/castle/wall.glb', x: 5, y: 0, z, ry: Math.PI / 2, scale: 1, label: 'East wall' });
-            }
-            // West wall (x = -5)
-            for (let z = -4; z <= 4; z += 1) {
-                defs.push({ path: 'assets/castle/wall.glb', x: -5, y: 0, z, ry: Math.PI / 2, scale: 1, label: 'West wall' });
-            }
-
-            // ── Gate & Bridge ────────────────────────────────────
-            defs.push({ path: 'assets/castle/gate.glb', x: 0, y: 0, z: 5.5, ry: 0, scale: 1, label: 'Gate' });
-            defs.push({ path: 'assets/castle/bridge-draw.glb', x: 0, y: 0, z: 7, ry: 0, scale: 1, label: 'Drawbridge' });
-
-            // ── Flags ────────────────────────────────────────────
-            defs.push({ path: 'assets/castle/flag-banner-long.glb', x: 0, y: 4 * 1.4, z: 0, ry: 0, scale: 1.4, label: 'Keep flag' });
-            towerPositions.forEach((tp, i) => {
-                defs.push({ path: i % 2 === 0 ? 'assets/castle/flag.glb' : 'assets/castle/flag-pennant.glb', x: tp.x, y: 3, z: tp.z, ry: 0, scale: 1, label: 'Tower flag' });
+            [{x:-12,z:-14},{x:-8,z:-13},{x:12,z:-14},{x:-14,z:-6},{x:14,z:-4},{x:-13,z:4},{x:13,z:6},{x:-12,z:12},{x:12,z:14},{x:-10,z:-18},{x:10,z:-18},{x:-18,z:0},{x:18,z:0},{x:0,z:-20},{x:-20,z:-8},{x:20,z:-8},{x:-18,z:10},{x:18,z:10}].forEach(t => {
+                defs.push({ path: 'assets/castle/tree-large.glb', x: t.x, y: 0, z: t.z, ry: Math.random()*Math.PI*2, scale: 1.3+Math.random()*0.5, label: 'Tree' });
             });
 
-            // ── Trees ────────────────────────────────────────────
-            const treePlacements = [
-                { path: 'assets/castle/tree-large.glb', x: -9, z: -8 },
-                { path: 'assets/castle/tree-large.glb', x: -10, z: 2 },
-                { path: 'assets/castle/tree-small.glb', x: -8, z: -3 },
-                { path: 'assets/castle/tree-large.glb', x: 9, z: -7 },
-                { path: 'assets/castle/tree-small.glb', x: 10, z: 4 },
-                { path: 'assets/castle/tree-large.glb', x: 8, z: 9 },
-                { path: 'assets/castle/tree-small.glb', x: -8, z: 9 },
-                { path: 'assets/castle/tree-small.glb', x: 3, z: -9 },
-            ];
-            treePlacements.forEach(t => {
-                defs.push({ path: t.path, x: t.x, y: 0, z: t.z, ry: Math.random() * Math.PI * 2, scale: 1.3, label: 'Tree' });
+            // ── VILLAGE (z > 12) ────────────────────────────────
+            [[-3,14,0.8],[-4,16,0.7],[-3,18,0.85],[-5,20,0.75]].forEach(([bx,bz,bs]) => {
+                defs.push({ path: 'assets/castle/wall.glb', x: bx, y: 0, z: bz, ry: 0, scale: bs, label: 'House' });
+                defs.push({ path: 'assets/castle/wall-doorway.glb', x: bx, y: 0, z: bz+1, ry: 0, scale: bs, label: 'Door' });
+                defs.push({ path: 'assets/castle/tower-slant-roof.glb', x: bx, y: bs*0.95, z: bz+0.5, ry: 0, scale: bs, label: 'Roof' });
+            });
+            [[3,14,0.85],[4,16,0.7],[3,18,0.8],[5,20,0.75]].forEach(([bx,bz,bs]) => {
+                defs.push({ path: 'assets/castle/wall.glb', x: bx, y: 0, z: bz, ry: 0, scale: bs, label: 'House' });
+                defs.push({ path: 'assets/castle/wall-doorway.glb', x: bx, y: 0, z: bz+1, ry: 0, scale: bs, label: 'Door' });
+                defs.push({ path: 'assets/castle/tower-slant-roof.glb', x: bx, y: bs*0.95, z: bz+0.5, ry: Math.PI, scale: bs, label: 'Roof' });
+            });
+            defs.push({ path: 'assets/castle/tower-hexagon-base.glb', x: -8, y: 0, z: 15, ry: 0, scale: 1.0, label: 'Chapel' });
+            defs.push({ path: 'assets/castle/tower-hexagon-roof.glb', x: -8, y: 1.0, z: 15, ry: 0, scale: 1.0, label: 'Chapel' });
+            defs.push({ path: 'assets/graveyard/altar-stone.glb', x: 0, y: 0, z: 17, ry: 0, scale: 1, label: 'Altar' });
+            defs.push({ path: 'assets/graveyard/bench.glb', x: -1.5, y: 0, z: 17, ry: Math.PI/2, scale: 1, label: 'Bench' });
+            defs.push({ path: 'assets/graveyard/bench.glb', x: 1.5, y: 0, z: 17, ry: -Math.PI/2, scale: 1, label: 'Bench' });
+            defs.push({ path: 'assets/graveyard/lightpost-double.glb', x: 0, y: 0, z: 15, ry: 0, scale: 1, label: 'Light' });
+            defs.push({ path: 'assets/graveyard/lightpost-single.glb', x: -2, y: 0, z: 12, ry: 0, scale: 1, label: 'Light' });
+            defs.push({ path: 'assets/graveyard/lightpost-single.glb', x: 2, y: 0, z: 12, ry: 0, scale: 1, label: 'Light' });
+            for (let z = 13; z <= 21; z += 2) { defs.push({ path: 'assets/castle/wall-narrow-wood-fence.glb', x: -7, y: 0, z, ry: Math.PI/2, scale: 0.8, label: 'Fence' }); defs.push({ path: 'assets/castle/wall-narrow-wood-fence.glb', x: 7, y: 0, z, ry: Math.PI/2, scale: 0.8, label: 'Fence' }); }
+            defs.push({ path: 'assets/graveyard/hay-bale.glb', x: -6, y: 0, z: 18, ry: 0.5, scale: 1, label: 'Hay' });
+            defs.push({ path: 'assets/graveyard/fire-basket.glb', x: -3, y: 0, z: 12.5, ry: 0, scale: 1, label: 'Fire' });
+            defs.push({ path: 'assets/graveyard/fire-basket.glb', x: 3, y: 0, z: 12.5, ry: 0, scale: 1, label: 'Fire' });
+
+            // ── GRAVEYARD (NW) ──────────────────────────────────
+            for (let x = -20; x <= -12; x++) defs.push({ path: 'assets/graveyard/iron-fence.glb', x, y: 0, z: -8, ry: 0, scale: 1, label: 'Fence' });
+            for (let z = -18; z <= -8; z++) defs.push({ path: 'assets/graveyard/iron-fence.glb', x: -20, y: 0, z, ry: Math.PI/2, scale: 1, label: 'Fence' });
+            defs.push({ path: 'assets/graveyard/iron-fence-border-gate.glb', x: -12, y: 0, z: -10, ry: Math.PI/2, scale: 1, label: 'Gate' });
+            defs.push({ path: 'assets/graveyard/column-large.glb', x: -12, y: 0, z: -9, ry: 0, scale: 1.2, label: 'Column' });
+            defs.push({ path: 'assets/graveyard/column-large.glb', x: -12, y: 0, z: -11, ry: 0, scale: 1.2, label: 'Column' });
+            ['gravestone-cross','gravestone-round','gravestone-wide','gravestone-decorative','gravestone-broken','gravestone-bevel','gravestone-cross-large','gravestone-roof','gravestone-debris','cross-wood','gravestone-round','gravestone-wide','gravestone-cross','cross-column','gravestone-decorative'].forEach((g,i) => {
+                defs.push({ path: 'assets/graveyard/'+g+'.glb', x: -14-(i%4)*1.5, y: 0, z: -9-Math.floor(i/4)*1.5, ry: Math.random()*0.3, scale: 1, label: 'Grave' });
+            });
+            defs.push({ path: 'assets/graveyard/crypt-large.glb', x: -17, y: 0, z: -15, ry: 0, scale: 1.1, label: 'Crypt' });
+            defs.push({ path: 'assets/graveyard/crypt-large-roof.glb', x: -17, y: 1.1, z: -15, ry: 0, scale: 1.1, label: 'Crypt' });
+            defs.push({ path: 'assets/graveyard/crypt-a.glb', x: -14, y: 0, z: -16, ry: Math.PI/2, scale: 1, label: 'Crypt' });
+            defs.push({ path: 'assets/graveyard/coffin.glb', x: -16, y: 0, z: -14, ry: 0.3, scale: 1, label: 'Coffin' });
+            defs.push({ path: 'assets/graveyard/character-ghost.glb', x: -15, y: 0, z: -11, ry: 0.5, scale: 0.5, label: 'Ghost' });
+            defs.push({ path: 'assets/graveyard/character-skeleton.glb', x: -17, y: 0, z: -11, ry: -0.3, scale: 0.5, label: 'Skeleton' });
+            defs.push({ path: 'assets/graveyard/character-vampire.glb', x: -19, y: 0, z: -12, ry: 0.8, scale: 0.5, label: 'Vampire' });
+            defs.push({ path: 'assets/graveyard/character-zombie.glb', x: -14, y: 0, z: -15, ry: -0.5, scale: 0.5, label: 'Zombie' });
+            defs.push({ path: 'assets/graveyard/character-keeper.glb', x: -12.5, y: 0, z: -10, ry: Math.PI, scale: 0.5, label: 'Keeper' });
+            defs.push({ path: 'assets/graveyard/altar-wood.glb', x: -16, y: 0, z: -16.5, ry: 0, scale: 1, label: 'Altar' });
+            defs.push({ path: 'assets/graveyard/candle-multiple.glb', x: -16, y: 0.5, z: -16.5, ry: 0, scale: 1, label: 'Candles' });
+            defs.push({ path: 'assets/graveyard/shovel-dirt.glb', x: -15.5, y: 0, z: -12.5, ry: 0.8, scale: 1, label: 'Shovel' });
+            defs.push({ path: 'assets/graveyard/pumpkin-carved.glb', x: -14.5, y: 0, z: -9.5, ry: 0, scale: 1, label: 'Pumpkin' });
+            ['pine','pine-crooked','pine-fall','pine-fall-crooked'].forEach((p,i) => {
+                defs.push({ path: 'assets/graveyard/'+p+'.glb', x: -20+i*2.5, y: 0, z: -17+i, ry: i*1.2, scale: 1.1+i*0.1, label: 'Pine' });
             });
 
-            // ── Rocks ────────────────────────────────────────────
-            const rockPlacements = [
-                { path: 'assets/castle/rocks-large.glb', x: -7, z: 7 },
-                { path: 'assets/castle/rocks-small.glb', x: 8, z: 8 },
-                { path: 'assets/castle/rocks-large.glb', x: 9, z: -2 },
-                { path: 'assets/castle/rocks-small.glb', x: -9, z: -6 },
-                { path: 'assets/castle/rocks-small.glb', x: 3, z: 9 },
-            ];
-            rockPlacements.forEach(r => {
-                defs.push({ path: r.path, x: r.x, y: 0, z: r.z, ry: Math.random() * Math.PI * 2, scale: 1, label: 'Rocks' });
+            // ── TRAINING GROUNDS (NE) ───────────────────────────
+            defs.push({ path: 'assets/castle/siege-catapult.glb', x: 15, y: 0, z: -4, ry: Math.PI, scale: 1.3, label: 'Catapult' });
+            defs.push({ path: 'assets/castle/siege-trebuchet.glb', x: 18, y: 0, z: -6, ry: Math.PI+0.3, scale: 1.3, label: 'Trebuchet' });
+            defs.push({ path: 'assets/castle/siege-ballista.glb', x: 14, y: 0, z: -8, ry: Math.PI, scale: 1.3, label: 'Ballista' });
+            defs.push({ path: 'assets/castle/siege-tower.glb', x: 20, y: 0, z: -4, ry: Math.PI, scale: 1.2, label: 'Siege Tower' });
+            defs.push({ path: 'assets/castle/siege-ram.glb', x: 17, y: 0, z: -1, ry: Math.PI/2, scale: 1.2, label: 'Ram' });
+            defs.push({ path: 'assets/castle/siege-catapult-demolished.glb', x: 22, y: 0, z: -7, ry: 0.5, scale: 1.2, label: 'Wreck' });
+            defs.push({ path: 'assets/castle/siege-tower-demolished.glb', x: 23, y: 0, z: -3, ry: 0.8, scale: 1.1, label: 'Wreck' });
+            for (let z = -8; z <= -2; z += 2) defs.push({ path: 'assets/castle/wall-narrow.glb', x: 13, y: 0, z, ry: Math.PI/2, scale: 1, label: 'Barrier' });
+            defs.push({ path: 'assets/graveyard/hay-bale.glb', x: 16, y: 0, z: -10, ry: 0, scale: 1.2, label: 'Target' });
+            defs.push({ path: 'assets/graveyard/fire-basket.glb', x: 13, y: 0, z: -1, ry: 0, scale: 1, label: 'Torch' });
+
+            // ── ROADS ───────────────────────────────────────────
+            for (let z = 10; z <= 22; z++) defs.push({ path: 'assets/graveyard/road.glb', x: 0, y: 0.005, z, ry: 0, scale: 1, label: 'Road' });
+            for (let x = -12; x >= -20; x--) defs.push({ path: 'assets/graveyard/road.glb', x, y: 0.005, z: -8, ry: Math.PI/2, scale: 1, label: 'Road' });
+            for (let x = 10; x <= 22; x++) defs.push({ path: 'assets/graveyard/road.glb', x, y: 0.005, z: -1, ry: Math.PI/2, scale: 1, label: 'Road' });
+
+            // ── RIVER BRIDGES ───────────────────────────────────
+            defs.push({ path: 'assets/castle/bridge-straight.glb', x: -12, y: 0.1, z: -12, ry: Math.PI/4, scale: 1.3, label: 'Bridge' });
+            defs.push({ path: 'assets/castle/bridge-straight-pillar.glb', x: -12, y: -0.1, z: -12, ry: Math.PI/4, scale: 1.3, label: 'Pillar' });
+            defs.push({ path: 'assets/castle/bridge-straight.glb', x: 18, y: 0.1, z: 3, ry: Math.PI/3, scale: 1.3, label: 'Bridge' });
+            defs.push({ path: 'assets/castle/bridge-straight-pillar.glb', x: 18, y: -0.1, z: 3, ry: Math.PI/3, scale: 1.3, label: 'Pillar' });
+
+            // ── SCATTERED ROCKS ──────────────────────────────────
+            [{x:-11,z:3},{x:11,z:-3},{x:7,z:13},{x:-10,z:10},{x:13,z:4},{x:10,z:12},{x:-15,z:5},{x:15,z:8},{x:0,z:-12},{x:-5,z:22},{x:5,z:22}].forEach(r => {
+                defs.push({ path: Math.random()>0.5?'assets/castle/rocks-large.glb':'assets/castle/rocks-small.glb', x: r.x, y: 0, z: r.z, ry: Math.random()*Math.PI*2, scale: 0.8+Math.random()*0.5, label: 'Rocks' });
             });
-
-            // ── Siege Equipment ──────────────────────────────────
-            defs.push({ path: 'assets/castle/siege-catapult.glb', x: -4, y: 0, z: 10, ry: Math.PI, scale: 1.2, label: 'Catapult' });
-            defs.push({ path: 'assets/castle/siege-trebuchet.glb', x: 5, y: 0, z: 11, ry: Math.PI + 0.3, scale: 1.2, label: 'Trebuchet' });
-            defs.push({ path: 'assets/castle/siege-ballista.glb', x: 0, y: 0, z: 12, ry: Math.PI, scale: 1.2, label: 'Ballista' });
-
-            // ── Logs & Trunks ────────────────────────────────────
-            defs.push({ path: 'assets/castle/tree-log.glb', x: -7, y: 0, z: 4, ry: 0.8, scale: 1, label: 'Log' });
-            defs.push({ path: 'assets/castle/tree-trunk.glb', x: 7, y: 0, z: -5, ry: 1.2, scale: 1, label: 'Trunk' });
-            defs.push({ path: 'assets/castle/tree-log.glb', x: 2, y: 0, z: 10, ry: -0.5, scale: 1, label: 'Log' });
-
-            // ── Stairs ───────────────────────────────────────────
-            defs.push({ path: 'assets/castle/stairs-stone.glb', x: 0, y: 0, z: 4.5, ry: 0, scale: 1, label: 'Stairs' });
-
-
-            // ══════════════════════════════════════════════════════
-            // ENRICHED SCENERY — Dense forest, village, graveyard
-            // ══════════════════════════════════════════════════════
-
-            // ── Dense Forest Ring (30+ trees) ───────────────────
-            const forestTrees = [
-                {x:-12,z:-14,s:1.5},{x:-8,z:-13,s:1.3},{x:-4,z:-15,s:1.6},
-                {x:0,z:-14,s:1.4},{x:4,z:-13,s:1.5},{x:8,z:-15,s:1.3},
-                {x:12,z:-14,s:1.6},{x:-14,z:-10,s:1.4},{x:14,z:-10,s:1.5},
-                {x:-6,z:-11,s:1.2},{x:6,z:-12,s:1.4},
-                {x:-14,z:-6,s:1.5},{x:-15,z:0,s:1.6},{x:-13,z:4,s:1.3},
-                {x:-14,z:8,s:1.5},{x:-12,z:12,s:1.4},{x:-15,z:-2,s:1.2},
-                {x:14,z:-4,s:1.4},{x:15,z:2,s:1.5},{x:13,z:6,s:1.3},
-                {x:14,z:10,s:1.6},{x:12,z:14,s:1.4},
-                {x:-12,z:14,s:1.4},{x:-8,z:16,s:1.5},{x:8,z:16,s:1.3},
-                {x:12,z:15,s:1.6},{x:0,z:18,s:1.4},{x:-4,z:17,s:1.2},
-                {x:-16,z:-12,s:1.8},{x:16,z:-12,s:1.7},
-                {x:-16,z:6,s:1.6},{x:16,z:8,s:1.5},
-            ];
-            forestTrees.forEach((t, i) => {
-                defs.push({
-                    path: i % 3 !== 0 ? 'assets/castle/tree-large.glb' : 'assets/castle/tree-small.glb',
-                    x: t.x, y: 0, z: t.z, ry: Math.random() * Math.PI * 2, scale: t.s, label: 'Forest tree'
-                });
-            });
-
-            // ── Village outside gate (z > 8) ────────────────────
-            defs.push({ path: 'assets/castle/wall.glb', x: -3, y: 0, z: 10, ry: 0, scale: 0.8, label: 'Tavern' });
-            defs.push({ path: 'assets/castle/wall-doorway.glb', x: -3, y: 0, z: 11, ry: 0, scale: 0.8, label: 'Tavern door' });
-            defs.push({ path: 'assets/castle/wall.glb', x: -3, y: 0, z: 12, ry: 0, scale: 0.8, label: 'Tavern' });
-            defs.push({ path: 'assets/castle/tower-slant-roof.glb', x: -3, y: 0.8, z: 11, ry: 0, scale: 0.8, label: 'Tavern roof' });
-            defs.push({ path: 'assets/castle/wall.glb', x: 3, y: 0, z: 10, ry: 0, scale: 0.8, label: 'Smithy' });
-            defs.push({ path: 'assets/castle/wall-doorway.glb', x: 3, y: 0, z: 11, ry: 0, scale: 0.8, label: 'Smithy door' });
-            defs.push({ path: 'assets/castle/tower-slant-roof.glb', x: 3, y: 0.8, z: 11, ry: Math.PI, scale: 0.8, label: 'Smithy roof' });
-            defs.push({ path: 'assets/castle/wall-half.glb', x: 5, y: 0, z: 9, ry: Math.PI/2, scale: 0.7, label: 'Market' });
-            defs.push({ path: 'assets/castle/wall-half.glb', x: 5, y: 0, z: 10, ry: Math.PI/2, scale: 0.7, label: 'Market' });
-            defs.push({ path: 'assets/castle/tower-square-base.glb', x: -6, y: 0, z: 13, ry: 0, scale: 0.7, label: 'Chapel' });
-            defs.push({ path: 'assets/castle/tower-square-top-roof-high.glb', x: -6, y: 0.7, z: 13, ry: 0, scale: 0.7, label: 'Chapel spire' });
-
-            // Village fences
-            [{x:-5,z:9},{x:-6,z:9},{x:-7,z:9},{x:5,z:12},{x:6,z:12},{x:7,z:12}].forEach(f => {
-                defs.push({ path: 'assets/castle/wall-narrow-wood-fence.glb', x: f.x, y: 0, z: f.z, ry: 0, scale: 0.8, label: 'Fence' });
-            });
-
-            // Hay bales + benches
-            defs.push({ path: 'assets/graveyard/hay-bale.glb', x: -5, y: 0, z: 11, ry: 0.5, scale: 1, label: 'Hay' });
-            defs.push({ path: 'assets/graveyard/hay-bale-bundled.glb', x: 6, y: 0, z: 10, ry: 1.2, scale: 1, label: 'Hay' });
-            defs.push({ path: 'assets/graveyard/hay-bale.glb', x: 4, y: 0, z: 13, ry: 2.1, scale: 1, label: 'Hay' });
-            defs.push({ path: 'assets/graveyard/bench.glb', x: -1, y: 0, z: 12, ry: Math.PI/2, scale: 1, label: 'Bench' });
-            defs.push({ path: 'assets/graveyard/bench.glb', x: 1, y: 0, z: 12, ry: -Math.PI/2, scale: 1, label: 'Bench' });
-
-            // ── Graveyard (northwest) ────────────────────────────
-            [{x:-8,z:-6},{x:-9,z:-6},{x:-10,z:-6},{x:-11,z:-6},{x:-12,z:-6},{x:-12,z:-7},{x:-12,z:-8},{x:-12,z:-9}].forEach(f => {
-                defs.push({ path: 'assets/graveyard/iron-fence.glb', x: f.x, y: 0, z: f.z, ry: f.z===-6 ? 0 : Math.PI/2, scale: 1, label: 'Grave fence' });
-            });
-            defs.push({ path: 'assets/graveyard/iron-fence-border-gate.glb', x: -8, y: 0, z: -7, ry: Math.PI/2, scale: 1, label: 'Grave gate' });
-            defs.push({ path: 'assets/graveyard/gravestone-cross.glb', x: -9, y: 0, z: -7, ry: 0, scale: 1, label: 'Gravestone' });
-            defs.push({ path: 'assets/graveyard/gravestone-round.glb', x: -10, y: 0, z: -7.5, ry: 0.2, scale: 1, label: 'Gravestone' });
-            defs.push({ path: 'assets/graveyard/gravestone-wide.glb', x: -11, y: 0, z: -7, ry: -0.1, scale: 1, label: 'Gravestone' });
-            defs.push({ path: 'assets/graveyard/gravestone-decorative.glb', x: -9.5, y: 0, z: -8.5, ry: 0, scale: 1, label: 'Gravestone' });
-            defs.push({ path: 'assets/graveyard/gravestone-broken.glb', x: -10.5, y: 0, z: -9, ry: 0.3, scale: 1, label: 'Gravestone' });
-            defs.push({ path: 'assets/graveyard/cross-wood.glb', x: -11, y: 0, z: -8.5, ry: 0, scale: 1, label: 'Cross' });
-            defs.push({ path: 'assets/graveyard/crypt-large.glb', x: -10.5, y: 0, z: -10.5, ry: 0, scale: 1, label: 'Crypt' });
-            defs.push({ path: 'assets/graveyard/crypt-large-roof.glb', x: -10.5, y: 1, z: -10.5, ry: 0, scale: 1, label: 'Crypt roof' });
-            defs.push({ path: 'assets/graveyard/pine.glb', x: -12, y: 0, z: -10, ry: 0, scale: 1.2, label: 'Pine' });
-            defs.push({ path: 'assets/graveyard/pine-crooked.glb', x: -9, y: 0, z: -11, ry: 1.5, scale: 1.1, label: 'Pine' });
-            defs.push({ path: 'assets/graveyard/candle-multiple.glb', x: -10.8, y: 0, z: -8, ry: 0, scale: 1, label: 'Candles' });
-            defs.push({ path: 'assets/graveyard/lantern-candle.glb', x: -8.5, y: 0, z: -6.5, ry: 0, scale: 1, label: 'Lantern' });
-            defs.push({ path: 'assets/graveyard/pumpkin-carved.glb', x: -10, y: 0, z: -6.5, ry: 0, scale: 1, label: 'Pumpkin' });
-
-            // ── Lightposts along paths ───────────────────────────
-            defs.push({ path: 'assets/graveyard/lightpost-single.glb', x: -1.5, y: 0, z: 8, ry: 0, scale: 1, label: 'Lightpost' });
-            defs.push({ path: 'assets/graveyard/lightpost-single.glb', x: 1.5, y: 0, z: 8, ry: 0, scale: 1, label: 'Lightpost' });
-            defs.push({ path: 'assets/graveyard/lightpost-double.glb', x: 0, y: 0, z: 14, ry: 0, scale: 1, label: 'Lightpost' });
-
-            // ── Extra rocks ─────────────────────────────────────
-            [{x:-11,z:3,s:1.2},{x:11,z:-3,s:1.1},{x:7,z:13,s:1.3},{x:-10,z:10,s:1},{x:13,z:4,s:1.2},{x:10,z:12,s:1.1}].forEach(r => {
-                defs.push({ path: Math.random()>0.5 ? 'assets/castle/rocks-large.glb' : 'assets/castle/rocks-small.glb', x: r.x, y: 0, z: r.z, ry: Math.random()*Math.PI*2, scale: r.s, label: 'Rocks' });
-            });
-
-            // ── Fire baskets at village entrance ─────────────────
-            defs.push({ path: 'assets/graveyard/fire-basket.glb', x: -3, y: 0, z: 8.5, ry: 0, scale: 1, label: 'Fire basket' });
-            defs.push({ path: 'assets/graveyard/fire-basket.glb', x: 3, y: 0, z: 8.5, ry: 0, scale: 1, label: 'Fire basket' });
-
-            // ══════════════════════════════════════════════════════
-            // RIVER BRIDGES — 3 crossings
-            // River flows NW→E through: (-10,-10), (0,7), (15,2)
-            // ══════════════════════════════════════════════════════
-
-            // Bridge 1 — Main drawbridge near castle gate (river at x≈0, z≈7)
-            // River direction angle at that point ≈ atan2(9-7, 4-0) ≈ atan2(2,4) ≈ 0.46 rad
-            // Bridge perpendicular: ry = 0.46 + PI/2
-            defs.push({ path: 'assets/castle/bridge-draw.glb', x: 0, y: 0, z: 7.5, ry: Math.PI / 2 + 0.46, scale: 1.2, label: 'River main bridge' });
-
-            // Bridge 2 — Stone bridge through forest area (river at x≈-10, z≈-10)
-            // River direction angle ≈ atan2(-4-(-10), -6-(-10)) = atan2(6,4) ≈ 0.98 rad
-            // Bridge perpendicular: ry = 0.98 + PI/2
-            defs.push({ path: 'assets/castle/bridge-straight.glb', x: -10, y: 0, z: -10, ry: Math.PI / 2 + 0.98, scale: 1.2, label: 'River forest bridge' });
-            defs.push({ path: 'assets/castle/bridge-straight-pillar.glb', x: -10, y: 0, z: -10, ry: Math.PI / 2 + 0.98, scale: 1.2, label: 'River forest bridge pillar' });
-
-            // Bridge 3 — Small bridge near training grounds (river at x≈15, z≈2)
-            // River direction angle ≈ atan2(4-5, 18-12) = atan2(-1,6) ≈ -0.165 rad
-            // Bridge perpendicular: ry = -0.165 + PI/2
-            defs.push({ path: 'assets/castle/bridge-straight.glb', x: 15, y: 0, z: 2, ry: Math.PI / 2 - 0.165, scale: 1.2, label: 'River training bridge' });
-            defs.push({ path: 'assets/castle/bridge-straight-pillar.glb', x: 15, y: 0, z: 2, ry: Math.PI / 2 - 0.165, scale: 1.2, label: 'River training bridge pillar' });
-
-            // ══════════════════════════════════════════════════════
-            // RIVERBANKS — rocks & trees scattered naturally
-            // ══════════════════════════════════════════════════════
-
-            // Rocks along the river — both banks, scattered
-            const riverBankRocks = [
-                // NW stretch
-                { path: 'assets/castle/rocks-small.glb', x: -19, z: -24, ry: 0.3 },
-                { path: 'assets/castle/rocks-large.glb', x: -18, z: -22, ry: 1.1 },
-                { path: 'assets/castle/rocks-small.glb', x: -16, z: -21, ry: 2.4 },
-                { path: 'assets/castle/rocks-small.glb', x: -13, z: -17, ry: 0.7 },
-                { path: 'assets/castle/rocks-large.glb', x: -12, z: -16, ry: 1.9 },
-                // Middle stretch
-                { path: 'assets/castle/rocks-small.glb', x: -7, z:  -3, ry: 0.5 },
-                { path: 'assets/castle/rocks-large.glb', x: -5, z:  -5, ry: 2.1 },
-                { path: 'assets/castle/rocks-small.glb', x:  5, z:   9, ry: 1.3 },
-                { path: 'assets/castle/rocks-large.glb', x:  6, z:  10, ry: 0.8 },
-                // East stretch
-                { path: 'assets/castle/rocks-small.glb', x: 19, z:   6, ry: 1.7 },
-                { path: 'assets/castle/rocks-large.glb', x: 22, z:   4, ry: 0.4 },
-                { path: 'assets/castle/rocks-small.glb', x: 25, z:   6, ry: 2.9 },
-                { path: 'assets/castle/rocks-small.glb', x: 28, z:   4, ry: 1.0 },
-                { path: 'assets/castle/rocks-large.glb', x: 16, z:   3, ry: 0.6 },
-                { path: 'assets/castle/rocks-small.glb', x: 13, z:   7, ry: 1.8 },
-                { path: 'assets/castle/rocks-small.glb', x: -8, z:  -8, ry: 2.2 },
-                { path: 'assets/castle/rocks-large.glb', x: -9, z: -12, ry: 0.9 },
-            ];
-            riverBankRocks.forEach(r => {
-                defs.push({ path: r.path, x: r.x, y: 0, z: r.z, ry: r.ry, scale: 0.9 + Math.random() * 0.3, label: 'River rock' });
-            });
-
-            // Trees leaning toward the water along the banks
-            const riverBankTrees = [
-                { x: -17, z: -23, s: 1.2 },
-                { x: -15, z: -19, s: 1.4 },
-                { x: -11, z: -12, s: 1.3 },
-                { x:  -9, z:  -6, s: 1.1 },
-                { x:   3, z:   8, s: 1.3 },
-                { x:   7, z:  11, s: 1.2 },
-                { x:  17, z:   6, s: 1.1 },
-                { x:  23, z:   6, s: 1.4 },
-            ];
-            riverBankTrees.forEach((t, i) => {
-                defs.push({
-                    path: i % 3 === 0 ? 'assets/castle/tree-large.glb' : 'assets/castle/tree-small.glb',
-                    x: t.x, y: 0, z: t.z,
-                    ry: Math.PI * 0.15 + (i * 0.7),   // slight lean toward water
-                    scale: t.s, label: 'Riverbank tree'
-                });
-            });
+            defs.push({ path: 'assets/castle/tree-log.glb', x: -10, y: 0, z: 8, ry: 0.8, scale: 1, label: 'Log' });
+            defs.push({ path: 'assets/castle/tree-trunk.glb', x: 10, y: 0, z: -12, ry: 1.2, scale: 1, label: 'Trunk' });
 
             return defs;
         }
@@ -1206,22 +1135,22 @@
             // Define patrol waypoints for each character (inside castle courtyard + around gate)
             // Courtyard bounds: x: -4 to 4, z: -4 to 4 (walls at ±5)
             const waypoints = [
-                // ApoMac — King, slow stately patrol through center
-                [{ x: 0, z: 0 }, { x: 1.5, z: 1.5 }, { x: -1, z: 2 }, { x: -1.5, z: -1 }, { x: 1, z: -1.5 }],
-                // Forge — Builder, moves between inner corners
-                [{ x: -3, z: -3 }, { x: -3, z: 3 }, { x: 3, z: 3 }, { x: 3, z: -3 }],
-                // Atlas — Navigator, scouts inner wall perimeter
-                [{ x: -4, z: 0 }, { x: 0, z: -4 }, { x: 4, z: 0 }, { x: 0, z: 3.5 }],
-                // Hunter — Scout, fast, exits through gate then returns
-                [{ x: 0, z: 3.5 }, { x: 0, z: 4.5 }, { x: 0, z: 6 }, { x: 3, z: 10 }, { x: -2, z: 9 }, { x: 0, z: 6 }, { x: 0, z: 4.5 }, { x: 0, z: 3.5 }],
-                // Echo — Bard, wanders courtyard safely
-                [{ x: -2, z: 1 }, { x: 1, z: 3 }, { x: 2, z: 0 }, { x: 1, z: -2 }, { x: -1, z: -1 }],
-                // Sentinel — Guard, patrols INSIDE the gate area (not on wall)
-                [{ x: -2, z: 3.5 }, { x: 2, z: 3.5 }, { x: 2, z: 2 }, { x: -2, z: 2 }],
-                // Mystic — Wizard, slow circle around keep
-                [{ x: -2, z: -2 }, { x: 2, z: -2 }, { x: 2, z: 2 }, { x: -2, z: 2 }],
-                // Smith — Blacksmith, near forge area
-                [{ x: 3, z: -1 }, { x: 4, z: -3 }, { x: 3, z: -4 }, { x: 2, z: -2 }],
+                // ApoMac — King, inner keep
+                [{ x: 0, z: 0 }, { x: 2, z: 2 }, { x: -2, z: 2 }, { x: -2, z: -2 }, { x: 2, z: -2 }],
+                // Forge — Builder, outer courtyard
+                [{ x: -6, z: -6 }, { x: -6, z: 6 }, { x: 6, z: 6 }, { x: 6, z: -6 }],
+                // Atlas — Navigator, outer perimeter
+                [{ x: -7, z: 0 }, { x: 0, z: -7 }, { x: 7, z: 0 }, { x: 0, z: 6 }],
+                // Hunter — Scout, exits gate, patrols village
+                [{ x: 0, z: 6 }, { x: 0, z: 8 }, { x: 0, z: 12 }, { x: 3, z: 16 }, { x: -3, z: 18 }, { x: 0, z: 14 }, { x: 0, z: 8 }],
+                // Echo — Bard, inner courtyard
+                [{ x: -2, z: 1 }, { x: 1, z: 3 }, { x: 3, z: 0 }, { x: 1, z: -3 }, { x: -1, z: -1 }],
+                // Sentinel — Guard, gatehouse
+                [{ x: -3, z: 7 }, { x: 3, z: 7 }, { x: 3, z: 5 }, { x: -3, z: 5 }],
+                // Mystic — Wizard, circles keep
+                [{ x: -3, z: -3 }, { x: 3, z: -3 }, { x: 3, z: 3 }, { x: -3, z: 3 }],
+                // Smith — near stables
+                [{ x: 5, z: 5 }, { x: 5, z: 7 }, { x: 6, z: 6 }, { x: 5, z: 5 }],
             ];
 
             for (let i = 0; i < agentDefs.length; i++) {
