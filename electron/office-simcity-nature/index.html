@@ -1993,10 +1993,12 @@ function showBubble(ch, type) {
   if (type === 'social') {
     text = SOCIAL_BUBBLES[Math.floor(Math.random() * SOCIAL_BUBBLES.length)];
   } else if (type === 'collab') {
-    const pool = COLLAB_BUBBLES[ch.agent.name] || ['Hey!'];
+    const aName = ch.agent ? ch.agent.name : '';
+    const pool = COLLAB_BUBBLES[aName] || ['Hey!'];
     text = pool[Math.floor(Math.random() * pool.length)];
   } else {
-    const pool = WORK_BUBBLES[ch.agent.name] || ['Working...'];
+    const aName = ch.agent ? ch.agent.name : '';
+    const pool = WORK_BUBBLES[aName] || ['Working...'];
     text = pool[Math.floor(Math.random() * pool.length)];
   }
   ch.bubble = { text, life: 3500, maxLife: 3500 };
@@ -2086,8 +2088,8 @@ function drawChar(ch) {
   ctx.fill();
   ctx.restore();
 
-  // Selection highlight — pulsing glow ring under selected agent
-  if (selectedAgentName && ch.agent.name === selectedAgentName) {
+  // Selection highlight — pulsing glow ring under selected agent (agents only, not NPCs)
+  if (selectedAgentName && ch.agent && ch.agent.name === selectedAgentName) {
     ctx.save();
     const pulse = 0.6 + 0.4 * Math.sin(Date.now() * 0.004);
     const glowW = shW * 1.8;
