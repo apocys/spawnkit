@@ -660,79 +660,6 @@
             this.scene.add(shim);
             this.moatShimmer = shim;
 
-            // ── Winding River ─────────────────────────────────────
-            // Catmull-Rom curve points: NW → castle south → E
-            const riverPoints = [
-                new THREE.Vector2(-20, -25),
-                new THREE.Vector2(-14, -18),
-                new THREE.Vector2(-10, -10),
-                new THREE.Vector2(-6,  -4),
-                new THREE.Vector2(-2,   2),
-                new THREE.Vector2( 0,   7),   // passes near drawbridge (castle gate z=7)
-                new THREE.Vector2( 4,   9),
-                new THREE.Vector2( 8,   8),
-                new THREE.Vector2(12,   5),
-                new THREE.Vector2(18,   4),
-                new THREE.Vector2(24,   5),
-                new THREE.Vector2(30,   5),
-            ];
-
-            // Build river as a series of quads along the curve
-            const riverWidth = 2.5;
-            const riverMat = new THREE.MeshStandardMaterial({
-                color: 0x1a5a8a, transparent: true, opacity: 0.7,
-                roughness: 0.15, metalness: 0.3, side: THREE.DoubleSide,
-            });
-            const riverGroup = new THREE.Group();
-            riverGroup.position.y = -0.01;
-
-            for (let i = 0; i < riverPoints.length - 1; i++) {
-                const a = riverPoints[i];
-                const b = riverPoints[i + 1];
-                const dx = b.x - a.x;
-                const dy = b.y - a.y;
-                const len = Math.sqrt(dx * dx + dy * dy);
-                const angle = Math.atan2(dy, dx);
-
-                const segGeo = new THREE.PlaneGeometry(len + 0.2, riverWidth);
-                const seg = new THREE.Mesh(segGeo, riverMat);
-                seg.rotation.x = -Math.PI / 2;
-                seg.rotation.z = -angle;   // PlaneGeometry on XZ, rotate to align
-                // Wait — PlaneGeometry is in XY after rotation.x; rotate around Y axis:
-                seg.rotation.z = 0;
-                // Actually re-approach: build flat (rotation.x = -PI/2), then rotate.y
-                seg.rotation.set(-Math.PI / 2, 0, 0);
-                // position at midpoint (note: group is in world XZ; PlaneGeometry on XZ after rotation)
-                seg.position.set((a.x + b.x) / 2, 0, (a.y + b.y) / 2);
-                seg.rotation.y = -angle;
-                riverGroup.add(seg);
-            }
-            this.scene.add(riverGroup);
-
-            // River shimmer layer — lighter blue on top
-            const riverShimmerGroup = new THREE.Group();
-            riverShimmerGroup.position.y = 0.03;
-            const riverShimMat = new THREE.MeshStandardMaterial({
-                color: 0x4aa8e8, transparent: true, opacity: 0.3,
-                roughness: 0.06, metalness: 0.7, side: THREE.DoubleSide,
-            });
-            for (let i = 0; i < riverPoints.length - 1; i++) {
-                const a = riverPoints[i];
-                const b = riverPoints[i + 1];
-                const dx = b.x - a.x;
-                const dy = b.y - a.y;
-                const len = Math.sqrt(dx * dx + dy * dy);
-                const angle = Math.atan2(dy, dx);
-                const segGeo = new THREE.PlaneGeometry(len + 0.2, riverWidth * 0.7);
-                const seg = new THREE.Mesh(segGeo, riverShimMat.clone());
-                seg.rotation.set(-Math.PI / 2, 0, 0);
-                seg.position.set((a.x + b.x) / 2, 0, (a.y + b.y) / 2);
-                seg.rotation.y = -angle;
-                riverShimmerGroup.add(seg);
-            }
-            this.scene.add(riverShimmerGroup);
-            this.riverShimmer = riverShimmerGroup;
-
             // ── Campfire factory ──────────────────────────────────
             const makeFire = (x, z, scale = 1) => {
                 const base = new THREE.Mesh(
@@ -794,16 +721,6 @@
             // Shimmer moat water
             if (this.moatShimmer) {
                 this.moatShimmer.material.opacity = 0.22 + Math.sin(elapsed * 0.7) * 0.08;
-            }
-            // Animate river shimmer — flowing pulse along segments
-            if (this.riverShimmer) {
-                this.riverShimmer.children.forEach((seg, i) => {
-                    if (seg.material) {
-                        const wave = Math.sin(elapsed * 1.2 + i * 0.45) * 0.10;
-                        seg.material.opacity = 0.25 + wave;
-                        seg.position.y = Math.sin(elapsed * 0.8 + i * 0.3) * 0.005;
-                    }
-                });
             }
         }
 
@@ -1078,79 +995,6 @@
             // ── Fire baskets at village entrance ─────────────────
             defs.push({ path: 'assets/graveyard/fire-basket.glb', x: -3, y: 0, z: 8.5, ry: 0, scale: 1, label: 'Fire basket' });
             defs.push({ path: 'assets/graveyard/fire-basket.glb', x: 3, y: 0, z: 8.5, ry: 0, scale: 1, label: 'Fire basket' });
-
-            // ══════════════════════════════════════════════════════
-            // RIVER BRIDGES — 3 crossings
-            // River flows NW→E through: (-10,-10), (0,7), (15,2)
-            // ══════════════════════════════════════════════════════
-
-            // Bridge 1 — Main drawbridge near castle gate (river at x≈0, z≈7)
-            // River direction angle at that point ≈ atan2(9-7, 4-0) ≈ atan2(2,4) ≈ 0.46 rad
-            // Bridge perpendicular: ry = 0.46 + PI/2
-            defs.push({ path: 'assets/castle/bridge-draw.glb', x: 0, y: 0, z: 7.5, ry: Math.PI / 2 + 0.46, scale: 1.2, label: 'River main bridge' });
-
-            // Bridge 2 — Stone bridge through forest area (river at x≈-10, z≈-10)
-            // River direction angle ≈ atan2(-4-(-10), -6-(-10)) = atan2(6,4) ≈ 0.98 rad
-            // Bridge perpendicular: ry = 0.98 + PI/2
-            defs.push({ path: 'assets/castle/bridge-straight.glb', x: -10, y: 0, z: -10, ry: Math.PI / 2 + 0.98, scale: 1.2, label: 'River forest bridge' });
-            defs.push({ path: 'assets/castle/bridge-straight-pillar.glb', x: -10, y: 0, z: -10, ry: Math.PI / 2 + 0.98, scale: 1.2, label: 'River forest bridge pillar' });
-
-            // Bridge 3 — Small bridge near training grounds (river at x≈15, z≈2)
-            // River direction angle ≈ atan2(4-5, 18-12) = atan2(-1,6) ≈ -0.165 rad
-            // Bridge perpendicular: ry = -0.165 + PI/2
-            defs.push({ path: 'assets/castle/bridge-straight.glb', x: 15, y: 0, z: 2, ry: Math.PI / 2 - 0.165, scale: 1.2, label: 'River training bridge' });
-            defs.push({ path: 'assets/castle/bridge-straight-pillar.glb', x: 15, y: 0, z: 2, ry: Math.PI / 2 - 0.165, scale: 1.2, label: 'River training bridge pillar' });
-
-            // ══════════════════════════════════════════════════════
-            // RIVERBANKS — rocks & trees scattered naturally
-            // ══════════════════════════════════════════════════════
-
-            // Rocks along the river — both banks, scattered
-            const riverBankRocks = [
-                // NW stretch
-                { path: 'assets/castle/rocks-small.glb', x: -19, z: -24, ry: 0.3 },
-                { path: 'assets/castle/rocks-large.glb', x: -18, z: -22, ry: 1.1 },
-                { path: 'assets/castle/rocks-small.glb', x: -16, z: -21, ry: 2.4 },
-                { path: 'assets/castle/rocks-small.glb', x: -13, z: -17, ry: 0.7 },
-                { path: 'assets/castle/rocks-large.glb', x: -12, z: -16, ry: 1.9 },
-                // Middle stretch
-                { path: 'assets/castle/rocks-small.glb', x: -7, z:  -3, ry: 0.5 },
-                { path: 'assets/castle/rocks-large.glb', x: -5, z:  -5, ry: 2.1 },
-                { path: 'assets/castle/rocks-small.glb', x:  5, z:   9, ry: 1.3 },
-                { path: 'assets/castle/rocks-large.glb', x:  6, z:  10, ry: 0.8 },
-                // East stretch
-                { path: 'assets/castle/rocks-small.glb', x: 19, z:   6, ry: 1.7 },
-                { path: 'assets/castle/rocks-large.glb', x: 22, z:   4, ry: 0.4 },
-                { path: 'assets/castle/rocks-small.glb', x: 25, z:   6, ry: 2.9 },
-                { path: 'assets/castle/rocks-small.glb', x: 28, z:   4, ry: 1.0 },
-                { path: 'assets/castle/rocks-large.glb', x: 16, z:   3, ry: 0.6 },
-                { path: 'assets/castle/rocks-small.glb', x: 13, z:   7, ry: 1.8 },
-                { path: 'assets/castle/rocks-small.glb', x: -8, z:  -8, ry: 2.2 },
-                { path: 'assets/castle/rocks-large.glb', x: -9, z: -12, ry: 0.9 },
-            ];
-            riverBankRocks.forEach(r => {
-                defs.push({ path: r.path, x: r.x, y: 0, z: r.z, ry: r.ry, scale: 0.9 + Math.random() * 0.3, label: 'River rock' });
-            });
-
-            // Trees leaning toward the water along the banks
-            const riverBankTrees = [
-                { x: -17, z: -23, s: 1.2 },
-                { x: -15, z: -19, s: 1.4 },
-                { x: -11, z: -12, s: 1.3 },
-                { x:  -9, z:  -6, s: 1.1 },
-                { x:   3, z:   8, s: 1.3 },
-                { x:   7, z:  11, s: 1.2 },
-                { x:  17, z:   6, s: 1.1 },
-                { x:  23, z:   6, s: 1.4 },
-            ];
-            riverBankTrees.forEach((t, i) => {
-                defs.push({
-                    path: i % 3 === 0 ? 'assets/castle/tree-large.glb' : 'assets/castle/tree-small.glb',
-                    x: t.x, y: 0, z: t.z,
-                    ry: Math.PI * 0.15 + (i * 0.7),   // slight lean toward water
-                    scale: t.s, label: 'Riverbank tree'
-                });
-            });
 
             return defs;
         }
