@@ -3898,6 +3898,8 @@
         // Normalize URL helper
         function normalizeUrl(u) { u = (u||'').trim().replace(/\/+$/, ''); if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u; return u; }
         if (relayUrl) relayUrl = normalizeUrl(relayUrl);
+        // Demo mode: no relay URL means no API calls
+        window.SPAWNKIT_DEMO = !relayUrl;
         // Make API URL available globally for all panels
         if (!window.OC_API_URL && relayUrl) window.OC_API_URL = relayUrl;
         var relayToken = stored.relayToken || params.get('token') || '';
@@ -8115,11 +8117,13 @@
             if (mcLoading) return;
             mcLoading = true;
             var sessions = [];
-            try {
-                var resp = await fetch(API_URL + '/api/oc/sessions');
-                if (resp.ok) sessions = await resp.json();
-            } catch(e) {
-                console.warn('[MC] Failed to load sessions:', e.message || e);
+            if (!window.SPAWNKIT_DEMO) {
+              try {
+                  var resp = await fetch(API_URL + '/api/oc/sessions');
+                  if (resp.ok) sessions = await resp.json();
+              } catch(e) {
+                  console.warn('[MC] Failed to load sessions:', e.message || e);
+              }
             }
             try {
                 renderLeftColumn(sessions);
@@ -8991,6 +8995,10 @@
         
         // Initialize live agent behaviors
         function initLiveAgentBehaviors() {
+            if (window.SPAWNKIT_DEMO) {
+                console.log('[LiveAgentBehaviors] Demo mode — skipping API polling');
+                return;
+            }
             console.log('[LiveAgentBehaviors] Initializing...');
             
             // Initial poll
