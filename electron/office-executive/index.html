@@ -3912,6 +3912,17 @@
         
         console.debug('🔌 SpawnKit Local: relay=' + relayUrl + ' token=' + (relayToken ? '***' : 'none'));
       })();
+
+      // Global auth-aware fetch for all API calls
+      window.authFetch = function(url, opts) {
+        opts = opts || {};
+        opts.headers = opts.headers || {};
+        if (window.OC_RELAY_TOKEN && !opts.headers['Authorization']) {
+          opts.headers['Authorization'] = 'Bearer ' + window.OC_RELAY_TOKEN;
+        }
+        opts.mode = opts.mode || 'cors';
+        return fetch(url, opts);
+      };
     </script>
     <script src="./src/data-bridge.js"></script>
     <script>
@@ -4489,7 +4500,7 @@
                 try {
                     var apiUrl = (window.OC_API_URL || '');
                     if (!apiUrl) return;
-                    var resp = await fetch(apiUrl + '/api/oc/sessions');
+                    var resp = await authFetch(apiUrl + '/api/oc/sessions');
                     if (!resp.ok) return;
                     var sessions = await resp.json();
                     // Map agentId to session key patterns
@@ -4563,7 +4574,7 @@
                 try {
                     var apiUrl = (window.OC_API_URL || '');
                     if (!apiUrl) return;
-                    var resp = await fetch(apiUrl + '/api/oc/sessions');
+                    var resp = await authFetch(apiUrl + '/api/oc/sessions');
                     if (!resp.ok) return;
                     var sessions = await resp.json();
                     var agentKeyMap = { ceo: 'main', atlas: 'atlas', forge: 'forge', hunter: 'hunter', echo: 'echo', sentinel: 'sentinel' };
@@ -5414,7 +5425,7 @@
                     updateChatTargetSelector();
                     return;
                 }
-                const response = await fetch(relayBase.replace(/\/+$/, '') + '/api/oc/chat/targets', {
+                const response = await authFetch(relayBase.replace(/\/+$/, '') + '/api/oc/chat/targets', {
                     method: 'GET',
                     headers: {
                         'Authorization': 'Bearer ' + (window.OC_RELAY_TOKEN || ''),
@@ -5632,7 +5643,7 @@
                 if (!apiUrl || window.SPAWNKIT_DEMO) { throw new Error("demo"); }
                 
                 // Try the dedicated chat history endpoint first
-                var response = await fetch(apiUrl + '/api/oc/chat/history');
+                var response = await authFetch(apiUrl + '/api/oc/chat/history');
                 if (response.ok) {
                     var data = await response.json();
                     if (data.ok && data.history) {
@@ -5641,7 +5652,7 @@
                 }
                 
                 // 3. Also fetch sessions for additional context
-                var sessResponse = await fetch(apiUrl + '/api/oc/sessions');
+                var sessResponse = await authFetch(apiUrl + '/api/oc/sessions');
                 if (sessResponse.ok) {
                     var sessions = await sessResponse.json();
                     if (Array.isArray(sessions)) {
@@ -5806,7 +5817,7 @@
                     var apiUrl = (window.OC_API_URL || '');
                     if (!apiUrl || window.SPAWNKIT_DEMO) { throw new Error("demo"); }
                     if (apiUrl) {
-                        var resp = await fetch(apiUrl + '/api/oc/crons');
+                        var resp = await authFetch(apiUrl + '/api/oc/crons');
                         if (resp.ok) {
                             var data = await resp.json();
                             crons = data.jobs || data.crons || (Array.isArray(data) ? data : []);
@@ -5964,7 +5975,7 @@
                 try {
                     var apiUrl = (window.OC_API_URL || '');
                     if (!apiUrl || window.SPAWNKIT_DEMO) { throw new Error("demo"); }
-                    var resp = await fetch(apiUrl + '/api/oc/memory');
+                    var resp = await authFetch(apiUrl + '/api/oc/memory');
                     if (resp.ok) {
                         var data = await resp.json();
                         // API bridge returns { main: "content", files: [{name,size,modified}] }
@@ -6245,7 +6256,7 @@
                 try {
                     var apiUrl = (window.OC_API_URL || '');
                     if (!apiUrl || window.SPAWNKIT_DEMO) { throw new Error("demo"); }
-                    var resp = await fetch(apiUrl + '/api/oc/sessions');
+                    var resp = await authFetch(apiUrl + '/api/oc/sessions');
                     if (resp.ok) {
                         var data = await resp.json();
                         // API bridge returns array of sessions
@@ -7898,7 +7909,7 @@
             var headers = { 'Accept': 'application/json' };
             if (token) headers['Authorization'] = 'Bearer ' + token;
 
-            fetch(url.replace(/\/+$/, '') + '/api/oc/sessions', { headers: headers, mode: 'cors' })
+            authFetch(url.replace(/\/+$/, '') + '/api/oc/sessions', { headers: headers, mode: 'cors' })
                 .then(function(r) {
                     if (r.ok) return r.json().then(function(d) {
                         var count = Array.isArray(d) ? d.length : (d.sessions ? d.sessions.length : 0);
@@ -8159,7 +8170,7 @@
             var sessions = [];
             if (!window.SPAWNKIT_DEMO) {
               try {
-                  var resp = await fetch(API_URL + '/api/oc/sessions');
+                  var resp = await authFetch(API_URL + '/api/oc/sessions');
                   if (resp.ok) sessions = await resp.json();
               } catch(e) {
                   console.warn('[MC] Failed to load sessions:', e.message || e);
@@ -8216,7 +8227,7 @@
             if (!mcTodoContent) {
                 var apiUrl = (window.OC_API_URL || '');
                 if (!apiUrl || window.SPAWNKIT_DEMO) { throw new Error("demo"); }
-                fetch(apiUrl + '/api/oc/memory').then(function(r) { return r.ok ? r.json() : null; }).then(function(data) {
+                authFetch(apiUrl + '/api/oc/memory').then(function(r) { return r.ok ? r.json() : null; }).then(function(data) {
                     if (data && data.todo) { mcTodoContent = data.todo; renderLeftColumn(sessions); }
                 }).catch(function() {});
             }
@@ -8299,7 +8310,7 @@
                     if (t) t.textContent = mcTodoExpanded ? '▾ Hide raw backlog' : '▸ Show raw backlog';
                     if (mcTodoExpanded && !mcTodoContent) {
                         if (r) r.textContent = 'Loading...';
-                        fetch(API_URL + '/api/oc/memory').then(function(resp) { return resp.ok ? resp.json() : null; }).then(function(data) {
+                        authFetch(API_URL + '/api/oc/memory').then(function(resp) { return resp.ok ? resp.json() : null; }).then(function(data) {
                             if (data && data.todo) {
                                 mcTodoContent = data.todo;
                             } else {
@@ -8424,7 +8435,7 @@
             if (mcTranscriptContent) { el.textContent = mcTranscriptContent; return; }
             el.textContent = 'Loading transcript...';
             try {
-                var resp = await fetch(API_URL + '/api/oc/chat');
+                var resp = await authFetch(API_URL + '/api/oc/chat');
                 if (resp.ok) {
                     var data = await resp.json();
                     var messages = data.messages || data || [];
@@ -8605,10 +8616,10 @@
         async function pollAgentState() {
             try {
                 const [sessionsResp, memoryResp, chatResp, cronsResp] = await Promise.allSettled([
-                    fetch(getApiUrl() + '/api/oc/sessions'),
-                    fetch(getApiUrl() + '/api/oc/memory'),
-                    fetch(getApiUrl() + '/api/oc/chat'),
-                    fetch(getApiUrl() + '/api/oc/crons')
+                    authFetch(getApiUrl() + '/api/oc/sessions'),
+                    authFetch(getApiUrl() + '/api/oc/memory'),
+                    authFetch(getApiUrl() + '/api/oc/chat'),
+                    authFetch(getApiUrl() + '/api/oc/crons')
                 ]);
                 
                 const sessions = sessionsResp.status === 'fulfilled' && sessionsResp.value.ok ? await sessionsResp.value.json() : [];
