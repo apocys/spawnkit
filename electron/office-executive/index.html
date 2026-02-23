@@ -4036,8 +4036,11 @@
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 createAPIBridge();
-                // Trigger initial meeting preview update if needed
-                if (window.API && typeof updateMeetingPreview === 'function') {
+                if (API) {
+                    prefetchPanelData();
+                    console.log('🔌 API bridge connected via DOMContentLoaded + prefetch done');
+                }
+                if (typeof updateMeetingPreview === 'function') {
                     updateMeetingPreview();
                 }
             }, 1000);
