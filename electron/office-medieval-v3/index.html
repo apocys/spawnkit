@@ -632,18 +632,16 @@
             trainGround.receiveShadow = true;
             this.scene.add(trainGround);
 
-            // ── Moat — sized for new château (outer walls ±8) ─────
+            // ── Moat — wider ring, deeper blue ───────────────────
             const moatShape = new THREE.Shape();
-            moatShape.absarc(0, 0, 12.0, 0, Math.PI * 2, false);
+            moatShape.absarc(0, 0, 9.0, 0, Math.PI * 2, false);
             const moatHole = new THREE.Path();
-            moatHole.absarc(0, 0, 9.5, 0, Math.PI * 2, true);
+            moatHole.absarc(0, 0, 7.0, 0, Math.PI * 2, true);
             moatShape.holes.push(moatHole);
-            const moatGeo = new THREE.ShapeGeometry(moatShape, 96);
+            const moatGeo = new THREE.ShapeGeometry(moatShape, 80);
             const moat = new THREE.Mesh(moatGeo, new THREE.MeshStandardMaterial({
-                color: 0x2288cc, transparent: true, opacity: 0.6,
-                roughness: 0.12, metalness: 0.35,
-                emissive: 0x114466, emissiveIntensity: 0.3,
-                side: THREE.DoubleSide,
+                color: 0x0a2f48, transparent: true, opacity: 0.88,
+                roughness: 0.12, metalness: 0.45, side: THREE.DoubleSide,
             }));
             moat.rotation.x = -Math.PI / 2;
             moat.position.y = -0.005;
@@ -651,9 +649,9 @@
 
             // Shimmer layer
             const shim = new THREE.Mesh(
-                new THREE.RingGeometry(9.52, 11.98, 96),
+                new THREE.RingGeometry(7.02, 8.98, 80),
                 new THREE.MeshStandardMaterial({
-                    color: 0x55bbff, transparent: true, opacity: 0.25,
+                    color: 0x1a5a80, transparent: true, opacity: 0.28,
                     roughness: 0.06, metalness: 0.7, side: THREE.DoubleSide,
                 })
             );
@@ -682,10 +680,8 @@
             // Build river as a series of quads along the curve
             const riverWidth = 2.5;
             const riverMat = new THREE.MeshStandardMaterial({
-                color: 0x2288cc, transparent: true, opacity: 0.6,
-                roughness: 0.15, metalness: 0.3,
-                emissive: 0x114466, emissiveIntensity: 0.3,
-                side: THREE.DoubleSide,
+                color: 0x1a5a8a, transparent: true, opacity: 0.7,
+                roughness: 0.15, metalness: 0.3, side: THREE.DoubleSide,
             });
             const riverGroup = new THREE.Group();
             riverGroup.position.y = -0.01;
@@ -701,6 +697,12 @@
                 const segGeo = new THREE.PlaneGeometry(len + 0.2, riverWidth);
                 const seg = new THREE.Mesh(segGeo, riverMat);
                 seg.rotation.x = -Math.PI / 2;
+                seg.rotation.z = -angle;   // PlaneGeometry on XZ, rotate to align
+                // Wait — PlaneGeometry is in XY after rotation.x; rotate around Y axis:
+                seg.rotation.z = 0;
+                // Actually re-approach: build flat (rotation.x = -PI/2), then rotate.y
+                seg.rotation.set(-Math.PI / 2, 0, 0);
+                // position at midpoint (note: group is in world XZ; PlaneGeometry on XZ after rotation)
                 seg.position.set((a.x + b.x) / 2, 0, (a.y + b.y) / 2);
                 seg.rotation.y = -angle;
                 riverGroup.add(seg);
@@ -711,7 +713,7 @@
             const riverShimmerGroup = new THREE.Group();
             riverShimmerGroup.position.y = 0.03;
             const riverShimMat = new THREE.MeshStandardMaterial({
-                color: 0x77ccff, transparent: true, opacity: 0.2,
+                color: 0x4aa8e8, transparent: true, opacity: 0.3,
                 roughness: 0.06, metalness: 0.7, side: THREE.DoubleSide,
             });
             for (let i = 0; i < riverPoints.length - 1; i++) {
@@ -723,7 +725,7 @@
                 const angle = Math.atan2(dy, dx);
                 const segGeo = new THREE.PlaneGeometry(len + 0.2, riverWidth * 0.7);
                 const seg = new THREE.Mesh(segGeo, riverShimMat.clone());
-                seg.rotation.x = -Math.PI / 2;
+                seg.rotation.set(-Math.PI / 2, 0, 0);
                 seg.position.set((a.x + b.x) / 2, 0, (a.y + b.y) / 2);
                 seg.rotation.y = -angle;
                 riverShimmerGroup.add(seg);
