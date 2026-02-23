@@ -3795,15 +3795,17 @@
         
         // Priority: localStorage config > URL params > defaults
         var params = new URLSearchParams(window.location.search);
-        // Auto-detect production: use same-origin API instead of localhost
-        var isProduction = window.location.hostname.includes('spawnkit.ai');
-        var defaultUrl = isProduction ? window.location.origin : 'http://127.0.0.1:8222';
+        // Auto-detect production: only app.spawnkit.ai has API endpoints
+        // themes.spawnkit.ai is static-only — skip API detection there
+        var isAppProd = window.location.hostname === 'app.spawnkit.ai';
+        var isThemes = window.location.hostname === 'themes.spawnkit.ai';
+        var defaultUrl = isAppProd ? window.location.origin : (isThemes ? '' : 'http://127.0.0.1:8222');
         var relayUrl = stored.relayUrl || params.get('relay') || defaultUrl;
         // Make API URL available globally for all panels
-        if (!window.OC_API_URL) window.OC_API_URL = relayUrl;
+        if (!window.OC_API_URL && relayUrl) window.OC_API_URL = relayUrl;
         var relayToken = stored.relayToken || params.get('token') || '';
         
-        window.OC_RELAY_URL = relayUrl;
+        if (relayUrl) window.OC_RELAY_URL = relayUrl;
         if (relayToken) window.OC_RELAY_TOKEN = relayToken;
         
         console.debug('🔌 SpawnKit Local: relay=' + relayUrl + ' token=' + (relayToken ? '***' : 'none'));
@@ -3816,7 +3818,7 @@
     (function() {
         var config = {};
         try { config = JSON.parse(localStorage.getItem('spawnkit-config') || '{}'); } catch(e) {}
-        var hasConfig = config.relayUrl || window.location.hostname.includes('spawnkit.ai');
+        var hasConfig = config.relayUrl || window.location.hostname === 'app.spawnkit.ai';
         var isDemo = config.demoMode || false;
         if (!hasConfig && !isDemo) {
             var overlay = document.getElementById('setupOverlay');
@@ -4349,7 +4351,7 @@
             // Fetch real metrics from API bridge
             (async function() {
                 try {
-                    var apiUrl = (window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222'));
+                    var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
                     var resp = await fetch(apiUrl + '/api/oc/sessions');
                     if (!resp.ok) return;
                     var sessions = await resp.json();
@@ -4422,7 +4424,7 @@
             // Async: populate sub-agents from live sessions
             (async function() {
                 try {
-                    var apiUrl = (window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222'));
+                    var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
                     var resp = await fetch(apiUrl + '/api/oc/sessions');
                     if (!resp.ok) return;
                     var sessions = await resp.json();
@@ -5395,7 +5397,7 @@
 
             try {
                 // Send to local API bridge (primary) or fleet relay (fallback)
-                var apiUrl = (window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222')) + '/api/oc/chat';
+                var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222') + '/api/oc/chat';
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -5495,7 +5497,7 @@
             
             try {
                 // 2. Fetch from local API bridge (sessions data)
-                var apiUrl = (window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222'));
+                var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
                 
                 // Try the dedicated chat history endpoint first
                 var response = await fetch(apiUrl + '/api/oc/chat/history');
@@ -5669,7 +5671,7 @@
             // Always prefer API bridge (has full state with nextRunAtMs)
             {
                 try {
-                    var apiUrl = (window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222'));
+                    var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
                     var resp = await fetch(apiUrl + '/api/oc/crons');
                     if (resp.ok) {
                         var data = await resp.json();
@@ -5825,7 +5827,7 @@
             // Fallback: fetch from API bridge
             if (!mem) {
                 try {
-                    var apiUrl = (window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222'));
+                    var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
                     var resp = await fetch(apiUrl + '/api/oc/memory');
                     if (resp.ok) {
                         var data = await resp.json();
@@ -6105,7 +6107,7 @@
             // Fallback: fetch from API bridge
             if (!sessions) {
                 try {
-                    var apiUrl = (window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222'));
+                    var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
                     var resp = await fetch(apiUrl + '/api/oc/sessions');
                     if (resp.ok) {
                         var data = await resp.json();
