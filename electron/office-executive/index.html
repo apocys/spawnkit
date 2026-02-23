@@ -3826,17 +3826,22 @@
         }
     })();
 
-    function connectSetup() {
+    function normalizeUrl(u) {
+            u = u.trim().replace(/\/+$/, '');
+            if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
+            return u;
+        }
+        function connectSetup() {
         var urlEl = document.getElementById('setupRelayUrl');
         var tokenEl = document.getElementById('setupRelayToken');
         var statusEl = document.getElementById('setupStatus');
-        var url = urlEl ? urlEl.value.trim() : '';
+        var url = normalizeUrl(urlEl ? urlEl.value : '');
         var token = tokenEl ? tokenEl.value.trim() : '';
         if (!url) { if (statusEl) statusEl.textContent = 'Please enter a gateway URL'; return; }
         if (statusEl) statusEl.textContent = '⏳ Connecting...';
         var headers = { 'Accept': 'application/json' };
         if (token) headers['Authorization'] = 'Bearer ' + token;
-        fetch(url.replace(/\/+$/, '') + '/api/oc/health', { headers: headers })
+        fetch(url + '/api/oc/health', { headers: headers })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data && data.ok) {
@@ -6394,7 +6399,7 @@
             statusEl.innerHTML = '⏳ Testing connection...';
             var headers = { 'Accept': 'application/json' };
             if (config.relayToken) headers['Authorization'] = 'Bearer ' + config.relayToken;
-            fetch(config.relayUrl.replace(/\/+$/, '') + '/api/oc/health', { headers: headers, mode: 'cors' })
+            fetch(normalizeUrl(config.relayUrl) + '/api/oc/health', { headers: headers, mode: 'cors' })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data && data.ok) {
