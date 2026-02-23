@@ -931,66 +931,63 @@ const AGENT_CHAR = {
 };
 
 // ================================================================
-// MAP DATA — Hand-designed village layout
+// MAP DATA — 40×40 village layout
+// Plaza center: row 19-20, col 19-20
 // ================================================================
 const ground = [];
 const objects = [];
 
-// Collision grid — tracks which tiles are occupied by objects/agents
-const occupied = [];
+// Tile occupant grid — strict tile-based collision
+// null = free, 'obj' = object tile, or character reference
+const tileOccupant = [];
 for (let r = 0; r < MAP; r++) {
   ground[r] = new Array(MAP).fill(0);
   objects[r] = new Array(MAP).fill(null);
-  occupied[r] = new Array(MAP).fill(false);
+  tileOccupant[r] = new Array(MAP).fill(null);
 }
 
-// Helper: check if a tile position is clear for character movement
-// Uses 0.7 tile radius to account for sprite width + margin
-function isTileClear(c, r, excludeChar) {
-  const tc = Math.round(c - 0.5), tr = Math.round(r - 0.5);
+// Check if a specific tile (integer coords) is free for movement
+function isTileFree(tc, tr, excludeChar) {
   if (tc < 0 || tc >= MAP || tr < 0 || tr >= MAP) return false;
-  for (const ch of chars) {
-    if (ch === excludeChar) continue;
-    if (ch.decommissioning) continue;
-    const dc = Math.abs(ch.c - c), dr = Math.abs(ch.r - r);
-    if (dc < 0.7 && dr < 0.7) return false;
-  }
-  if (typeof npcs !== 'undefined') {
-    for (const npc of npcs) {
-      const dc = Math.abs(npc.c - c), dr = Math.abs(npc.r - r);
-      if (dc < 0.5 && dr < 0.5) return false;
-    }
-  }
+  if (ground[tr][tc] !== 1) return false;
+  if (tileOccupant[tr][tc] && tileOccupant[tr][tc] !== excludeChar) return false;
   return true;
 }
 
-// Find adjacent empty tile near a destination (for meeting stops)
-// Uses 1.0 tile offsets to ensure characters don't overlap visually
+// Legacy float-position check for campfire destination (still used by decideNextAction)
+function isTileClear(c, r, excludeChar) {
+  const tc = Math.round(c - 0.5), tr = Math.round(r - 0.5);
+  return isTileFree(tc, tr, excludeChar);
+}
+
+// Find adjacent free tile near a destination tile (for meeting stops)
 function findAdjacentEmpty(destC, destR, excludeChar) {
-  const offsets = [
-    [1, 0],[0, 1],[-1, 0],[0, -1],
-    [1, 1],[-1, 1],[1, -1],[-1, -1],
-    [2, 0],[0, 2],[-2, 0],[0, -2]
-  ];
+  // destC, destR are float coords (tile + 0.5)
+  const dtc = Math.round(destC - 0.5), dtr = Math.round(destR - 0.5);
+  const offsets = [[1,0],[0,1],[-1,0],[0,-1],[2,0],[0,2],[-2,0],[0,-2],[1,1],[-1,1],[1,-1],[-1,-1]];
   for (const [dc, dr] of offsets) {
-    const nc = destC + dc * 1.0, nr = destR + dr * 1.0;
-    // Convert float tile coords to int grid indices
-    const gc = Math.round(nc - 0.5), gr = Math.round(nr - 0.5);
-    if (gc < 0 || gc >= MAP || gr < 0 || gr >= MAP) continue;
-    if (ground[gr][gc] === 1 && !objects[gr][gc]) {
-      if (isTileClear(nc, nr, excludeChar)) return {c: gc + 0.5, r: gr + 0.5};
-    }
+    const nc = dtc + dc, nr = dtr + dr;
+    if (isTileFree(nc, nr, excludeChar)) return {c: nc + 0.5, r: nr + 0.5};
   }
-  // Fallback: return a slight offset from dest
-  return {c: destC + 0.5, r: destR};
+  return {c: destC, r: destR};
 }
 
 let _seed = 42;
 function rng() { _seed = (_seed * 16807) % 2147483647; return _seed / 2147483647; }
 
 function P(r, c) { if (r >= 0 && r < MAP && c >= 0 && c < MAP) ground[r][c] = 1; }
-function O(r, c, name) { if (r >= 0 && r < MAP && c >= 0 && c < MAP && !objects[r][c]) objects[r][c] = name; }
-function OF(r, c, name) { if (r >= 0 && r < MAP && c >= 0 && c < MAP) objects[r][c] = name; } // force-place
+function O(r, c, name) {
+  if (r >= 0 && r < MAP && c >= 0 && c < MAP && !objects[r][c]) {
+    objects[r][c] = name;
+    tileOccupant[r][c] = 'obj';
+  }
+}
+function OF(r, c, name) {
+  if (r >= 0 && r < MAP && c >= 0 && c < MAP) {
+    objects[r][c] = name;
+    tileOccupant[r][c] = 'obj';
+  }
+}
 
 const trees = [
   'tree_default_NE','tree_default_dark_NE','tree_oak_NE','tree_oak_dark_NE',
@@ -1006,186 +1003,227 @@ const flowers = [
   'flower_yellowA_NE','flower_yellowB_NE','flower_yellowC_NE',
   'flower_purpleA_NE','flower_purpleB_NE','flower_purpleC_NE'
 ];
-const deco = [
-  ...flowers, 'mushroom_red_NE','mushroom_tan_NE',
-  'rock_smallA_NE','rock_smallB_NE','stone_smallA_NE','stone_smallB_NE',
-  'plant_bushSmall_NE','plant_bush_NE'
-];
 const crops = ['crop_pumpkin_NE','crop_carrot_NE','crop_melon_NE','crop_turnip_NE'];
 
 function rndTree() { return rng() < 0.35 ? fallTrees[Math.floor(rng()*fallTrees.length)] : trees[Math.floor(rng()*trees.length)]; }
 
-// ── Forest border (rows 0-2 and 17-19, col edges) ────────────────
-for (let r = 0; r <= 2; r++)
+// ── Dense forest border (3-4 tiles deep on all edges) ─────────────
+// Rows 0-3 (north border)
+for (let r = 0; r <= 1; r++)
   for (let c = 0; c < MAP; c++)
-    if (rng() < 0.82) O(r, c, rndTree());
-for (let r = 3; r <= 4; r++)
+    O(r, c, rndTree());
+for (let r = 2; r <= 3; r++)
   for (let c = 0; c < MAP; c++)
-    if (rng() < 0.35) O(r, c, rndTree());
-for (let r = 17; r <= 19; r++)
+    if (rng() < 0.80) O(r, c, rndTree());
+
+// Rows 36-39 (south border)
+for (let r = 38; r <= 39; r++)
   for (let c = 0; c < MAP; c++)
-    if (rng() < 0.78) O(r, c, rndTree());
-for (let r = 5; r < 17; r++) {
-  if (rng() < 0.65) O(r, 0, rndTree());
-  if (rng() < 0.55) O(r, 1, rndTree());
-  if (rng() < 0.65) O(r, 19, rndTree());
-  if (rng() < 0.55) O(r, 18, rndTree());
+    O(r, c, rndTree());
+for (let r = 36; r <= 37; r++)
+  for (let c = 0; c < MAP; c++)
+    if (rng() < 0.80) O(r, c, rndTree());
+
+// Left edge (cols 0-3)
+for (let r = 4; r <= 35; r++) {
+  O(r, 0, rndTree()); O(r, 1, rndTree());
+  if (rng() < 0.75) O(r, 2, rndTree());
+  if (rng() < 0.55) O(r, 3, rndTree());
+}
+// Right edge (cols 36-39)
+for (let r = 4; r <= 35; r++) {
+  O(r, 39, rndTree()); O(r, 38, rndTree());
+  if (rng() < 0.75) O(r, 37, rndTree());
+  if (rng() < 0.55) O(r, 36, rndTree());
 }
 
-// ── Central Plaza (3x3 path tiles around campfire at r=9,c=9) ────
-// Plaza center: row 9, col 9-10
-for (let pr = 8; pr <= 11; pr++)
-  for (let pc = 8; pc <= 11; pc++)
+// ── Central Plaza (6×6) centered at row 17-22, col 17-22 ──────────
+// Map center = row 19.5, col 19.5 → plaza 17..22
+for (let pr = 17; pr <= 22; pr++)
+  for (let pc = 17; pc <= 22; pc++)
     P(pr, pc);
 
-// ── Spoke paths from plaza ────────────────────────────────────────
-// North spoke (toward Sentinel watchtower)
-for (let r = 4; r <= 8; r++)  { P(r, 9); P(r, 10); }
-// South spoke (toward farm area)
-for (let r = 11; r <= 16; r++) { P(r, 9); P(r, 10); }
-// West spoke (toward ApoMac & Hunter tents)
-for (let c = 4; c <= 8; c++)  { P(9, c); P(10, c); }
-// East spoke (toward Forge & Echo tents)
-for (let c = 11; c <= 15; c++) { P(9, c); P(10, c); }
+// ── 4 Main Roads from plaza ───────────────────────────────────────
+// North road: plaza row 17 → row 5 (toward Sentinel watchtower)
+for (let r = 5; r <= 17; r++) { P(r, 19); P(r, 20); }
+// South road: plaza row 22 → row 34
+for (let r = 22; r <= 35; r++) { P(r, 19); P(r, 20); }
+// West road: plaza col 17 → col 5
+for (let c = 5; c <= 17; c++) { P(19, c); P(20, c); }
+// East road: plaza col 22 → col 34
+for (let c = 22; c <= 34; c++) { P(19, c); P(20, c); }
 
-// Northwest path (ApoMac tent at r=7, c=7)
-for (let r = 7; r <= 9; r++)  { P(r, 7); P(r, 8); }
-// Northeast path (Forge tent at r=7, c=12)
-for (let r = 7; r <= 9; r++)  { P(r, 11); P(r, 12); }
-// Southwest path (Hunter tent at r=11, c=5)
-for (let r = 9; r <= 11; r++) { P(r, 5); P(r, 6); }
-// Southeast path (Echo tent at r=11, c=14)
-for (let r = 9; r <= 11; r++) { P(r, 13); P(r, 14); }
-// Atlas path (r=13, c=10)
-for (let r = 12; r <= 13; r++) { P(r, 9); P(r, 10); P(r, 11); }
+// ── ApoMac area: West road branch at r=19 → c=11 ─────────────────
+// Tent at r=19, c=11 → path spur: c=11-14 at r=19-20
+for (let c = 11; c <= 14; c++) { P(19, c); P(20, c); }
+// Small clearing for tent
+P(18, 11); P(18, 12); P(21, 11); P(21, 12);
 
-// ── North watchtower area (Sentinel) — r=5, c=10 ────────────────
-P(5, 9); P(5, 10); P(5, 11);
-P(6, 9); P(6, 10); P(6, 11);
+// ── Hunter area: West road branch at r=24 → c=11 ─────────────────
+// Cross-street at r=24, c=5-14
+for (let c = 5; c <= 14; c++) { P(24, c); P(25, c); }
+// Tent clearing
+P(23, 11); P(23, 12); P(26, 11); P(26, 12);
 
-// ── Farm area (bottom-left) r=14-16, c=3-7 ───────────────────────
-for (let pr = 14; pr <= 16; pr++)
-  for (let pc = 3; pc <= 7; pc++)
+// ── Forge area: East road branch at r=19 → c=29 ──────────────────
+for (let c = 25; c <= 29; c++) { P(19, c); P(20, c); }
+P(18, 29); P(18, 30); P(21, 29); P(21, 30);
+
+// ── Echo area: East road branch at r=24 → c=29 ───────────────────
+for (let c = 25; c <= 34; c++) { P(24, c); P(25, c); }
+P(23, 29); P(23, 30); P(26, 29); P(26, 30);
+
+// ── Sentinel watchtower area: North road end, r=5-8, c=18-21 ─────
+for (let pr = 5; pr <= 8; pr++)
+  for (let pc = 18; pc <= 21; pc++)
     P(pr, pc);
+
+// ── Atlas area: South road at r=31, c=18-22 ──────────────────────
+for (let pr = 31; pr <= 33; pr++)
+  for (let pc = 18; pc <= 22; pc++)
+    P(pr, pc);
+
+// ── Farm/garden area (southwest): r=27-34, c=5-14 ────────────────
+for (let pr = 27; pr <= 34; pr++)
+  for (let pc = 5; pc <= 13; pc++)
+    P(pr, pc);
+
+// ── Pond/clearing (southeast): r=28-34, c=26-34 ──────────────────
+// Not a path — just decorative; leave grass, place rocks/flowers there
+
+// ── Interior scattered trees (not border) ─────────────────────────
+// Northwest quadrant: r=5-16, c=5-14 (between plaza and west/north roads)
+const interiorTreeSpots = [
+  [6,5],[6,6],[6,7],[6,8],[7,5],[7,6],[7,8],
+  [8,5],[8,6],[9,5],[9,6],[10,5],[10,6],[11,5],[11,6],
+  [12,5],[12,6],[13,5],[13,6],[14,5],[14,6],[15,5],[15,6],
+  [16,5],[16,6],[16,7],[16,8],[16,9],
+  // Northeast quadrant
+  [6,31],[6,32],[6,33],[7,31],[7,32],[7,33],[7,34],
+  [8,33],[8,34],[9,33],[9,34],[10,33],[10,34],
+  [11,33],[11,34],[12,33],[12,34],[13,33],[13,34],
+  [14,33],[14,34],[15,33],[15,34],[16,33],[16,34],
+  // Southwest interior
+  [18,5],[18,6],[18,7],[19,5],[20,5],[21,5],[21,6],[22,5],
+  [22,6],[22,7],[23,5],[23,6],[23,7],[23,8],
+  // Southeast interior  
+  [18,33],[18,34],[21,33],[21,34],[22,33],[22,34],
+  // Interior mid-map scattered
+  [12,10],[12,11],[12,12],[14,9],[14,10],[15,9],
+  [12,28],[12,29],[14,30],[14,31],[15,30],
+  [28,16],[28,17],[29,16],[30,15],[30,16],
+  [28,22],[28,23],[29,23],[30,23],[30,24],
+];
+interiorTreeSpots.forEach(([r,c]) => {
+  if (!objects[r][c] && ground[r][c] !== 1) {
+    if (rng() < 0.70) O(r, c, rndTree());
+  }
+});
 
 // ── Place agent tents ─────────────────────────────────────────────
 agents.forEach(a => O(a.row, a.col, 'tent_detailedOpen_NE'));
 
 // ── Campfire at plaza center ──────────────────────────────────────
-O(9, 9, 'campfire_stones_NE');
-O(10, 10, 'campfire_logs_NE');
+O(19, 19, 'campfire_stones_NE');
+O(20, 20, 'campfire_logs_NE');
 
-// ── Signs at plaza entrance ───────────────────────────────────────
-O(8, 8, 'sign_NE');
-O(8, 11, 'sign_NE');
-
-// ── Sentinel Watchtower (north) ───────────────────────────────────
-// Use log stacks as tower base
-O(4, 9, 'log_stackLarge_NE');
-O(4, 10, 'log_stackLarge_NE');
-O(4, 11, 'stump_round_NE');
+// ── Signs at plaza entrances ──────────────────────────────────────
+O(17, 17, 'sign_NE'); O(17, 22, 'sign_NE');
+O(22, 17, 'sign_NE'); O(22, 22, 'sign_NE');
 
 // ── Log seats around plaza ────────────────────────────────────────
-O(11, 8, 'log_NE');
-O(11, 11, 'log_NE');
-O(8, 9, 'log_NE');
+O(18, 17, 'log_NE'); O(18, 22, 'log_NE');
+O(21, 17, 'log_NE'); O(21, 22, 'log_NE');
+O(17, 19, 'log_NE'); O(17, 20, 'log_NE');
 
-// ── Farm area crops & fences ──────────────────────────────────────
-// Fence boundary
-O(14, 3, 'fence_simple_NE'); O(14, 4, 'fence_simple_NE');
-O(14, 5, 'fence_simple_NE'); O(14, 6, 'fence_simple_NE'); O(14, 7, 'fence_simple_NE');
-O(16, 3, 'fence_simple_NE'); O(16, 4, 'fence_simple_NE');
-O(16, 5, 'fence_simple_NE'); O(16, 6, 'fence_simple_NE'); O(16, 7, 'fence_simple_NE');
-// Crops inside farm
-O(15, 3, 'crop_pumpkin_NE'); O(15, 4, 'crop_carrot_NE'); O(15, 5, 'crop_melon_NE');
-O(15, 6, 'crop_turnip_NE'); O(15, 7, 'crop_carrot_NE');
+// ── Sentinel Watchtower (north) ───────────────────────────────────
+O(5, 19, 'log_stackLarge_NE');
+O(5, 20, 'log_stackLarge_NE');
+O(6, 18, 'stump_round_NE');
+O(6, 21, 'stump_old_NE');
 
-// ── Decorative elements around plaza ─────────────────────────────
-O(8, 13, 'plant_bushSmall_NE'); O(8, 14, 'plant_bush_NE');
-O(12, 6, 'mushroom_redGroup_NE'); O(12, 13, 'mushroom_tanGroup_NE');
-O(7, 5, 'stump_old_NE'); O(7, 14, 'stump_round_NE');
-O(6, 7, 'rock_smallA_NE'); O(6, 12, 'rock_smallB_NE');
-O(13, 7, 'stone_smallA_NE'); O(13, 12, 'stone_smallB_NE');
-
-// ── Flowers scattered near paths ─────────────────────────────────
-const flowerSpots = [
-  [5,7],[5,8],[5,11],[5,12],
-  [10,5],[10,6],[10,13],[10,14],
-  [12,8],[12,11],[13,8],[13,11],
-  [7,9],[7,10],[6,9],[6,10]
-];
-flowerSpots.forEach(([r,c]) => {
-  if (!objects[r][c]) O(r, c, flowers[Math.floor(rng()*flowers.length)]);
+// ── Farm area (southwest) fences and crops ────────────────────────
+// Fence around farm perimeter
+for (let c = 5; c <= 13; c++) { O(27, c, 'fence_simple_NE'); O(34, c, 'fence_simple_NE'); }
+for (let r = 27; r <= 34; r++) { O(r, 5, 'fence_simple_NE'); O(r, 13, 'fence_simple_NE'); }
+// Crops inside (rows 28-33, cols 6-12)
+const cropRow = [28, 29, 30, 31, 32, 33];
+const cropCols = [6, 7, 8, 9, 10, 11, 12];
+cropRow.forEach((r, ri) => {
+  cropCols.forEach((c, ci) => {
+    if ((ri + ci) % 2 === 0) O(r, c, crops[Math.floor(rng() * crops.length)]);
+    else if (rng() < 0.25) O(r, c, flowers[Math.floor(rng() * flowers.length)]);
+  });
 });
 
-// ── Sparse deco on grass (not on path tiles) ──────────────────────
-const decoSpots = [
-  [5,3],[5,4],[5,15],[5,16],
-  [9,2],[9,3],[9,16],[9,17],
-  [13,2],[13,3],[13,15],[13,16],
-  [6,3],[6,4],[6,15],[6,16],
-  [11,3],[11,15],[10,3],[10,16]
+// ── Pond/clearing (southeast): rocks + flowers suggest water ─────
+const pondArea = [
+  [29,27],[29,28],[29,29],[29,30],[29,31],
+  [30,27],[30,28],[30,31],[30,32],
+  [31,27],[31,32],[31,33],
+  [32,28],[32,32],[32,33],
+  [33,29],[33,30],[33,31],
 ];
-decoSpots.forEach(([r,c]) => {
-  if (!objects[r][c] && ground[r][c] !== 1) O(r, c, deco[Math.floor(rng() * deco.length)]);
+pondArea.forEach(([r,c]) => {
+  if (!objects[r][c]) {
+    const roll = rng();
+    if (roll < 0.4) O(r, c, 'rock_smallA_NE');
+    else if (roll < 0.7) O(r, c, flowers[Math.floor(rng()*flowers.length)]);
+    else O(r, c, 'stone_smallB_NE');
+  }
 });
 
-// ── Fill interior vegetation gaps (rows 3-17, cols 2-17) ──────────
-// Near-path decorations (flowers, small plants, small stones)
-const nearPathDeco = [
-  ...flowers,
-  'rock_smallA_NE','rock_smallB_NE','stone_smallA_NE','stone_smallB_NE',
-  'plant_bushSmall_NE'
+// ── Decorative elements along roads ──────────────────────────────
+// Along north road
+[7,9,11,13,15].forEach(r => {
+  if (!objects[r][18]) O(r, 18, flowers[Math.floor(rng()*flowers.length)]);
+  if (!objects[r][21]) O(r, 21, flowers[Math.floor(rng()*flowers.length)]);
+});
+// Along south road
+[23,26,28,30,32].forEach(r => {
+  if (!objects[r][18]) O(r, 18, flowers[Math.floor(rng()*flowers.length)]);
+  if (!objects[r][21]) O(r, 21, flowers[Math.floor(rng()*flowers.length)]);
+});
+// Along west road
+[7,9,11,13,15].forEach(c => {
+  if (!objects[18][c]) O(18, c, flowers[Math.floor(rng()*flowers.length)]);
+  if (!objects[21][c]) O(21, c, flowers[Math.floor(rng()*flowers.length)]);
+});
+// Along east road
+[23,26,28,30,32].forEach(c => {
+  if (!objects[18][c]) O(18, c, flowers[Math.floor(rng()*flowers.length)]);
+  if (!objects[21][c]) O(21, c, flowers[Math.floor(rng()*flowers.length)]);
+});
+
+// ── Sparse deco in interior grass (NOT on paths, NOT near borders) ─
+// Only scattered intentional spots, NOT a fill loop
+const sparseDecoSpots = [
+  // Near ApoMac area
+  [17,9],[17,10],[22,9],[22,10],
+  // Near Forge area
+  [17,30],[17,31],[22,30],[22,31],
+  // Near Hunter area
+  [23,8],[23,9],[26,8],[26,9],
+  // Near Echo area
+  [23,31],[23,32],[26,31],[26,32],
+  // Around Sentinel
+  [7,17],[7,22],[9,17],[9,22],
+  // Around Atlas
+  [32,17],[32,22],[33,17],[33,22],
+  // Interior mid-map
+  [15,15],[15,16],[15,23],[15,24],
+  [24,15],[24,16],[24,23],[24,24],
 ];
-// Open-area decorations (bushes, stumps, mushrooms)
-const openAreaDeco = [
-  'plant_bush_NE','plant_bushSmall_NE',
-  'stump_round_NE','stump_old_NE',
-  'mushroom_red_NE','mushroom_tan_NE',
-  'rock_smallA_NE','rock_smallB_NE',
+const sparseDeco = [
+  'rock_smallA_NE','rock_smallB_NE','stone_smallA_NE',
+  'plant_bushSmall_NE','plant_bush_NE',
   ...flowers
 ];
-
-function isNearPath(r, c, radius) {
-  for (let dr = -radius; dr <= radius; dr++) {
-    for (let dc = -radius; dc <= radius; dc++) {
-      const nr = r + dr, nc = c + dc;
-      if (nr >= 0 && nr < MAP && nc >= 0 && nc < MAP && ground[nr][nc] === 1) return true;
-    }
+sparseDecoSpots.forEach(([r,c]) => {
+  if (!objects[r][c] && ground[r][c] !== 1 && r >= 4 && r <= 35 && c >= 4 && c <= 35) {
+    O(r, c, sparseDeco[Math.floor(rng() * sparseDeco.length)]);
   }
-  return false;
-}
-
-for (let r = 3; r <= 17; r++) {
-  for (let c = 2; c <= 17; c++) {
-    // Skip path tiles and occupied tiles
-    if (ground[r][c] === 1) continue;
-    if (objects[r][c]) continue;
-    // Skip forest border tiles (already decorated with trees)
-    if (r <= 4 || r >= 17) continue;
-    if (c <= 1 || c >= 18) continue;
-    
-    let probability;
-    let pool;
-    if (isNearPath(r, c, 1)) {
-      // Near path: 65% chance of light decoration
-      probability = 0.65;
-      pool = nearPathDeco;
-    } else if (isNearPath(r, c, 2)) {
-      // 2 tiles from path: 55% chance, mixed
-      probability = 0.55;
-      pool = [...nearPathDeco, ...openAreaDeco];
-    } else {
-      // Open grass area: 45% chance, heavier deco
-      probability = 0.45;
-      pool = openAreaDeco;
-    }
-    
-    if (rng() < probability) {
-      O(r, c, pool[Math.floor(rng() * pool.length)]);
-    }
-  }
-}
+});
 
 // ================================================================
 // IMAGE LOADING
@@ -1323,71 +1361,61 @@ const COLLAB_BUBBLES = {
 
 const EMOTION_EMOJIS = ['💡', '🔥', '✅', '🎯', '📊', '🛡️', '⚡', '🚀', '💪', '🏆'];
 
-// Campfire zone (tiles near the campfire objects) — central plaza
-const CAMPFIRE_ZONE = {c: 9.5, r: 9.5};
+// Campfire zone (tiles near the campfire objects) — central plaza center (40×40 map)
+const CAMPFIRE_ZONE = {c: 19.5, r: 19.5};
 
-// BFS pathfinding on the ground grid (path tiles only)
+// BFS pathfinding on the ground grid — 4-directional only
+// Returns array of integer tile coords {c, r} (without +0.5)
 function findPath(startC, startR, endC, endR) {
-  const sc = Math.round(startC), sr = Math.round(startR);
-  const ec = Math.round(endC), er = Math.round(endR);
-  
-  // Clamp to map bounds
+  // Accept both float (tile+0.5) and integer tile coords
+  const sc = Math.round(startC - 0.5), sr = Math.round(startR - 0.5);
+  const ec = Math.round(endC - 0.5), er = Math.round(endR - 0.5);
+
   const clamp = (v) => Math.max(0, Math.min(MAP - 1, v));
-  const s = {c: clamp(sc), r: clamp(sr)};
-  const e = {c: clamp(ec), r: clamp(er)};
-  
-  // If start or end not on a path, find nearest path tile
+  const cs = {c: clamp(sc), r: clamp(sr)};
+  const ce = {c: clamp(ec), r: clamp(er)};
+
+  // If start/end not on path, find nearest path tile
   function nearestPath(c, r) {
     if (c >= 0 && c < MAP && r >= 0 && r < MAP && ground[r][c] === 1) return {c, r};
     let best = null, bestD = Infinity;
-    for (let dr = -3; dr <= 3; dr++) {
-      for (let dc = -3; dc <= 3; dc++) {
-        const nc = c + dc, nr = r + dr;
-        if (nc >= 0 && nc < MAP && nr >= 0 && nr < MAP && ground[nr][nc] === 1) {
-          const d = dc*dc + dr*dr;
-          if (d < bestD) { bestD = d; best = {c: nc, r: nr}; }
-        }
+    for (let dr = -5; dr <= 5; dr++) for (let dc = -5; dc <= 5; dc++) {
+      const nc = c+dc, nr = r+dr;
+      if (nc >= 0 && nc < MAP && nr >= 0 && nr < MAP && ground[nr][nc] === 1) {
+        const d = dc*dc+dr*dr;
+        if (d < bestD) { bestD = d; best = {c:nc, r:nr}; }
       }
     }
     return best || {c, r};
   }
-  
-  const start = nearestPath(s.c, s.r);
-  const end = nearestPath(e.c, e.r);
-  
-  if (start.c === end.c && start.r === end.r) return [{c: end.c + 0.5, r: end.r + 0.5}];
-  
-  // BFS
-  const visited = {};
+
+  const start = nearestPath(cs.c, cs.r);
+  const end   = nearestPath(ce.c, ce.r);
+
+  if (start.c === end.c && start.r === end.r) return [{c: end.c, r: end.r}];
+
+  // BFS — 4-directional only (no diagonals per spec)
+  const visited = new Uint8Array(MAP * MAP);
+  visited[start.r * MAP + start.c] = 1;
   const queue = [{c: start.c, r: start.r, path: []}];
-  visited[`${start.c},${start.r}`] = true;
-  
-  const neighbors = [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]];
-  
+  const dirs4 = [[0,1],[0,-1],[1,0],[-1,0]];
+
   while (queue.length > 0) {
     const cur = queue.shift();
-    
-    for (const [dc, dr] of neighbors) {
+    for (const [dc, dr] of dirs4) {
       const nc = cur.c + dc, nr = cur.r + dr;
-      const key = `${nc},${nr}`;
-      
       if (nc < 0 || nc >= MAP || nr < 0 || nr >= MAP) continue;
-      if (visited[key]) continue;
+      const idx = nr * MAP + nc;
+      if (visited[idx]) continue;
       if (ground[nr][nc] !== 1) continue;
-      
-      visited[key] = true;
-      const newPath = [...cur.path, {c: nc + 0.5, r: nr + 0.5}];
-      
-      if (nc === end.c && nr === end.r) {
-        return newPath;
-      }
-      
+      visited[idx] = 1;
+      const newPath = [...cur.path, {c: nc, r: nr}];
+      if (nc === end.c && nr === end.r) return newPath;
       queue.push({c: nc, r: nr, path: newPath});
     }
   }
-  
-  // No path found — just return direct endpoint (fallback)
-  return [{c: end.c + 0.5, r: end.r + 0.5}];
+  // No path found — return direct endpoint
+  return [{c: end.c, r: end.r}];
 }
 
 // ================================================================
@@ -1416,13 +1444,23 @@ function findHomeTile(a) {
 
 const chars = agents.map((a, i) => {
   const home = findHomeTile(a);
-  return {
+  const htc = Math.round(home.c - 0.5);
+  const htr = Math.round(home.r - 0.5);
+  // Mark home tile as occupied
+  if (htc >= 0 && htc < MAP && htr >= 0 && htr < MAP) tileOccupant[htr][htc] = 'pending';
+  const ch = {
   agent: a,
   charName: AGENT_CHAR[a.name],
   c: home.c, r: home.r,
   homeC: home.c, homeR: home.r,
+  // Tile-based movement state
+  tileC: htc, tileR: htr,           // current tile (integer)
+  targetTileC: null, targetTileR: null, // destination tile (integer, null when idle)
+  moveProgress: 0,                   // 0.0..1.0 lerp between tiles
+  moveSpeed: 420,                    // ms per tile
+  _moveMsElapsed: 0,                 // accumulated ms for current tile step
   // Movement
-  path: [],           // BFS path waypoints
+  path: [],           // BFS path waypoints [{c,r} integers]
   pathIdx: 0,         // current waypoint index
   moving: false,
   facing: 'SE',       // front-facing by default
@@ -1430,17 +1468,17 @@ const chars = agents.map((a, i) => {
   ft: 0,              // frame timer
   // Behavior
   state: STATE.WORKING,
-  stateTimer: 3000 + Math.random() * 6000,  // time until next state change (staggered)
-  meetTarget: null,    // which agent we're visiting
-  meetTimer: 0,        // time spent at meeting point
+  stateTimer: 3000 + Math.random() * 6000,
+  meetTarget: null,
+  meetTimer: 0,
   // Idle routine state
-  idleRoutine: null,   // 'lookaround' | 'thinking' | 'smallwander' | null
-  idleRoutineTimer: 0, // time left in idle routine
-  idleRoutineCd: 2000 + Math.random() * 4000, // cooldown before next idle routine
-  smallWanderTarget: null, // {c, r} offset target for small wander
+  idleRoutine: null,
+  idleRoutineTimer: 0,
+  idleRoutineCd: 2000 + Math.random() * 4000,
+  smallWanderTarget: null,
   // Speech
-  bubble: null,        // {text, life, maxLife}
-  bubbleCd: 1000 + Math.random() * 3000,    // cooldown before next bubble
+  bubble: null,
+  bubbleCd: 1000 + Math.random() * 3000,
   // Emotion
   emotionEmoji: null,
   emotionTimer: 0,
@@ -1448,7 +1486,15 @@ const chars = agents.map((a, i) => {
   decommissioning: false,
   decommissionAlpha: 1,
   decommissionScale: 1,
-};});
+  };
+  return ch;
+});
+// Mark char tiles as occupied (replace 'pending' with actual char ref)
+chars.forEach(ch => {
+  if (ch.tileC >= 0 && ch.tileC < MAP && ch.tileR >= 0 && ch.tileR < MAP) {
+    tileOccupant[ch.tileR][ch.tileC] = ch;
+  }
+});;
 
 // ================================================================
 // BACKGROUND NPCs — wander on paths, not in agent panel
@@ -1482,12 +1528,25 @@ function initNPCs() {
   pathTiles = getPathTiles();
   if (pathTiles.length === 0) return;
   NPC_DEFS.forEach((def, i) => {
-    // Pick a random path tile to start on
-    const start = pathTiles[Math.floor(Math.random() * pathTiles.length)];
-    npcs.push({
+    // Pick a free path tile to start on (not already occupied)
+    let start = null;
+    const shuffled = pathTiles.slice().sort(() => Math.random() - 0.5);
+    for (const pt of shuffled) {
+      const tc = Math.round(pt.c - 0.5), tr = Math.round(pt.r - 0.5);
+      if (tc >= 0 && tc < MAP && tr >= 0 && tr < MAP && !tileOccupant[tr][tc]) {
+        start = pt; break;
+      }
+    }
+    if (!start) start = pathTiles[i % pathTiles.length];
+    const tc = Math.round(start.c - 0.5), tr = Math.round(start.r - 0.5);
+    const npc = {
       name: def.name,
       charName: NPC_CHAR_MODELS[def.charIdx % NPC_CHAR_MODELS.length],
-      c: start.c, r: start.r,
+      c: tc + 0.5, r: tr + 0.5,
+      tileC: tc, tileR: tr,
+      targetTileC: null, targetTileR: null,
+      moveProgress: 0, _moveMsElapsed: 0,
+      moveSpeed: 520,  // slightly slower than agents
       facing: ['NE','SE','SW','NW'][i % 4],
       frame: Math.floor(Math.random() * FRAME_COUNT),
       ft: 0,
@@ -1498,8 +1557,11 @@ function initNPCs() {
       bubble: null,
       bubbleCd: 4000 + Math.random() * 8000,
       isNPC: true,
-      scale: 0.9,  // slightly smaller than agents
-    });
+      scale: 0.9,
+    };
+    // Mark tile occupied
+    if (tc >= 0 && tc < MAP && tr >= 0 && tr < MAP) tileOccupant[tr][tc] = npc;
+    npcs.push(npc);
   });
 }
 
@@ -1510,61 +1572,67 @@ const NPC_WANDER_BUBBLES = [
 
 function updateNPCs(dt) {
   npcs.forEach(ch => {
-    // Bubble timer
     if (ch.bubbleCd > 0) ch.bubbleCd -= dt;
-    if (ch.bubble) {
-      ch.bubble.life -= dt;
-      if (ch.bubble.life <= 0) ch.bubble = null;
-    }
+    if (ch.bubble) { ch.bubble.life -= dt; if (ch.bubble.life <= 0) ch.bubble = null; }
 
-    if (ch.moving && ch.path.length > 0) {
-      const target = ch.path[ch.pathIdx];
-      if (!target) { ch.moving = false; ch.path = []; return; }
-      const dx = target.c - ch.c, dy = target.r - ch.r;
-      const d = Math.sqrt(dx*dx + dy*dy);
-      if (d < 0.1) {
-        ch.c = target.c; ch.r = target.r;
-        ch.pathIdx++;
-        if (ch.pathIdx >= ch.path.length) {
-          ch.moving = false; ch.path = [];
-          ch.wanderTimer = 1000 + Math.random() * 3000;
+    if (ch.moving) {
+      if (ch.targetTileC !== null) {
+        // Lerp toward next tile
+        ch._moveMsElapsed += dt;
+        ch.moveProgress = Math.min(1.0, ch._moveMsElapsed / ch.moveSpeed);
+        const t = ch.moveProgress;
+        ch.c = ch.tileC + 0.5 + (ch.targetTileC - ch.tileC) * t;
+        ch.r = ch.tileR + 0.5 + (ch.targetTileR - ch.tileR) * t;
+        ch.ft += dt;
+        if (ch.ft > 120) { ch.frame = (ch.frame + 1) % FRAME_COUNT; ch.ft -= 120; }
+
+        if (ch.moveProgress >= 1.0) {
+          // Release old tile, occupy new
+          if (ch.tileC >= 0 && ch.tileC < MAP && ch.tileR >= 0 && ch.tileR < MAP)
+            if (tileOccupant[ch.tileR][ch.tileC] === ch) tileOccupant[ch.tileR][ch.tileC] = null;
+          ch.tileC = ch.targetTileC; ch.tileR = ch.targetTileR;
+          if (ch.tileC >= 0 && ch.tileC < MAP && ch.tileR >= 0 && ch.tileR < MAP) tileOccupant[ch.tileR][ch.tileC] = ch;
+          ch.c = ch.tileC + 0.5; ch.r = ch.tileR + 0.5;
+          ch.targetTileC = null; ch.targetTileR = null;
+          ch.moveProgress = 0; ch._moveMsElapsed = 0;
+          ch.pathIdx++;
+          if (ch.pathIdx >= ch.path.length) {
+            ch.moving = false; ch.path = [];
+            ch.wanderTimer = 1000 + Math.random() * 3000;
+          }
         }
       } else {
-        const spd = 0.0016 * dt; // slightly slower than agents
-        const newC = ch.c + (dx/d)*spd, newR = ch.r + (dy/d)*spd;
-        // Simple collision: check main agents (0.6 radius for NPC vs agent)
-        let npcBlocked = false;
-        for (const ag of chars) {
-          if (ag.decommissioning) continue;
-          if (Math.abs(ag.c - newC) < 0.6 && Math.abs(ag.r - newR) < 0.6) { npcBlocked = true; break; }
-        }
-        if (!npcBlocked) {
-          ch.c = newC; ch.r = newR;
-          const _f = getFacing(dx/d, dy/d); if (_f) ch.facing = _f;
+        if (ch.pathIdx < ch.path.length) {
+          const next = ch.path[ch.pathIdx];
+          if (isTileFree(next.c, next.r, ch)) {
+            tileOccupant[next.r][next.c] = ch;
+            ch.targetTileC = next.c; ch.targetTileR = next.r;
+            ch.moveProgress = 0; ch._moveMsElapsed = 0;
+            const dc = next.c - ch.tileC, dr2 = next.r - ch.tileR;
+            if (dc !== 0 || dr2 !== 0) ch.facing = facingFromDelta(dc, dr2);
+          } else {
+            // Blocked — abort and re-wander soon
+            ch.moving = false; ch.path = [];
+            ch.wanderTimer = 300 + Math.random() * 800;
+          }
         } else {
-          // Stop and re-wander
           ch.moving = false; ch.path = [];
-          ch.wanderTimer = 300 + Math.random() * 1000;
         }
-        ch.ft += dt;
-        if (ch.ft > 110) { ch.frame = (ch.frame+1) % FRAME_COUNT; ch.ft -= 110; }
       }
     } else {
-      // Idle animation
       ch.ft += dt;
-      if (ch.ft > 220) { ch.frame = (ch.frame+1) % FRAME_COUNT; ch.ft -= 220; }
+      if (ch.ft > 220) { ch.frame = (ch.frame + 1) % FRAME_COUNT; ch.ft -= 220; }
       ch.wanderTimer -= dt;
       if (ch.wanderTimer <= 0) {
-        // Pick a random path tile to wander to
         if (pathTiles.length > 0) {
           const dest = pathTiles[Math.floor(Math.random() * pathTiles.length)];
-          ch.path = findPath(ch.c, ch.r, dest.c, dest.r);
+          const dtc = Math.round(dest.c - 0.5), dtr = Math.round(dest.r - 0.5);
+          ch.path = findPath(ch.tileC + 0.5, ch.tileR + 0.5, dtc + 0.5, dtr + 0.5);
           ch.pathIdx = 0;
           ch.moving = ch.path.length > 0;
         }
-        ch.wanderTimer = 500 + Math.random() * 2000;
+        ch.wanderTimer = 800 + Math.random() * 3000;
       }
-      // Random NPC bubble
       if (ch.bubbleCd <= 0 && !ch.bubble && Math.random() < 0.005) {
         const txt = NPC_WANDER_BUBBLES[Math.floor(Math.random() * NPC_WANDER_BUBBLES.length)];
         ch.bubble = { text: txt, life: 2500, maxLife: 2500 };
@@ -1575,26 +1643,23 @@ function updateNPCs(dt) {
 }
 
 // ================================================================
-// Decide next action for an agent
+// Decide next action for an agent (tile-based)
 function decideNextAction(ch) {
   const roll = Math.random();
-  
+
   if (ch.state === STATE.WORKING) {
-    // From working, decide what to do
     if (roll < 0.35) {
-      // Go to campfire — find a clear spot around it
+      // Go to campfire — pick a nearby plaza tile
       ch.state = STATE.WALKING_TO_POI;
-      let destC, destR, attempts = 0;
-      do {
-        const angle = Math.random() * Math.PI * 2;
-        const dist = 0.8 + Math.random() * 1.2;
-        destC = CAMPFIRE_ZONE.c + Math.cos(angle) * dist;
-        destR = CAMPFIRE_ZONE.r + Math.sin(angle) * dist;
-        attempts++;
-      } while (!isTileClear(destC, destR, ch) && attempts < 8);
-      ch.path = findPath(ch.c, ch.r, destC, destR);
+      const pzTiles = [[18,19],[18,20],[21,19],[21,20],[19,18],[20,18],[19,21],[20,21]];
+      let dest = null;
+      for (let t of pzTiles) {
+        if (isTileFree(t[1], t[0], ch)) { dest = {c: t[1], r: t[0]}; break; }
+      }
+      if (!dest) dest = {c: 19, r: 19};
+      ch.path = findPath(ch.tileC + 0.5, ch.tileR + 0.5, dest.c + 0.5, dest.r + 0.5);
       ch.pathIdx = 0;
-      ch.moving = true;
+      ch.moving = ch.path.length > 0;
       ch.stateTimer = 0;
     } else if (roll < 0.65) {
       // Visit another agent
@@ -1602,30 +1667,26 @@ function decideNextAction(ch) {
       if (others.length === 0) { ch.stateTimer = 5000 + Math.random() * 5000; return; }
       ch.meetTarget = others[Math.floor(Math.random() * others.length)];
       ch.state = STATE.WALKING_TO_AGENT;
-      // Walk to an adjacent tile near the other agent's current position
-      const targetCh = ch.meetTarget;
-      const adj = findAdjacentEmpty(targetCh.c, targetCh.r, ch);
-      ch.path = findPath(ch.c, ch.r, adj.c, adj.r);
+      const tgt = ch.meetTarget;
+      const adj = findAdjacentEmpty(tgt.c, tgt.r, ch);
+      ch.path = findPath(ch.tileC + 0.5, ch.tileR + 0.5, adj.c, adj.r);
       ch.pathIdx = 0;
-      ch.moving = true;
+      ch.moving = ch.path.length > 0;
       ch.stateTimer = 0;
     } else {
-      // Stay working longer
       ch.stateTimer = 5000 + Math.random() * 10000;
     }
   } else if (ch.state === STATE.AT_CAMPFIRE) {
-    // Leave campfire, return home
     ch.state = STATE.RETURNING;
-    ch.path = findPath(ch.c, ch.r, ch.homeC, ch.homeR);
+    ch.path = findPath(ch.tileC + 0.5, ch.tileR + 0.5, ch.homeC, ch.homeR);
     ch.pathIdx = 0;
-    ch.moving = true;
+    ch.moving = ch.path.length > 0;
     ch.stateTimer = 0;
   } else if (ch.state === STATE.MEETING) {
-    // Done meeting, return home
     ch.state = STATE.RETURNING;
-    ch.path = findPath(ch.c, ch.r, ch.homeC, ch.homeR);
+    ch.path = findPath(ch.tileC + 0.5, ch.tileR + 0.5, ch.homeC, ch.homeR);
     ch.pathIdx = 0;
-    ch.moving = true;
+    ch.moving = ch.path.length > 0;
     ch.stateTimer = 0;
   }
 }
@@ -1645,6 +1706,26 @@ function getFacing(dx, dy) {
   }
 }
 
+// ── Tile-based movement helpers ───────────────────────────────────
+// Release old tile, occupy new tile
+function charReleaseTile(ch) {
+  if (ch.tileC >= 0 && ch.tileC < MAP && ch.tileR >= 0 && ch.tileR < MAP) {
+    if (tileOccupant[ch.tileR][ch.tileC] === ch) tileOccupant[ch.tileR][ch.tileC] = null;
+  }
+}
+function charOccupyTile(ch, tc, tr) {
+  if (tc >= 0 && tc < MAP && tr >= 0 && tr < MAP) tileOccupant[tr][tc] = ch;
+  ch.tileC = tc; ch.tileR = tr;
+}
+
+// Facing from tile delta (4-directional)
+function facingFromDelta(dc, dr) {
+  if (dc > 0) return 'SE';   // East (+col)
+  if (dc < 0) return 'NW';   // West (-col)
+  if (dr > 0) return 'SW';   // South (+row)
+  return 'NE';                // North (-row)
+}
+
 function updateChars(dt) {
   chars.forEach(ch => {
     // Handle decommission animation
@@ -1654,207 +1735,182 @@ function updateChars(dt) {
       if (ch.decommissionAlpha <= 0) {
         ch.decommissionAlpha = 0;
         ch.decommissionScale = 0;
-        // Remove label
         const el = labelEls[ch.agent.name];
         if (el) el.style.display = 'none';
       }
-      return; // Skip normal logic
+      return;
     }
 
-    // Bubble timers
+    // Timers
     if (ch.bubbleCd > 0) ch.bubbleCd -= dt;
-    if (ch.bubble) {
-      ch.bubble.life -= dt;
-      if (ch.bubble.life <= 0) ch.bubble = null;
-    }
-    if (ch.emotionTimer > 0) {
-      ch.emotionTimer -= dt;
-      if (ch.emotionTimer <= 0) ch.emotionEmoji = null;
-    }
-    
-    // Movement along path
-    if (ch.moving && ch.path.length > 0) {
-      const target = ch.path[ch.pathIdx];
-      if (!target) {
-        ch.moving = false;
-        ch.path = [];
-        return;
-      }
-      
-      const dx = target.c - ch.c;
-      const dy = target.r - ch.r;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      
-      if (d < 0.1) {
-        ch.c = target.c;
-        ch.r = target.r;
-        ch.pathIdx++;
-        
-        if (ch.pathIdx >= ch.path.length) {
-          // Reached destination
-          ch.moving = false;
-          ch.path = [];
-          ch.frame = 0;
-          
-          // Transition to arrived state
-          if (ch.state === STATE.WALKING_TO_POI) {
-            ch.state = STATE.AT_CAMPFIRE;
-            ch.stateTimer = 5000 + Math.random() * 8000;
-            // Show social bubble
-            showBubble(ch, 'social');
-          } else if (ch.state === STATE.WALKING_TO_AGENT) {
-            ch.state = STATE.MEETING;
-            ch.stateTimer = 4000 + Math.random() * 6000;
-            ch._meetBubbleTimer = 0; // track alternating bubbles
-            ch._meetBobble = 0;      // bobble phase
-            // Face toward the meeting target if they exist
-            if (ch.meetTarget && !ch.meetTarget.decommissioning) {
-              const dx = ch.meetTarget.c - ch.c;
-              const dy = ch.meetTarget.r - ch.r;
-              const _f = getFacing(dx || 0.001, dy || 0.001); if (_f) ch.facing = _f;
-              // Make the target face back
-              const target = ch.meetTarget;
-              const _ft = getFacing(-dx || -0.001, -dy || -0.001); if (_ft) target.facing = _ft;
-            }
-            // Show collab bubble
-            showBubble(ch, 'collab');
-          } else if (ch.state === STATE.RETURNING) {
-            ch.state = STATE.WORKING;
-            ch.stateTimer = 5000 + Math.random() * 10000;
-            ch.meetTarget = null;
-            // Show work bubble
-            showBubble(ch, 'work');
-          }
-        }
-      } else {
-        const spd = 0.0022 * dt;
-        const mx = (dx / d) * spd;
-        const my = (dy / d) * spd;
-        const newC = ch.c + mx;
-        const newR = ch.r + my;
-        // Collision check: don't move if another character is too close at new position
-        // 0.7 tile radius ≈ character sprite width + margin
-        let blocked = false;
-        for (const other of chars) {
-          if (other === ch || other.decommissioning) continue;
-          const oc = Math.abs(other.c - newC), or2 = Math.abs(other.r - newR);
-          if (oc < 0.7 && or2 < 0.7) { blocked = true; break; }
-        }
-        if (!blocked && typeof npcs !== 'undefined') {
-          for (const npc of npcs) {
-            const nc = Math.abs(npc.c - newC), nr = Math.abs(npc.r - newR);
-            if (nc < 0.5 && nr < 0.5) { blocked = true; break; }
-          }
-        }
-        if (!blocked) {
-          ch.c = newC;
-          ch.r = newR;
-          const _f = getFacing(mx, my); if (_f) ch.facing = _f;
-          ch._blockCount = 0; // reset block counter on successful move
-        } else {
-          // Blocked — stop walk animation, show idle pose
-          ch.frame = 0;
-          if (!ch._blockCount) ch._blockCount = 0;
-          if (!ch._blockTimer) ch._blockTimer = 0;
-          ch._blockTimer += dt;
-          if (ch._blockTimer > 400) {
-            ch._blockTimer = 0;
-            ch._blockCount++;
-            if (ch._blockCount >= 3) {
-              // Stuck too long — abort current action and return home
-              ch._blockCount = 0;
-              ch.moving = false;
-              ch.path = [];
-              ch.state = STATE.RETURNING;
-              ch.path = findPath(ch.c, ch.r, ch.homeC, ch.homeR);
-              ch.pathIdx = 0;
-              ch.moving = true;
-              ch.meetTarget = null;
-            } else if (ch.path.length > 0) {
-              // Try re-pathing around obstacle
-              const dest = ch.path[ch.path.length - 1];
-              ch.path = findPath(ch.c, ch.r, dest.c, dest.r);
-              ch.pathIdx = 0;
-            }
-          }
-        }
-        
+    if (ch.bubble) { ch.bubble.life -= dt; if (ch.bubble.life <= 0) ch.bubble = null; }
+    if (ch.emotionTimer > 0) { ch.emotionTimer -= dt; if (ch.emotionTimer <= 0) ch.emotionEmoji = null; }
+
+    // ── TILE-BASED MOVEMENT ──────────────────────────────────────
+    if (ch.moving) {
+      if (ch.targetTileC !== null) {
+        // Currently walking toward next tile — lerp visual position
+        ch._moveMsElapsed += dt;
+        ch.moveProgress = Math.min(1.0, ch._moveMsElapsed / ch.moveSpeed);
+        const t = ch.moveProgress;
+        ch.c = ch.tileC + 0.5 + (ch.targetTileC - ch.tileC) * t;
+        ch.r = ch.tileR + 0.5 + (ch.targetTileR - ch.tileR) * t;
+
         // Animate walk
         ch.ft += dt;
-        if (ch.ft > 100) {
-          ch.frame = (ch.frame + 1) % FRAME_COUNT;
-          ch.ft -= 100;
+        if (ch.ft > 100) { ch.frame = (ch.frame + 1) % FRAME_COUNT; ch.ft -= 100; }
+
+        if (ch.moveProgress >= 1.0) {
+          // Tile step complete: release old tile, occupy new tile
+          const oldTileC = ch.tileC, oldTileR = ch.tileR;
+          charReleaseTile(ch);
+          charOccupyTile(ch, ch.targetTileC, ch.targetTileR);
+          ch.c = ch.tileC + 0.5;
+          ch.r = ch.tileR + 0.5;
+          ch.targetTileC = null;
+          ch.targetTileR = null;
+          ch.moveProgress = 0;
+          ch._moveMsElapsed = 0;
+          ch.pathIdx++;
+
+          // Check if path done
+          if (ch.pathIdx >= ch.path.length) {
+            ch.moving = false;
+            ch.path = [];
+            ch.frame = 0;
+            // Arrived — transition state
+            if (ch.state === STATE.WALKING_TO_POI) {
+              ch.state = STATE.AT_CAMPFIRE;
+              ch.stateTimer = 5000 + Math.random() * 8000;
+              showBubble(ch, 'social');
+            } else if (ch.state === STATE.WALKING_TO_AGENT) {
+              ch.state = STATE.MEETING;
+              ch.stateTimer = 4000 + Math.random() * 6000;
+              ch._meetBubbleTimer = 0;
+              ch._meetBobble = 0;
+              if (ch.meetTarget && !ch.meetTarget.decommissioning) {
+                const dx2 = ch.meetTarget.tileC - ch.tileC;
+                const dy2 = ch.meetTarget.tileR - ch.tileR;
+                if (dx2 !== 0 || dy2 !== 0) {
+                  ch.facing = facingFromDelta(dx2, dy2);
+                  ch.meetTarget.facing = facingFromDelta(-dx2, -dy2);
+                }
+              }
+              showBubble(ch, 'collab');
+            } else if (ch.state === STATE.RETURNING) {
+              ch.state = STATE.WORKING;
+              ch.stateTimer = 5000 + Math.random() * 10000;
+              ch.meetTarget = null;
+              showBubble(ch, 'work');
+            }
+          }
+          // Otherwise next tile step will be picked up in next frame (targetTileC is null)
+        }
+      } else {
+        // Ready to step to next tile in path
+        if (ch.pathIdx < ch.path.length) {
+          const nextTile = ch.path[ch.pathIdx];
+          const ntc = nextTile.c, ntr = nextTile.r;
+          // Check if destination tile is free
+          if (isTileFree(ntc, ntr, ch)) {
+            // Reserve destination tile immediately to prevent conflicts
+            if (tileOccupant[ntr][ntc] !== ch) tileOccupant[ntr][ntc] = ch;
+            ch.targetTileC = ntc;
+            ch.targetTileR = ntr;
+            ch.moveProgress = 0;
+            ch._moveMsElapsed = 0;
+            // Update facing when starting to move to new tile
+            const dc = ntc - ch.tileC, dr2 = ntr - ch.tileR;
+            if (dc !== 0 || dr2 !== 0) ch.facing = facingFromDelta(dc, dr2);
+          } else {
+            // Tile blocked — wait a bit then repath or abort
+            if (!ch._waitTimer) ch._waitTimer = 0;
+            ch._waitTimer += dt;
+            if (ch._waitTimer > 600) {
+              ch._waitTimer = 0;
+              // Try re-pathing
+              const dest = ch.path[ch.path.length - 1];
+              const newPath = findPath(ch.tileC + 0.5, ch.tileR + 0.5, dest.c + 0.5, dest.r + 0.5);
+              if (newPath.length > 0) {
+                ch.path = newPath; ch.pathIdx = 0;
+              } else {
+                // Give up, return home
+                ch.moving = false; ch.path = [];
+                ch.state = STATE.RETURNING;
+                ch.path = findPath(ch.tileC + 0.5, ch.tileR + 0.5, ch.homeC, ch.homeR);
+                ch.pathIdx = 0;
+                ch.moving = ch.path.length > 0;
+              }
+            }
+            // Idle animation while waiting
+            ch.ft += dt;
+            if (ch.ft > 200) { ch.frame = (ch.frame + 1) % FRAME_COUNT; ch.ft -= 200; }
+          }
+        } else {
+          // Path exhausted with no target — stop
+          ch.moving = false; ch.path = [];
         }
       }
     } else {
-      // Not moving — animate idle (slower)
+      // Idle animation
       ch.ft += dt;
-      if (ch.ft > 200) {
-        ch.frame = (ch.frame + 1) % FRAME_COUNT;
-        ch.ft -= 200;
-      }
-      
+      if (ch.ft > 200) { ch.frame = (ch.frame + 1) % FRAME_COUNT; ch.ft -= 200; }
+
       // State timer
       ch.stateTimer -= dt;
-      if (ch.stateTimer <= 0) {
-        decideNextAction(ch);
-      }
+      if (ch.stateTimer <= 0) decideNextAction(ch);
 
-      // ── Idle Routines (only when WORKING at home) ──
+      // ── Idle Routines (WORKING state only) ──────────────────
       if (ch.state === STATE.WORKING) {
         if (ch.idleRoutineCd > 0) ch.idleRoutineCd -= dt;
-        
+
         if (!ch.idleRoutine && ch.idleRoutineCd <= 0) {
-          // Pick a random idle routine
           const roll = Math.random();
           if (roll < 0.30) {
-            // Look around: rotate clockwise SE→SW→NW→NE→SE, slow steps (2-3s each)
             ch.idleRoutine = 'lookaround';
-            ch.idleRoutineTimer = 8000 + Math.random() * 4000; // total 8-12s
-            ch._lookDirs = ['SE','SW','NW','NE'];  // clockwise order
-            // Start from current facing direction's index (or default SE=0)
-            const startFacingIdx = ['SE','SW','NW','NE'].indexOf(ch.facing);
-            ch._lookIdx = startFacingIdx >= 0 ? startFacingIdx : 0;
-            ch._lookStep = 2200 + Math.random() * 800; // force first change after 2.2-3s
+            ch.idleRoutineTimer = 8000 + Math.random() * 4000;
+            ch._lookDirs = ['SE','SW','NW','NE'];
+            const si = ['SE','SW','NW','NE'].indexOf(ch.facing);
+            ch._lookIdx = si >= 0 ? si : 0;
+            ch._lookStep = 2200 + Math.random() * 800;
           } else if (roll < 0.55) {
-            // Thinking: face tent briefly then return
             ch.idleRoutine = 'thinking';
             ch.idleRoutineTimer = 1500 + Math.random() * 1000;
-            ch._thinkPhase = 'face_tent'; // then 'face_back'
+            ch._thinkPhase = 'face_tent';
             ch._origFacing = ch.facing;
-            ch.facing = 'NE'; // face toward tent (northwest-ish)
+            ch.facing = 'NE';
           } else if (roll < 0.78) {
-            // Small wander: move ±0.3 tiles from home
-            ch.idleRoutine = 'smallwander';
-            const drc = (Math.random() - 0.5) * 0.6;
-            const drr = (Math.random() - 0.5) * 0.6;
-            ch.smallWanderTarget = { c: ch.homeC + drc, r: ch.homeR + drr };
-            ch.idleRoutineTimer = 2000 + Math.random() * 1500;
+            // Small wander: step to an adjacent free path tile
+            const dirs4 = [[1,0],[-1,0],[0,1],[0,-1]];
+            const shuffled = dirs4.sort(() => Math.random() - 0.5);
+            for (const [dc, dr2] of shuffled) {
+              const nc = ch.tileC + dc, nr = ch.tileR + dr2;
+              if (isTileFree(nc, nr, ch)) {
+                ch.idleRoutine = 'smallwander';
+                ch.idleRoutineTimer = 2000 + Math.random() * 1500;
+                ch.smallWanderTarget = {c: nc, r: nr};
+                break;
+              }
+            }
+            if (!ch.idleRoutine) ch.idleRoutineCd = 1000 + Math.random() * 2000;
           } else {
-            // Show work bubble more frequently
             ch.idleRoutineCd = 500 + Math.random() * 1000;
             if (ch.bubbleCd <= 0 && !ch.bubble) showBubble(ch, 'work');
           }
         }
-        
+
         if (ch.idleRoutine) {
           ch.idleRoutineTimer -= dt;
-          
+
           if (ch.idleRoutine === 'lookaround') {
-            // Only change facing when truly idle (not moving, no transition)
-            if (!ch.moving) {
-              ch._lookStep -= dt;
-              if (ch._lookStep <= 0) {
-                // Rotate clockwise only (no opposite-direction flip)
-                ch._lookIdx = (ch._lookIdx + 1) % ch._lookDirs.length;
-                ch.facing = ch._lookDirs[ch._lookIdx];
-                ch._lookStep = 2200 + Math.random() * 800; // next change in 2.2–3s
-              }
+            ch._lookStep -= dt;
+            if (ch._lookStep <= 0) {
+              ch._lookIdx = (ch._lookIdx + 1) % ch._lookDirs.length;
+              ch.facing = ch._lookDirs[ch._lookIdx];
+              ch._lookStep = 2200 + Math.random() * 800;
             }
             if (ch.idleRoutineTimer <= 0) {
-              ch.facing = 'SE'; // settle on default SE
-              ch.idleRoutine = null;
-              ch.idleRoutineCd = 4000 + Math.random() * 6000;
+              ch.facing = 'SE'; ch.idleRoutine = null; ch.idleRoutineCd = 4000 + Math.random() * 6000;
             }
           } else if (ch.idleRoutine === 'thinking') {
             if (ch._thinkPhase === 'face_tent' && ch.idleRoutineTimer < 700) {
@@ -1862,73 +1918,62 @@ function updateChars(dt) {
               ch.facing = ch._origFacing || 'SE';
               if (ch.bubbleCd <= 0 && !ch.bubble) showBubble(ch, 'work');
             }
-            if (ch.idleRoutineTimer <= 0) {
-              ch.idleRoutine = null;
-              ch.idleRoutineCd = 3000 + Math.random() * 6000;
-            }
+            if (ch.idleRoutineTimer <= 0) { ch.idleRoutine = null; ch.idleRoutineCd = 3000 + Math.random() * 6000; }
           } else if (ch.idleRoutine === 'smallwander') {
             const t = ch.smallWanderTarget;
-            if (t) {
-              const dx = t.c - ch.c, dy = t.r - ch.r;
-              const d = Math.sqrt(dx*dx + dy*dy);
-              if (d < 0.05 || ch.idleRoutineTimer <= 0) {
-                // Return home
-                const hx = ch.homeC - ch.c, hy = ch.homeR - ch.r;
-                const hd = Math.sqrt(hx*hx + hy*hy);
-                if (hd < 0.05) {
-                  ch.c = ch.homeC; ch.r = ch.homeR;
-                  ch.idleRoutine = null;
-                  ch.smallWanderTarget = null;
-                  ch.idleRoutineCd = 3000 + Math.random() * 6000;
-                } else {
-                  const spd = 0.0008 * dt;
-                  ch.c += (hx/hd)*spd; ch.r += (hy/hd)*spd;
-                  const _f = getFacing(hx/hd, hy/hd); if (_f) ch.facing = _f;
+            if (t && ch.idleRoutineTimer > 0) {
+              if (ch.tileC === t.c && ch.tileR === t.r) {
+                // Arrived — return home tile
+                const homeTc = Math.round(ch.homeC - 0.5), homeTr = Math.round(ch.homeR - 0.5);
+                if (isTileFree(homeTc, homeTr, ch)) {
+                  ch.path = [{c: homeTc, r: homeTr}]; ch.pathIdx = 0; ch.moving = true;
+                  ch.targetTileC = null; ch.targetTileR = null;
                 }
+                ch.idleRoutine = null; ch.smallWanderTarget = null; ch.idleRoutineCd = 3000 + Math.random() * 6000;
               } else {
-                const spd = 0.0008 * dt;
-                ch.c += (dx/d)*spd; ch.r += (dy/d)*spd;
-                const _f = getFacing(dx/d, dy/d); if (_f) ch.facing = _f;
-                // Animate walk-like (slow)
-                ch.ft += dt;
-                if (ch.ft > 220) { ch.frame = (ch.frame + 1) % FRAME_COUNT; ch.ft -= 220; }
+                // Single tile step to wander target
+                const dc = t.c - ch.tileC, dr2 = t.r - ch.tileR;
+                // Use direct step (1 tile)
+                const stc = ch.tileC + Math.sign(dc), str = ch.tileR + Math.sign(dr2 && !dc ? dr2 : 0);
+                // Prefer col movement first
+                const nc = dc !== 0 ? ch.tileC + Math.sign(dc) : ch.tileC;
+                const nr = dc === 0 && dr2 !== 0 ? ch.tileR + Math.sign(dr2) : ch.tileR;
+                if (isTileFree(nc, nr, ch)) {
+                  tileOccupant[nr][nc] = ch;
+                  ch.targetTileC = nc; ch.targetTileR = nr;
+                  ch.moveProgress = 0; ch._moveMsElapsed = 0; ch.moving = true;
+                  ch.path = [{c: nc, r: nr}]; ch.pathIdx = 0;
+                  ch.facing = facingFromDelta(nc - ch.tileC, nr - ch.tileR);
+                } else {
+                  ch.idleRoutine = null; ch.smallWanderTarget = null; ch.idleRoutineCd = 2000 + Math.random() * 3000;
+                }
               }
             } else {
-              ch.idleRoutine = null;
-              ch.idleRoutineCd = 3000 + Math.random() * 6000;
+              ch.idleRoutine = null; ch.smallWanderTarget = null; ch.idleRoutineCd = 3000 + Math.random() * 6000;
             }
           }
         }
       }
-      
-      // Random work bubble when idle at home (more frequent: 0.015)
-      if (ch.state === STATE.WORKING && ch.bubbleCd <= 0 && !ch.bubble && Math.random() < 0.015) {
-        showBubble(ch, 'work');
-      }
-      // Random social/collab bubble at campfire/meeting
-      if (ch.state === STATE.AT_CAMPFIRE && ch.bubbleCd <= 0 && !ch.bubble && Math.random() < 0.012) {
-        showBubble(ch, 'social');
-      }
-      // Meeting logic: face each other, alternating bubbles, bobble animation
+
+      // Bubbles
+      if (ch.state === STATE.WORKING && ch.bubbleCd <= 0 && !ch.bubble && Math.random() < 0.015) showBubble(ch, 'work');
+      if (ch.state === STATE.AT_CAMPFIRE && ch.bubbleCd <= 0 && !ch.bubble && Math.random() < 0.012) showBubble(ch, 'social');
+
+      // Meeting logic
       if (ch.state === STATE.MEETING && ch.meetTarget && !ch.meetTarget.decommissioning) {
         const tgt = ch.meetTarget;
-        // Keep facing toward each other continuously
-        const dx = tgt.c - ch.c;
-        const dy = tgt.r - ch.r;
-        if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
-          const _f = getFacing(dx, dy); if (_f) ch.facing = _f;
-        }
-        // Alternating speech bubble timer
+        const dx = tgt.tileC - ch.tileC, dy2 = tgt.tileR - ch.tileR;
+        if (dx !== 0 || dy2 !== 0) ch.facing = facingFromDelta(dx, dy2);
         if (typeof ch._meetBubbleTimer === 'undefined') ch._meetBubbleTimer = 0;
         ch._meetBubbleTimer -= dt;
         if (ch._meetBubbleTimer <= 0 && ch.bubbleCd <= 0 && !ch.bubble) {
           showBubble(ch, 'collab');
-          ch._meetBubbleTimer = 2500 + Math.random() * 2000; // alternate ~2.5-4.5s
+          ch._meetBubbleTimer = 2500 + Math.random() * 2000;
         }
-        // Bobble: very slight Y offset oscillation stored in ch._meetBobble
         if (typeof ch._meetBobble === 'undefined') ch._meetBobble = Math.random() * Math.PI * 2;
         ch._meetBobble += dt * 0.003;
       }
+
       // Random emotion emoji
       if (!ch.emotionEmoji && Math.random() < 0.002) {
         ch.emotionEmoji = EMOTION_EMOJIS[Math.floor(Math.random() * EMOTION_EMOJIS.length)];
@@ -2186,6 +2231,10 @@ window.decommission = function(agentName) {
     selectedAgentName = null;
     if (typeof closeVillageDetail === 'function') closeVillageDetail();
   }
+  // Release the tile immediately
+  if (ch.tileC >= 0 && ch.tileC < MAP && ch.tileR >= 0 && ch.tileR < MAP) {
+    if (tileOccupant[ch.tileR][ch.tileC] === ch) tileOccupant[ch.tileR][ch.tileC] = null;
+  }
   // After animation completes, remove from chars array
   setTimeout(() => {
     const idx = chars.indexOf(ch);
@@ -2202,7 +2251,7 @@ window.decommission = function(agentName) {
 const particles = [];
 
 function spawnCampfireParticle() {
-  [[9, 9], [10, 10]].forEach(([pc, pr]) => {
+  [[19, 19], [20, 20]].forEach(([pc, pr]) => {
     if (Math.random() < 0.3) {
       const { x, y } = iso(pc + 0.5, pr + 0.5);
       const s = toScreen(x, y);
@@ -2282,7 +2331,7 @@ function updateAndDrawParticles(tick) {
   ctx.restore();
   
   // Campfire glow
-  [[9, 9], [10, 10]].forEach(([pc, pr]) => {
+  [[19, 19], [20, 20]].forEach(([pc, pr]) => {
     const { x, y } = iso(pc + 0.5, pr + 0.5);
     const s = toScreen(x, y);
     ctx.save();
@@ -2505,8 +2554,8 @@ function audioPlayBubblePop() {
 // Update campfire volume based on camera proximity to campfire
 function updateAudioSpatial() {
   if (audioMuted || !_campfireGain) return;
-  // Campfire at iso col=9.5, row=9.5 → screen position
-  const { x, y } = iso(9.5, 9.5);
+  // Campfire at iso col=19.5, row=19.5 → screen position
+  const { x, y } = iso(19.5, 19.5);
   const s = toScreen(x, y);
   const cx = cvs.width / 2, cy = cvs.height / 2;
   const dist = Math.sqrt((s.x - cx) * (s.x - cx) + (s.y - cy) * (s.y - cy));
@@ -2740,10 +2789,11 @@ cvs.addEventListener('touchend', () => { drag = false; });
 
 function doZoom(f) { scale = Math.max(MIN_S, Math.min(MAX_S, scale * f)); }
 function resetView() {
-  scale = Math.max(MIN_S, Math.min(MAX_S, cvs.width / (12 * DW)));
+  // Scale to fit 40×40 map — show roughly 18 tiles wide
+  scale = Math.max(MIN_S, Math.min(MAX_S, cvs.width / (18 * DW)));
   const ctr = iso(MAP / 2, MAP / 2);
   vpX = -ctr.x;
-  vpY = -ctr.y;
+  vpY = -ctr.y - cvs.height * 0.05;
 }
 
 // ================================================================
