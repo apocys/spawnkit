@@ -940,20 +940,27 @@ for (let r = 0; r < MAP; r++) {
 }
 
 // Helper: check if a tile position is clear for character movement
+// Uses 0.7 tile radius to account for sprite width + margin
 function isTileClear(c, r, excludeChar) {
   const tc = Math.round(c - 0.5), tr = Math.round(r - 0.5);
   if (tc < 0 || tc >= MAP || tr < 0 || tr >= MAP) return false;
-  // Check against all other characters (not NPCs for now — they are smaller)
   for (const ch of chars) {
     if (ch === excludeChar) continue;
     if (ch.decommissioning) continue;
     const dc = Math.abs(ch.c - c), dr = Math.abs(ch.r - r);
-    if (dc < 0.5 && dr < 0.5) return false;
+    if (dc < 0.7 && dr < 0.7) return false;
+  }
+  if (typeof npcs !== 'undefined') {
+    for (const npc of npcs) {
+      const dc = Math.abs(npc.c - c), dr = Math.abs(npc.r - r);
+      if (dc < 0.5 && dr < 0.5) return false;
+    }
   }
   return true;
 }
 
 // Find adjacent empty tile near a destination (for meeting stops)
+// Uses 1.0 tile offsets to ensure characters don't overlap visually
 function findAdjacentEmpty(destC, destR, excludeChar) {
   const offsets = [
     [1, 0],[0, 1],[-1, 0],[0, -1],
@@ -961,7 +968,7 @@ function findAdjacentEmpty(destC, destR, excludeChar) {
     [2, 0],[0, 2],[-2, 0],[0, -2]
   ];
   for (const [dc, dr] of offsets) {
-    const nc = destC + dc * 0.8, nr = destR + dr * 0.8;
+    const nc = destC + dc * 1.0, nr = destR + dr * 1.0;
     // Convert float tile coords to int grid indices
     const gc = Math.round(nc - 0.5), gr = Math.round(nr - 0.5);
     if (gc < 0 || gc >= MAP || gr < 0 || gr >= MAP) continue;
@@ -1520,11 +1527,11 @@ function updateNPCs(dt) {
       } else {
         const spd = 0.0016 * dt; // slightly slower than agents
         const newC = ch.c + (dx/d)*spd, newR = ch.r + (dy/d)*spd;
-        // Simple collision: check main agents
+        // Simple collision: check main agents (0.6 radius for NPC vs agent)
         let npcBlocked = false;
         for (const ag of chars) {
           if (ag.decommissioning) continue;
-          if (Math.abs(ag.c - newC) < 0.4 && Math.abs(ag.r - newR) < 0.4) { npcBlocked = true; break; }
+          if (Math.abs(ag.c - newC) < 0.6 && Math.abs(ag.r - newR) < 0.6) { npcBlocked = true; break; }
         }
         if (!npcBlocked) {
           ch.c = newC; ch.r = newR;
@@ -1721,31 +1728,45 @@ function updateChars(dt) {
         const newC = ch.c + mx;
         const newR = ch.r + my;
         // Collision check: don't move if another character is too close at new position
+        // 0.7 tile radius ≈ character sprite width + margin
         let blocked = false;
         for (const other of chars) {
           if (other === ch || other.decommissioning) continue;
           const oc = Math.abs(other.c - newC), or2 = Math.abs(other.r - newR);
-          if (oc < 0.45 && or2 < 0.45) { blocked = true; break; }
+          if (oc < 0.7 && or2 < 0.7) { blocked = true; break; }
         }
-        // Also check NPCs
         if (!blocked && typeof npcs !== 'undefined') {
           for (const npc of npcs) {
             const nc = Math.abs(npc.c - newC), nr = Math.abs(npc.r - newR);
-            if (nc < 0.35 && nr < 0.35) { blocked = true; break; }
+            if (nc < 0.5 && nr < 0.5) { blocked = true; break; }
           }
         }
         if (!blocked) {
           ch.c = newC;
           ch.r = newR;
           const _f = getFacing(mx, my); if (_f) ch.facing = _f;
+          ch._blockCount = 0; // reset block counter on successful move
         } else {
-          // Blocked — wait briefly then try to re-path
+          // Blocked — stop walk animation, show idle pose
+          ch.frame = 0;
+          if (!ch._blockCount) ch._blockCount = 0;
           if (!ch._blockTimer) ch._blockTimer = 0;
           ch._blockTimer += dt;
-          if (ch._blockTimer > 500) {
-            // Re-path to destination
+          if (ch._blockTimer > 400) {
             ch._blockTimer = 0;
-            if (ch.path.length > 0) {
+            ch._blockCount++;
+            if (ch._blockCount >= 3) {
+              // Stuck too long — abort current action and return home
+              ch._blockCount = 0;
+              ch.moving = false;
+              ch.path = [];
+              ch.state = STATE.RETURNING;
+              ch.path = findPath(ch.c, ch.r, ch.homeC, ch.homeR);
+              ch.pathIdx = 0;
+              ch.moving = true;
+              ch.meetTarget = null;
+            } else if (ch.path.length > 0) {
+              // Try re-pathing around obstacle
               const dest = ch.path[ch.path.length - 1];
               ch.path = findPath(ch.c, ch.r, dest.c, dest.r);
               ch.pathIdx = 0;
