@@ -3903,6 +3903,8 @@
         window.SPAWNKIT_DEMO = !relayUrl;
         // Make API URL available globally for all panels
         if (!window.OC_API_URL && relayUrl) window.OC_API_URL = relayUrl;
+        // In demo mode, set OC_API_URL to a safe no-op value to prevent localhost fallbacks
+        // Demo guard: OC_API_URL stays unset in demo — panel functions check SPAWNKIT_DEMO
         var relayToken = stored.relayToken || params.get('token') || '';
         
         if (relayUrl) window.OC_RELAY_URL = relayUrl;
@@ -4483,9 +4485,10 @@
             body += '</div></div>';
 
             // Fetch real metrics from API bridge
-            (async function() {
+            if (!window.SPAWNKIT_DEMO) (async function() {
                 try {
-                    var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
+                    var apiUrl = (window.OC_API_URL || '');
+                    if (!apiUrl) return;
                     var resp = await fetch(apiUrl + '/api/oc/sessions');
                     if (!resp.ok) return;
                     var sessions = await resp.json();
@@ -4556,9 +4559,10 @@
             body += '<div id="detailSubAgentList" style="color:var(--text-tertiary);font-size:13px;">Loading...</div></div>';
 
             // Async: populate sub-agents from live sessions
-            (async function() {
+            if (!window.SPAWNKIT_DEMO) (async function() {
                 try {
-                    var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
+                    var apiUrl = (window.OC_API_URL || '');
+                    if (!apiUrl) return;
                     var resp = await fetch(apiUrl + '/api/oc/sessions');
                     if (!resp.ok) return;
                     var sessions = await resp.json();
@@ -5525,7 +5529,8 @@
 
             try {
                 // Send to local API bridge (primary) or fleet relay (fallback)
-                var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222') + '/api/oc/chat';
+                var apiUrl = (window.OC_API_URL || '') + '/api/oc/chat';
+                if (!apiUrl || window.SPAWNKIT_DEMO) { throw new Error("demo"); }
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -5623,7 +5628,8 @@
             
             try {
                 // 2. Fetch from local API bridge (sessions data)
-                var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
+                var apiUrl = (window.OC_API_URL || '');
+                if (!apiUrl || window.SPAWNKIT_DEMO) { throw new Error("demo"); }
                 
                 // Try the dedicated chat history endpoint first
                 var response = await fetch(apiUrl + '/api/oc/chat/history');
@@ -5795,13 +5801,16 @@
             var crons = null;
 
             // Always prefer API bridge (has full state with nextRunAtMs)
-            {
+            if (!window.SPAWNKIT_DEMO) {
                 try {
-                    var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
-                    var resp = await fetch(apiUrl + '/api/oc/crons');
-                    if (resp.ok) {
-                        var data = await resp.json();
-                        crons = data.jobs || data.crons || (Array.isArray(data) ? data : []);
+                    var apiUrl = (window.OC_API_URL || '');
+                    if (!apiUrl || window.SPAWNKIT_DEMO) { throw new Error("demo"); }
+                    if (apiUrl) {
+                        var resp = await fetch(apiUrl + '/api/oc/crons');
+                        if (resp.ok) {
+                            var data = await resp.json();
+                            crons = data.jobs || data.crons || (Array.isArray(data) ? data : []);
+                        }
                     }
                 } catch(e) {}
             }
@@ -5953,7 +5962,8 @@
             // Fallback: fetch from API bridge
             if (!mem) {
                 try {
-                    var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
+                    var apiUrl = (window.OC_API_URL || '');
+                    if (!apiUrl || window.SPAWNKIT_DEMO) { throw new Error("demo"); }
                     var resp = await fetch(apiUrl + '/api/oc/memory');
                     if (resp.ok) {
                         var data = await resp.json();
@@ -6233,7 +6243,8 @@
             // Fallback: fetch from API bridge
             if (!sessions) {
                 try {
-                    var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
+                    var apiUrl = (window.OC_API_URL || '');
+                    if (!apiUrl || window.SPAWNKIT_DEMO) { throw new Error("demo"); }
                     var resp = await fetch(apiUrl + '/api/oc/sessions');
                     if (resp.ok) {
                         var data = await resp.json();
@@ -8104,7 +8115,7 @@
         var mcCenter = document.getElementById('mcCenterCol');
         var mcRight = document.getElementById('mcRightCol');
         var mcStatus = document.getElementById('mcStatusBar');
-        var API_URL = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+        var API_URL = window.SPAWNKIT_DEMO ? '' : (window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222'));
         var mcRefreshTimer = null;
         var mcFeedMode = 'filtered'; // 'filtered' or 'raw'
         var mcTodoExpanded = false;
@@ -8203,7 +8214,8 @@
 
             // Load TODO from API (cached in mcTodoContent)
             if (!mcTodoContent) {
-                var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
+                var apiUrl = (window.OC_API_URL || '');
+                if (!apiUrl || window.SPAWNKIT_DEMO) { throw new Error("demo"); }
                 fetch(apiUrl + '/api/oc/memory').then(function(r) { return r.ok ? r.json() : null; }).then(function(data) {
                     if (data && data.todo) { mcTodoContent = data.todo; renderLeftColumn(sessions); }
                 }).catch(function() {});
@@ -8584,6 +8596,7 @@
         
         // API URL helper
         function getApiUrl() {
+            if (window.SPAWNKIT_DEMO) return null;
             if (window.SPAWNKIT_DEMO) return null;
             return window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
         }
