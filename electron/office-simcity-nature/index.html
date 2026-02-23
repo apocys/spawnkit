@@ -956,18 +956,18 @@ function isTileFree(tc, tr, excludeChar) {
 
 // Legacy float-position check for campfire destination (still used by decideNextAction)
 function isTileClear(c, r, excludeChar) {
-  const tc = Math.round(c - 0.5), tr = Math.round(r - 0.5);
+  const tc = Math.round(c), tr = Math.round(r);
   return isTileFree(tc, tr, excludeChar);
 }
 
 // Find adjacent free tile near a destination tile (for meeting stops)
 function findAdjacentEmpty(destC, destR, excludeChar) {
   // destC, destR are float coords (tile + 0.5)
-  const dtc = Math.round(destC - 0.5), dtr = Math.round(destR - 0.5);
+  const dtc = Math.round(destC), dtr = Math.round(destR);
   const offsets = [[1,0],[0,1],[-1,0],[0,-1],[2,0],[0,2],[-2,0],[0,-2],[1,1],[-1,1],[1,-1],[-1,-1]];
   for (const [dc, dr] of offsets) {
     const nc = dtc + dc, nr = dtr + dr;
-    if (isTileFree(nc, nr, excludeChar)) return {c: nc + 0.5, r: nr + 0.5};
+    if (isTileFree(nc, nr, excludeChar)) return {c: nc, r: nr};
   }
   return {c: destC, r: destR};
 }
@@ -1367,9 +1367,9 @@ const CAMPFIRE_ZONE = {c: 19.5, r: 19.5};
 // BFS pathfinding on the ground grid — 4-directional only
 // Returns array of integer tile coords {c, r} (without +0.5)
 function findPath(startC, startR, endC, endR) {
-  // Accept both float (tile+0.5) and integer tile coords
-  const sc = Math.round(startC - 0.5), sr = Math.round(startR - 0.5);
-  const ec = Math.round(endC - 0.5), er = Math.round(endR - 0.5);
+  // Accept integer tile coords (or float — rounds to nearest int)
+  const sc = Math.round(startC), sr = Math.round(startR);
+  const ec = Math.round(endC), er = Math.round(endR);
 
   const clamp = (v) => Math.max(0, Math.min(MAP - 1, v));
   const cs = {c: clamp(sc), r: clamp(sr)};
@@ -1436,16 +1436,16 @@ function findHomeTile(a) {
   for (const p of candidates) {
     if (p.r >= 0 && p.r < MAP && p.c >= 0 && p.c < MAP &&
         ground[p.r][p.c] === 1 && !objects[p.r][p.c]) {
-      return {c: p.c + 0.5, r: p.r + 0.5};
+      return {c: p.c, r: p.r};
     }
   }
-  return {c: a.col + 0.5, r: a.row + 0.5};
+  return {c: a.col, r: a.row};
 }
 
 const chars = agents.map((a, i) => {
   const home = findHomeTile(a);
-  const htc = Math.round(home.c - 0.5);
-  const htr = Math.round(home.r - 0.5);
+  const htc = home.c;
+  const htr = home.r;
   // Mark home tile as occupied
   if (htc >= 0 && htc < MAP && htr >= 0 && htr < MAP) tileOccupant[htr][htc] = 'pending';
   const ch = {
@@ -1532,17 +1532,17 @@ function initNPCs() {
     let start = null;
     const shuffled = pathTiles.slice().sort(() => Math.random() - 0.5);
     for (const pt of shuffled) {
-      const tc = Math.round(pt.c - 0.5), tr = Math.round(pt.r - 0.5);
+      const tc = Math.round(pt.c), tr = Math.round(pt.r);
       if (tc >= 0 && tc < MAP && tr >= 0 && tr < MAP && !tileOccupant[tr][tc]) {
         start = pt; break;
       }
     }
     if (!start) start = pathTiles[i % pathTiles.length];
-    const tc = Math.round(start.c - 0.5), tr = Math.round(start.r - 0.5);
+    const tc = Math.round(start.c), tr = Math.round(start.r);
     const npc = {
       name: def.name,
       charName: NPC_CHAR_MODELS[def.charIdx % NPC_CHAR_MODELS.length],
-      c: tc + 0.5, r: tr + 0.5,
+      c: tc, r: tr,
       tileC: tc, tileR: tr,
       targetTileC: null, targetTileR: null,
       moveProgress: 0, _moveMsElapsed: 0,
@@ -1581,8 +1581,8 @@ function updateNPCs(dt) {
         ch._moveMsElapsed += dt;
         ch.moveProgress = Math.min(1.0, ch._moveMsElapsed / ch.moveSpeed);
         const t = ch.moveProgress;
-        ch.c = ch.tileC + 0.5 + (ch.targetTileC - ch.tileC) * t;
-        ch.r = ch.tileR + 0.5 + (ch.targetTileR - ch.tileR) * t;
+        ch.c = ch.tileC + (ch.targetTileC - ch.tileC) * t;
+        ch.r = ch.tileR + (ch.targetTileR - ch.tileR) * t;
         ch.ft += dt;
         if (ch.ft > 120) { ch.frame = (ch.frame + 1) % FRAME_COUNT; ch.ft -= 120; }
 
@@ -1592,7 +1592,7 @@ function updateNPCs(dt) {
             if (tileOccupant[ch.tileR][ch.tileC] === ch) tileOccupant[ch.tileR][ch.tileC] = null;
           ch.tileC = ch.targetTileC; ch.tileR = ch.targetTileR;
           if (ch.tileC >= 0 && ch.tileC < MAP && ch.tileR >= 0 && ch.tileR < MAP) tileOccupant[ch.tileR][ch.tileC] = ch;
-          ch.c = ch.tileC + 0.5; ch.r = ch.tileR + 0.5;
+          ch.c = ch.tileC; ch.r = ch.tileR;
           ch.targetTileC = null; ch.targetTileR = null;
           ch.moveProgress = 0; ch._moveMsElapsed = 0;
           ch.pathIdx++;
@@ -1626,8 +1626,8 @@ function updateNPCs(dt) {
       if (ch.wanderTimer <= 0) {
         if (pathTiles.length > 0) {
           const dest = pathTiles[Math.floor(Math.random() * pathTiles.length)];
-          const dtc = Math.round(dest.c - 0.5), dtr = Math.round(dest.r - 0.5);
-          ch.path = findPath(ch.tileC + 0.5, ch.tileR + 0.5, dtc + 0.5, dtr + 0.5);
+          const dtc = Math.round(dest.c), dtr = Math.round(dest.r);
+          ch.path = findPath(ch.tileC, ch.tileR, dtc, dtr);
           ch.pathIdx = 0;
           ch.moving = ch.path.length > 0;
         }
@@ -1657,7 +1657,7 @@ function decideNextAction(ch) {
         if (isTileFree(t[1], t[0], ch)) { dest = {c: t[1], r: t[0]}; break; }
       }
       if (!dest) dest = {c: 19, r: 19};
-      ch.path = findPath(ch.tileC + 0.5, ch.tileR + 0.5, dest.c + 0.5, dest.r + 0.5);
+      ch.path = findPath(ch.tileC, ch.tileR, dest.c, dest.r);
       ch.pathIdx = 0;
       ch.moving = ch.path.length > 0;
       ch.stateTimer = 0;
@@ -1669,7 +1669,7 @@ function decideNextAction(ch) {
       ch.state = STATE.WALKING_TO_AGENT;
       const tgt = ch.meetTarget;
       const adj = findAdjacentEmpty(tgt.c, tgt.r, ch);
-      ch.path = findPath(ch.tileC + 0.5, ch.tileR + 0.5, adj.c, adj.r);
+      ch.path = findPath(ch.tileC, ch.tileR, adj.c, adj.r);
       ch.pathIdx = 0;
       ch.moving = ch.path.length > 0;
       ch.stateTimer = 0;
@@ -1678,13 +1678,13 @@ function decideNextAction(ch) {
     }
   } else if (ch.state === STATE.AT_CAMPFIRE) {
     ch.state = STATE.RETURNING;
-    ch.path = findPath(ch.tileC + 0.5, ch.tileR + 0.5, ch.homeC, ch.homeR);
+    ch.path = findPath(ch.tileC, ch.tileR, ch.homeC, ch.homeR);
     ch.pathIdx = 0;
     ch.moving = ch.path.length > 0;
     ch.stateTimer = 0;
   } else if (ch.state === STATE.MEETING) {
     ch.state = STATE.RETURNING;
-    ch.path = findPath(ch.tileC + 0.5, ch.tileR + 0.5, ch.homeC, ch.homeR);
+    ch.path = findPath(ch.tileC, ch.tileR, ch.homeC, ch.homeR);
     ch.pathIdx = 0;
     ch.moving = ch.path.length > 0;
     ch.stateTimer = 0;
@@ -1753,8 +1753,8 @@ function updateChars(dt) {
         ch._moveMsElapsed += dt;
         ch.moveProgress = Math.min(1.0, ch._moveMsElapsed / ch.moveSpeed);
         const t = ch.moveProgress;
-        ch.c = ch.tileC + 0.5 + (ch.targetTileC - ch.tileC) * t;
-        ch.r = ch.tileR + 0.5 + (ch.targetTileR - ch.tileR) * t;
+        ch.c = ch.tileC + (ch.targetTileC - ch.tileC) * t;
+        ch.r = ch.tileR + (ch.targetTileR - ch.tileR) * t;
 
         // Animate walk
         ch.ft += dt;
@@ -1765,8 +1765,8 @@ function updateChars(dt) {
           const oldTileC = ch.tileC, oldTileR = ch.tileR;
           charReleaseTile(ch);
           charOccupyTile(ch, ch.targetTileC, ch.targetTileR);
-          ch.c = ch.tileC + 0.5;
-          ch.r = ch.tileR + 0.5;
+          ch.c = ch.tileC;
+          ch.r = ch.tileR;
           ch.targetTileC = null;
           ch.targetTileR = null;
           ch.moveProgress = 0;
@@ -1830,14 +1830,14 @@ function updateChars(dt) {
               ch._waitTimer = 0;
               // Try re-pathing
               const dest = ch.path[ch.path.length - 1];
-              const newPath = findPath(ch.tileC + 0.5, ch.tileR + 0.5, dest.c + 0.5, dest.r + 0.5);
+              const newPath = findPath(ch.tileC, ch.tileR, dest.c, dest.r);
               if (newPath.length > 0) {
                 ch.path = newPath; ch.pathIdx = 0;
               } else {
                 // Give up, return home
                 ch.moving = false; ch.path = [];
                 ch.state = STATE.RETURNING;
-                ch.path = findPath(ch.tileC + 0.5, ch.tileR + 0.5, ch.homeC, ch.homeR);
+                ch.path = findPath(ch.tileC, ch.tileR, ch.homeC, ch.homeR);
                 ch.pathIdx = 0;
                 ch.moving = ch.path.length > 0;
               }
@@ -1924,7 +1924,7 @@ function updateChars(dt) {
             if (t && ch.idleRoutineTimer > 0) {
               if (ch.tileC === t.c && ch.tileR === t.r) {
                 // Arrived — return home tile
-                const homeTc = Math.round(ch.homeC - 0.5), homeTr = Math.round(ch.homeR - 0.5);
+                const homeTc = Math.round(ch.homeC), homeTr = Math.round(ch.homeR);
                 if (isTileFree(homeTc, homeTr, ch)) {
                   ch.path = [{c: homeTc, r: homeTr}]; ch.pathIdx = 0; ch.moving = true;
                   ch.targetTileC = null; ch.targetTileR = null;
