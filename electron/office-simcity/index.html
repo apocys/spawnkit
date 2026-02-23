@@ -2998,7 +2998,9 @@ console.log('🏢 Executive Features loaded - F1-F14 integrated with SimCity the
 
 <!-- ═══ Data Bridge ═══ -->
 <script>
-  window.OC_RELAY_URL = 'http://127.0.0.1:18790';
+  if (!window.location.hostname.includes('spawnkit.ai')) {
+    window.OC_RELAY_URL = 'http://127.0.0.1:18790';
+  }
   window.OC_RELAY_TOKEN = 'sk-oc-proxy-spawnkit-2026';
 </script>
 <script src="../src/data-bridge.js"></script>
@@ -3749,14 +3751,448 @@ console.log('🏢 Executive Features loaded - F1-F14 integrated with SimCity the
   }
 
   // ══════════════════════════════════════════════════
+  //  SIMCITY LIVE AGENT BEHAVIORS — Real-time API Integration
+  // ══════════════════════════════════════════════════
+  
+  var lastSimCityAgentState = {};
+  var lastSimCityMessageCount = 0;
+  var simcityPollTimer = null;
+  var buildingAnimations = new Map();
+  
+  // Main polling function for SimCity theme
+  async function pollSimCityAgentState() {
+    try {
+      const [sessionsResp, memoryResp, chatResp] = await Promise.allSettled([
+        fetch(API_URL + '/api/oc/sessions'),
+        fetch(API_URL + '/api/oc/memory'),
+        fetch(API_URL + '/api/oc/chat')
+      ]);
+      
+      const sessions = sessionsResp.status === 'fulfilled' && sessionsResp.value.ok ? await sessionsResp.value.json() : [];
+      const memory = memoryResp.status === 'fulfilled' && memoryResp.value.ok ? await memoryResp.value.json() : {};
+      const chat = chatResp.status === 'fulfilled' && chatResp.value.ok ? await chatResp.value.json() : [];
+      
+      processSimCityStateChanges(sessions, memory, chat);
+    } catch (error) {
+      console.warn('[SimCityLiveBehaviors] Poll failed:', error.message || error);
+    }
+  }
+  
+  function processSimCityStateChanges(sessions, memory, chat) {
+    const currentState = {};
+    
+    // Build current state
+    (sessions || []).forEach(session => {
+      currentState[session.key] = {
+        status: session.status,
+        label: session.label || session.displayName,
+        kind: session.kind,
+        lastActive: session.lastActive,
+        totalTokens: session.totalTokens,
+        model: session.model
+      };
+    });
+    
+    // Detect changes
+    detectSimCityChanges(currentState);
+    
+    // Check for new messages
+    const currentMessageCount = Array.isArray(chat) ? chat.length : (chat.messages ? chat.messages.length : 0);
+    if (currentMessageCount > lastSimCityMessageCount && lastSimCityMessageCount > 0) {
+      animateSimCityNewMessage(currentMessageCount - lastSimCityMessageCount);
+    }
+    lastSimCityMessageCount = currentMessageCount;
+    
+    // Update building states (lit windows = active agents)
+    updateBuildingStates(sessions);
+    
+    // Update city stats from real data
+    updateCityStats(sessions);
+    
+    // Update agent labels with real activity
+    updateAgentLabels(sessions, memory);
+    
+    lastSimCityAgentState = currentState;
+  }
+  
+  function detectSimCityChanges(currentState) {
+    Object.keys(currentState).forEach(key => {
+      const current = currentState[key];
+      const previous = lastSimCityAgentState[key];
+      
+      if (!previous && current.kind === 'subagent') {
+        // New building constructed (agent spawned)
+        animateBuildingConstruction(key, current);
+      } else if (previous && !currentState[key]) {
+        // Building demolished (agent decommissioned)
+        animateBuildingDemolition(key, previous);
+      } else if (previous && previous.status !== current.status) {
+        if (current.status === 'active') {
+          animateBuildingActive(key, current);
+        } else {
+          animateBuildingIdle(key, current);
+        }
+      }
+    });
+  }
+  
+  function updateBuildingStates(sessions) {
+    // Update building visuals based on agent states
+    const agentLabels = document.querySelectorAll('.agent-label');
+    
+    agentLabels.forEach(label => {
+      const agentName = label.textContent.replace(/.*:\s*/, '').toLowerCase();
+      const dot = label.querySelector('.dot');
+      
+      if (!dot) return;
+      
+      let isActive = false;
+      let session = null;
+      
+      // Find corresponding session
+      if (agentName.includes('ceo') || agentName.includes('mayor')) {
+        session = (sessions || []).find(s => s.key === 'agent:main:main');
+      } else {
+        session = (sessions || []).find(s => 
+          s.kind === 'subagent' && 
+          s.label && 
+          s.label.toLowerCase().includes(agentName)
+        );
+      }
+      
+      if (session && session.status === 'active') {
+        isActive = true;
+        dot.style.background = '#30D158';
+        dot.style.boxShadow = '0 0 8px rgba(48, 209, 88, 0.6)';
+        dot.style.animation = 'cityStatusPulse 2s infinite';
+        
+        // Update label with current activity
+        const activity = session.label || session.displayName || 'Working';
+        label.textContent = `🏗️ ${activity}`;
+      } else if (session) {
+        dot.style.background = '#8E8E93';
+        dot.style.boxShadow = '';
+        dot.style.animation = '';
+        
+        const agoStr = formatSimCityTimeAgo(Date.now() - (session.lastActive || Date.now()));
+        label.textContent = `😴 Idle ${agoStr}`;
+      } else {
+        dot.style.background = '#636366';
+        dot.style.boxShadow = '';
+        dot.style.animation = '';
+        label.textContent = `🏠 Ready for work`;
+      }
+      
+      // Building window lighting effect
+      const buildingId = getBuildingIdFromLabel(label);
+      if (buildingId && isActive) {
+        animateWindowLights(buildingId, true);
+      } else if (buildingId) {
+        animateWindowLights(buildingId, false);
+      }
+    });
+  }
+  
+  function updateCityStats(sessions) {
+    // Update population = number of sessions
+    const populationEl = document.querySelector('#vsbAgentCount, .population-count');
+    if (populationEl) {
+      const totalSessions = (sessions || []).length;
+      populationEl.textContent = `${totalSessions} Citizens`;
+    }
+    
+    // Update budget = total tokens
+    const budgetEl = document.querySelector('.budget-count, [data-stat="budget"]');
+    if (budgetEl) {
+      const totalTokens = (sessions || []).reduce((sum, s) => sum + (s.totalTokens || 0), 0);
+      budgetEl.textContent = `$${totalTokens.toLocaleString()}`;
+    }
+    
+    // Update activity level
+    const activityEl = document.querySelector('.activity-level, [data-stat="activity"]');
+    if (activityEl) {
+      const activeSessions = (sessions || []).filter(s => s.status === 'active').length;
+      const activityLevel = activeSessions > 3 ? 'High' : activeSessions > 1 ? 'Medium' : 'Low';
+      activityEl.textContent = activityLevel;
+      activityEl.style.color = activeSessions > 3 ? '#30D158' : activeSessions > 1 ? '#FFD60A' : '#8E8E93';
+    }
+    
+    // Update status bar values
+    const statusBar = document.getElementById('village-statusbar');
+    if (statusBar) {
+      const activeSessions = (sessions || []).filter(s => s.status === 'active').length;
+      const totalSessions = (sessions || []).length;
+      
+      // Update activity indicator
+      const activityDot = statusBar.querySelector('.vsb-dot');
+      if (activityDot) {
+        if (activeSessions > 0) {
+          activityDot.style.background = '#34C759';
+          activityDot.style.animation = 'vsbPulse 2.5s ease-in-out infinite';
+        } else {
+          activityDot.style.background = '#8E8E93';
+          activityDot.style.animation = '';
+        }
+      }
+      
+      // Update session count
+      const sessionCountEl = statusBar.querySelector('.vsb-sessions, [data-metric="sessions"]');
+      if (sessionCountEl) {
+        sessionCountEl.textContent = `${activeSessions}/${totalSessions} Active`;
+      }
+    }
+  }
+  
+  function updateAgentLabels(sessions, memory) {
+    const labels = document.querySelectorAll('.agent-label');
+    
+    labels.forEach(label => {
+      const text = label.textContent;
+      let agentName = '';
+      
+      // Extract agent name
+      if (text.includes('CEO') || text.includes('Mayor')) {
+        agentName = 'ceo';
+      } else {
+        const match = text.match(/(\w+):/);
+        if (match) agentName = match[1].toLowerCase();
+      }
+      
+      if (!agentName) return;
+      
+      // Find session
+      let session = null;
+      if (agentName === 'ceo') {
+        session = (sessions || []).find(s => s.key === 'agent:main:main');
+      } else {
+        session = (sessions || []).find(s => 
+          s.kind === 'subagent' && 
+          s.label && 
+          s.label.toLowerCase().includes(agentName)
+        );
+      }
+      
+      // Update label text based on real state
+      if (session && session.status === 'active') {
+        const taskName = session.label || session.displayName || 'Unknown task';
+        label.textContent = `🏗️ Building: ${taskName}`;
+      } else if (session) {
+        const agoMs = Date.now() - (session.lastActive || Date.now());
+        const agoStr = formatSimCityTimeAgo(agoMs);
+        label.textContent = `😴 Idle ${agoStr}`;
+      } else if (agentName === 'ceo' && memory && memory.todo) {
+        // CEO shows next task from TODO.md
+        const nextTask = extractSimCityNextTask(memory.todo);
+        label.textContent = `👑 Planning: ${nextTask || 'City development'}`;
+      } else {
+        label.textContent = `🏠 ${agentName}: Ready`;
+      }
+    });
+  }
+  
+  function animateBuildingConstruction(sessionKey, session) {
+    console.log(`[SimCity] Building constructed: ${session.label}`);
+    
+    // Find building and animate construction
+    const building = getBuildingBySession(sessionKey);
+    if (building) {
+      // Construction effect
+      building.style.animation = 'buildingConstruct 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)';
+      setTimeout(() => { building.style.animation = ''; }, 1200);
+    }
+    
+    // Show city notification
+    showCityNotification(`🏗️ New building: ${session.label}`, 'success');
+  }
+  
+  function animateBuildingActive(sessionKey, session) {
+    const building = getBuildingBySession(sessionKey);
+    if (building) {
+      // Light up windows
+      animateWindowLights(building.id || building.className, true);
+    }
+  }
+  
+  function animateBuildingIdle(sessionKey, session) {
+    const building = getBuildingBySession(sessionKey);
+    if (building) {
+      // Dim windows
+      animateWindowLights(building.id || building.className, false);
+    }
+  }
+  
+  function animateBuildingDemolition(sessionKey, session) {
+    console.log(`[SimCity] Building demolished: ${session.label}`);
+    showCityNotification(`🏚️ Building decommissioned: ${session.label}`, 'warning');
+  }
+  
+  function animateSimCityNewMessage(count) {
+    // Animate message/mail buildings
+    const mailBuildings = document.querySelectorAll('.building[data-type="communication"], .agent-label');
+    
+    mailBuildings.forEach(building => {
+      building.style.animation = 'messagePulse 0.8s ease-out';
+      setTimeout(() => { building.style.animation = ''; }, 800);
+    });
+    
+    showCityNotification(`📬 ${count} new message${count > 1 ? 's' : ''}`, 'info');
+  }
+  
+  function animateWindowLights(buildingId, active) {
+    // This would ideally interact with the 3D building models
+    // For now, we animate the agent labels
+    const building = document.getElementById(buildingId) || 
+                     document.querySelector(`[data-building="${buildingId}"]`);
+    
+    if (building) {
+      if (active) {
+        building.style.boxShadow = '0 0 15px rgba(255, 214, 10, 0.4)';
+        building.style.filter = 'brightness(1.1)';
+      } else {
+        building.style.boxShadow = '';
+        building.style.filter = '';
+      }
+    }
+  }
+  
+  function showCityNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `city-notification city-notification--${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: fixed;
+      top: 60px;
+      right: 20px;
+      background: rgba(28, 28, 30, 0.9);
+      color: #f5f5f7;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(52, 199, 89, 0.4);
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 2000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      animation: cityNotificationSlide 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      max-width: 280px;
+    `;
+    
+    // Type-specific colors
+    if (type === 'success') {
+      notification.style.borderColor = 'rgba(48, 209, 88, 0.6)';
+      notification.style.background = 'rgba(48, 209, 88, 0.1)';
+    } else if (type === 'warning') {
+      notification.style.borderColor = 'rgba(255, 214, 10, 0.6)';
+      notification.style.background = 'rgba(255, 214, 10, 0.1)';
+    }
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 3.5 seconds
+    setTimeout(() => {
+      notification.style.animation = 'cityNotificationFadeOut 0.3s ease-out forwards';
+      setTimeout(() => notification.remove(), 300);
+    }, 3500);
+  }
+  
+  // Helper functions
+  function getBuildingBySession(sessionKey) {
+    // This is a simplified approach - in a real 3D city, you'd map sessions to buildings
+    return document.querySelector(`[data-session="${sessionKey}"]`) ||
+           document.querySelector('.building') ||
+           document.querySelector('.agent-label');
+  }
+  
+  function getBuildingIdFromLabel(label) {
+    // Extract building ID from label position or content
+    const rect = label.getBoundingClientRect();
+    return `building-${Math.floor(rect.left / 100)}-${Math.floor(rect.top / 100)}`;
+  }
+  
+  function extractSimCityNextTask(todoMd) {
+    if (!todoMd) return null;
+    const lines = todoMd.split('\n');
+    for (const line of lines) {
+      if (line.includes('>>> NEXT')) {
+        return line.replace(/.*>>> NEXT:?\s*/, '').trim().substring(0, 35);
+      }
+    }
+    return null;
+  }
+  
+  function formatSimCityTimeAgo(ms) {
+    const minutes = Math.floor(ms / 60000);
+    const hours = Math.floor(ms / 3600000);
+    if (minutes < 1) return 'now';
+    if (minutes < 60) return `${minutes}min`;
+    if (hours < 24) return `${hours}hr`;
+    return `${Math.floor(ms / 86400000)}d`;
+  }
+  
+  // SimCity-specific CSS animations
+  const simcityAnimationStyles = document.createElement('style');
+  simcityAnimationStyles.textContent = `
+    @keyframes buildingConstruct {
+      0% { transform: scale(0.5) translateY(20px); opacity: 0; }
+      50% { transform: scale(1.1) translateY(-5px); }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    
+    @keyframes cityStatusPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.15); }
+    }
+    
+    @keyframes messagePulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); filter: brightness(1.2); }
+    }
+    
+    @keyframes cityNotificationSlide {
+      0% { transform: translateX(100%); opacity: 0; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes cityNotificationFadeOut {
+      0% { transform: translateX(0); opacity: 1; }
+      100% { transform: translateX(30px); opacity: 0; }
+    }
+    
+    @keyframes vsbPulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(52, 199, 89, 0.5); }
+      50% { opacity: 0.8; box-shadow: 0 0 12px rgba(52, 199, 89, 0.8); }
+    }
+  `;
+  document.head.appendChild(simcityAnimationStyles);
+
+  // ══════════════════════════════════════════════════
   //  INIT (called after village images load)
   // ══════════════════════════════════════════════════
   window.initVillagePanels = function() {
     prefetchData();
     setInterval(prefetchData, 30000);
     loadLiveAgentData();
+    
+    // Initialize SimCity live behaviors
+    console.log('[SimCityLiveBehaviors] Initializing...');
+    
+    // Initial poll
+    pollSimCityAgentState();
+    
+    // Set up polling interval
+    if (simcityPollTimer) clearInterval(simcityPollTimer);
+    simcityPollTimer = setInterval(pollSimCityAgentState, 15000);
+    
+    console.log('[SimCityLiveBehaviors] Active - polling every 15s');
     console.log('🏘️ [Village] Panel system initialized');
   };
+  
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    if (simcityPollTimer) {
+      clearInterval(simcityPollTimer);
+      simcityPollTimer = null;
+    }
+  });
 
 })();
 </script>

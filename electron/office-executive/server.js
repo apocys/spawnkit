@@ -142,11 +142,77 @@ function cors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
-const server = http.createServer((req, res) => {
+// Helper: read POST body as JSON
+function readBody(req) {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', c => { body += c; if (body.length > 1e6) req.destroy(); });
+    req.on('end', () => { try { resolve(JSON.parse(body)); } catch(e) { resolve(null); } });
+  });
+}
+
+// Helper: proxy fetch to a remote gateway
+async function proxyFetch(url, token) {
+  const https = url.startsWith('https') ? require('https') : require('http');
+  return new Promise((resolve) => {
+    const req = https.get(url, { headers: token ? { 'Authorization': 'Bearer ' + token } : {}, timeout: 8000 }, (resp) => {
+      let data = '';
+      resp.on('data', c => data += c);
+      resp.on('end', () => {
+        try { resolve({ ok: resp.statusCode === 200, status: resp.statusCode, data: JSON.parse(data) }); }
+        catch(e) { resolve({ ok: false, status: resp.statusCode, data: null }); }
+      });
+    });
+    req.on('error', (e) => resolve({ ok: false, status: 0, error: e.message }));
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false, status: 0, error: 'timeout' }); });
+  });
+}
+
+const server = http.createServer(async (req, res) => {
   cors(res);
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  // API routes
+  // ─── Auth validation endpoint ────────────────────────────
+  if (req.url === '/api/auth/validate' && req.method === 'POST') {
+    const body = await readBody(req);
+    if (!body || !body.url) {
+      res.writeHead(400, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: false, error: 'Missing gateway URL' }));
+      return;
+    }
+    // Try to reach the gateway's health endpoint
+    const gatewayUrl = body.url.replace(/\/+$/, '');
+    const token = body.token || '';
+    const result = await proxyFetch(gatewayUrl + '/api/oc/health', token);
+    res.setHeader('Content-Type', 'application/json');
+    if (result.ok) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, gateway: gatewayUrl, health: result.data }));
+    } else {
+      res.writeHead(502);
+      res.end(JSON.stringify({ ok: false, error: result.error || 'Gateway unreachable', status: result.status }));
+    }
+    return;
+  }
+
+  // ─── Remote proxy endpoint ───────────────────────────────
+  if (req.url.startsWith('/api/remote/') && req.method === 'POST') {
+    const body = await readBody(req);
+    if (!body || !body.url || !body.endpoint) {
+      res.writeHead(400, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ error: 'Missing url or endpoint' }));
+      return;
+    }
+    const gatewayUrl = body.url.replace(/\/+$/, '');
+    const token = body.token || '';
+    const result = await proxyFetch(gatewayUrl + body.endpoint, token);
+    res.setHeader('Content-Type', 'application/json');
+    res.writeHead(result.ok ? 200 : 502);
+    res.end(JSON.stringify(result.ok ? result.data : { error: result.error || 'Remote fetch failed' }));
+    return;
+  }
+
+  // ─── Local API routes ────────────────────────────────────
   if (req.url.startsWith('/api/oc/')) {
     res.setHeader('Content-Type', 'application/json');
     const route = req.url.replace(/\?.*/, '');
@@ -157,6 +223,7 @@ const server = http.createServer((req, res) => {
       case '/api/oc/config': data = getConfig(); break;
       case '/api/oc/crons': data = getCrons(); break;
       case '/api/oc/chat': data = getChat(); break;
+      case '/api/oc/chat/history': data = getChat(); break;
       case '/api/oc/agents': data = { agents: [] }; break;
       case '/api/oc/health': data = { ok: true, uptime: process.uptime() }; break;
       default: res.writeHead(404); res.end(JSON.stringify({error:'not found'})); return;
@@ -169,6 +236,8 @@ const server = http.createServer((req, res) => {
   // Static files
   let filePath = req.url.split('?')[0];
   if (filePath === '/' || filePath === '') filePath = '/index.html';
+  // Directory URLs: append index.html (e.g. /office-medieval/ → /office-medieval/index.html)
+  if (filePath.endsWith('/')) filePath += 'index.html';
   
   const fullPath = path.join(STATIC_DIR, filePath);
   // Security: prevent directory traversal
@@ -177,7 +246,16 @@ const server = http.createServer((req, res) => {
   fs.readFile(fullPath, (err, content) => {
     if (err) {
       if (err.code === 'ENOENT') {
-        // SPA fallback
+        // Try as directory: /office-medieval → /office-medieval/index.html
+        const dirIndex = path.join(STATIC_DIR, filePath, 'index.html');
+        if (dirIndex.startsWith(STATIC_DIR) && fs.existsSync(dirIndex)) {
+          fs.readFile(dirIndex, (e3, html) => {
+            if (e3) { res.writeHead(500); res.end('Error'); return; }
+            res.writeHead(200, {'Content-Type': 'text/html', 'Cache-Control': 'no-cache'}); res.end(html);
+          });
+          return;
+        }
+        // SPA fallback to root index.html
         fs.readFile(path.join(STATIC_DIR, 'index.html'), (e2, html) => {
           if (e2) { res.writeHead(500); res.end('Error'); return; }
           res.writeHead(200, {'Content-Type': 'text/html'}); res.end(html);

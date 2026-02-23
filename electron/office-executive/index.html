@@ -2129,14 +2129,39 @@
             }
 
             .exec-statusbar {
-                flex-direction: column;
-                gap: 10px;
-                padding: 12px 16px;
+                flex-wrap: wrap;
+                gap: 6px;
+                padding: 8px 12px;
+                justify-content: center;
             }
 
             .statusbar-info {
                 width: 100%;
                 justify-content: center;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .statusbar-item {
+                font-size: 10px;
+            }
+
+            .statusbar-action {
+                padding: 4px 8px !important;
+                font-size: 10px !important;
+                gap: 2px !important;
+            }
+
+            .statusbar-action span:not(.statusbar-action-icon) {
+                display: none;
+            }
+
+            .statusbar-action-icon {
+                font-size: 16px !important;
+            }
+
+            .exec-command-input {
+                display: none;
             }
 
             .org-children {
@@ -2146,6 +2171,58 @@
 
             .org-children::before {
                 display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .exec-statusbar {
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 10px 16px;
+            }
+
+            .statusbar-action {
+                padding: 5px 10px;
+                font-size: 11px;
+            }
+
+            .statusbar-action span:not(.statusbar-action-icon) {
+                display: none;
+            }
+
+            .exec-command-input {
+                width: 100%;
+                order: 99;
+            }
+
+            .statusbar-separator {
+                display: none;
+            }
+
+            /* Overlays full-screen on mobile */
+            .cron-panel,
+            .chat-history-modal {
+                max-width: 100vw !important;
+                max-height: 100vh !important;
+                border-radius: 0 !important;
+                width: 100vw;
+            }
+
+            /* Mission Control responsive */
+            .mc-layout {
+                flex-direction: column !important;
+            }
+            .mc-left, .mc-center, .mc-right {
+                width: 100% !important;
+                max-height: none !important;
+                border-right: none !important;
+                border-bottom: 1px solid var(--border-subtle);
+            }
+
+            /* Theme picker responsive */
+            .theme-picker-panel {
+                width: 95vw;
+                padding: 20px;
             }
         }
 
@@ -3006,6 +3083,48 @@
         /* Remote Office — uses cron-overlay pattern for consistency */
 
         /* ═══════════════════════════════════════════════════
+           Theme Picker Overlay
+           ═══════════════════════════════════════════════════ */
+        .theme-picker-overlay {
+            position: fixed; inset: 0; z-index: 10000;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .theme-picker-overlay.open { opacity: 1; pointer-events: all; }
+        .theme-picker-panel {
+            background: var(--exec-white, #fff); border-radius: 20px;
+            padding: 32px; width: 520px; max-width: 92vw;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.18);
+        }
+        .theme-picker-title {
+            font-size: 20px; font-weight: 700; margin-bottom: 6px;
+            color: var(--text-primary, #1C1C1E);
+        }
+        .theme-picker-subtitle {
+            font-size: 13px; color: var(--text-tertiary, #8E8E93); margin-bottom: 20px;
+        }
+        .theme-cards { display: flex; flex-direction: column; gap: 12px; }
+        .theme-card {
+            display: flex; align-items: center; gap: 16px;
+            padding: 16px; border-radius: 14px; cursor: pointer;
+            border: 2px solid rgba(0,0,0,0.06);
+            transition: all 0.2s ease; background: var(--exec-gray-50, #F5F5F7);
+        }
+        .theme-card:hover { border-color: var(--exec-blue, #007AFF); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,122,255,0.12); }
+        .theme-card.active { border-color: var(--exec-blue, #007AFF); background: rgba(0,122,255,0.06); }
+        .theme-card-icon { font-size: 36px; width: 52px; text-align: center; flex-shrink: 0; }
+        .theme-card-info { flex: 1; }
+        .theme-card-name { font-size: 15px; font-weight: 600; color: var(--text-primary, #1C1C1E); }
+        .theme-card-desc { font-size: 12px; color: var(--text-tertiary, #8E8E93); margin-top: 2px; }
+        .theme-card-badge {
+            font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
+            background: rgba(0,122,255,0.1); color: var(--exec-blue, #007AFF);
+        }
+        .theme-card-badge.current { background: rgba(48,209,88,0.12); color: #30D158; }
+
+        /* ═══════════════════════════════════════════════════
            Reduced Motion
            ═══════════════════════════════════════════════════ */
         @media (prefers-reduced-motion: reduce) {
@@ -3138,28 +3257,6 @@
             </symbol>
         </defs>
     </svg>
-
-    <!-- ═══ Setup / Login Overlay ═══ -->
-    <div id="setupOverlay" style="position:fixed;inset:0;z-index:10000;background:var(--bg-primary);display:none;align-items:center;justify-content:center;">
-        <div style="max-width:400px;width:100%;padding:32px;">
-            <div style="text-align:center;margin-bottom:24px;">
-                <div style="font-size:48px;margin-bottom:8px;">🏰</div>
-                <h1 style="font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 4px;">SpawnKit</h1>
-                <p style="font-size:14px;color:var(--text-secondary);margin:0;">Connect to your AI fleet</p>
-            </div>
-            <div style="margin-bottom:16px;">
-                <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-tertiary);display:block;margin-bottom:4px;">OpenClaw Gateway URL</label>
-                <input type="text" id="setupRelayUrl" placeholder="http://localhost:8222" style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border-primary);background:var(--bg-secondary);color:var(--text-primary);font-size:14px;">
-            </div>
-            <div style="margin-bottom:16px;">
-                <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-tertiary);display:block;margin-bottom:4px;">Auth Token (optional)</label>
-                <input type="password" id="setupRelayToken" placeholder="sk-oc-..." style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border-primary);background:var(--bg-secondary);color:var(--text-primary);font-size:14px;">
-            </div>
-            <button onclick="connectSetup()" style="width:100%;padding:14px;border-radius:10px;border:none;background:var(--exec-blue);color:white;font-weight:600;font-size:15px;cursor:pointer;margin-bottom:12px;">Connect</button>
-            <button onclick="enterDemoMode()" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border-primary);background:transparent;color:var(--text-secondary);font-size:13px;cursor:pointer;">Try Demo Mode</button>
-            <div id="setupStatus" style="margin-top:12px;text-align:center;font-size:12px;color:var(--text-tertiary);"></div>
-        </div>
-    </div>
 
     <!-- ═══ Main Container ═══ -->
     <div class="exec-container">
@@ -3419,7 +3516,10 @@
                 <span class="statusbar-action-icon" aria-hidden="true">🏙️</span>
                 <span>Remote</span>
             </button>
-            <button class="statusbar-action" id="themesBtn" aria-label="Themes">🎨 Themes</button>
+            <button class="statusbar-action" id="themesBtn" aria-label="Switch Theme" style="background:linear-gradient(135deg, rgba(175,82,222,0.12), rgba(0,122,255,0.08)); border-color:rgba(175,82,222,0.3);">
+                <span class="statusbar-action-icon" aria-hidden="true">🎨</span>
+                <span>Themes</span>
+            </button>
             <button class="statusbar-action" id="addAgentBtn" aria-label="Add Agent" style="background:linear-gradient(135deg, rgba(48,209,88,0.12), rgba(0,122,255,0.08)); border-color:rgba(48,209,88,0.3);">
                 <span class="statusbar-action-icon" aria-hidden="true">➕</span>
                 <span>Add Agent</span>
@@ -3704,18 +3804,6 @@
         </div>
     </div>
 
-    <!-- ═══ Themes Panel ═══ -->
-    <div class="cron-overlay" id="themesOverlay" role="dialog">
-        <div class="cron-backdrop" id="themesBackdrop"></div>
-        <div class="cron-panel" style="max-width:420px;">
-            <div class="cron-header">
-                <div><h2 style="margin:0;font-size:17px;font-weight:600;">🎨 Switch Theme</h2></div>
-                <button class="cron-close" id="themesClose" aria-label="Close">&times;</button>
-            </div>
-            <div class="cron-body" id="themesBody"></div>
-        </div>
-    </div>
-
     <!-- ═══ Chat History Modal ═══ -->
     <div class="chat-history-overlay" id="chatHistoryOverlay" role="dialog" aria-modal="true" aria-label="Chat History">
         <div class="chat-history-backdrop" id="chatHistoryBackdrop"></div>
@@ -3793,14 +3881,23 @@
         var stored = {};
         try { stored = JSON.parse(localStorage.getItem('spawnkit-config') || '{}'); } catch(e) {}
         
-        // Priority: localStorage config > URL params > defaults
+        // Priority: production = same-origin (app.spawnkit.ai only)
+        // themes.spawnkit.ai is static-only — no API, go straight to demo
         var params = new URLSearchParams(window.location.search);
-        // Auto-detect production: only app.spawnkit.ai has API endpoints
-        // themes.spawnkit.ai is static-only — skip API detection there
         var isAppProd = window.location.hostname === 'app.spawnkit.ai';
         var isThemes = window.location.hostname === 'themes.spawnkit.ai';
-        var defaultUrl = isAppProd ? window.location.origin : (isThemes ? '' : 'http://127.0.0.1:8222');
-        var relayUrl = stored.relayUrl || params.get('relay') || defaultUrl;
+        var relayUrl;
+        if (isAppProd) {
+            relayUrl = window.location.origin;
+        } else if (isThemes) {
+            relayUrl = stored.relayUrl || params.get('relay') || ''; // no default — demo mode
+        } else {
+            var defaultUrl = 'http://127.0.0.1:8222';
+            relayUrl = stored.relayUrl || params.get('relay') || defaultUrl;
+        }
+        // Normalize URL helper
+        function normalizeUrl(u) { u = (u||'').trim().replace(/\/+$/, ''); if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u; return u; }
+        if (relayUrl) relayUrl = normalizeUrl(relayUrl);
         // Make API URL available globally for all panels
         if (!window.OC_API_URL && relayUrl) window.OC_API_URL = relayUrl;
         var relayToken = stored.relayToken || params.get('token') || '';
@@ -3811,67 +3908,6 @@
         console.debug('🔌 SpawnKit Local: relay=' + relayUrl + ' token=' + (relayToken ? '***' : 'none'));
       })();
     </script>
-
-    <!-- ═══ Setup / Demo Mode Logic ═══ -->
-    <script>
-    // Show setup if no relay configured and not in demo mode
-    (function() {
-        var config = {};
-        try { config = JSON.parse(localStorage.getItem('spawnkit-config') || '{}'); } catch(e) {}
-        var hasConfig = config.relayUrl || window.location.hostname === 'app.spawnkit.ai';
-        var isDemo = config.demoMode || false;
-        if (!hasConfig && !isDemo) {
-            var overlay = document.getElementById('setupOverlay');
-            if (overlay) overlay.style.display = 'flex';
-        }
-    })();
-
-    function normalizeUrl(u) {
-            u = u.trim().replace(/\/+$/, '');
-            if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
-            return u;
-        }
-        function connectSetup() {
-        var urlEl = document.getElementById('setupRelayUrl');
-        var tokenEl = document.getElementById('setupRelayToken');
-        var statusEl = document.getElementById('setupStatus');
-        var url = normalizeUrl(urlEl ? urlEl.value : '');
-        var token = tokenEl ? tokenEl.value.trim() : '';
-        if (!url) { if (statusEl) statusEl.textContent = 'Please enter a gateway URL'; return; }
-        if (statusEl) statusEl.textContent = '⏳ Connecting...';
-        var headers = { 'Accept': 'application/json' };
-        if (token) headers['Authorization'] = 'Bearer ' + token;
-        fetch(url + '/api/oc/health', { headers: headers })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data && data.ok) {
-                    var cfg = { relayUrl: url, relayToken: token, connectedAt: Date.now() };
-                    localStorage.setItem('spawnkit-config', JSON.stringify(cfg));
-                    window.OC_RELAY_URL = url;
-                    window.OC_API_URL = url;
-                    if (token) window.OC_RELAY_TOKEN = token;
-                    var overlay = document.getElementById('setupOverlay');
-                    if (overlay) overlay.style.display = 'none';
-                    if (typeof showToast === 'function') showToast('✅ Connected to gateway');
-                    if (typeof SpawnKit !== 'undefined' && SpawnKit.refresh) SpawnKit.refresh();
-                } else {
-                    if (statusEl) statusEl.textContent = '⚠️ Server responded but health check failed';
-                }
-            })
-            .catch(function(err) {
-                if (statusEl) statusEl.textContent = '❌ Connection failed: ' + (err.message || 'Cannot reach server');
-            });
-    }
-
-    function enterDemoMode() {
-        var cfg = { demoMode: true, enteredAt: Date.now() };
-        localStorage.setItem('spawnkit-config', JSON.stringify(cfg));
-        var overlay = document.getElementById('setupOverlay');
-        if (overlay) overlay.style.display = 'none';
-        if (typeof showToast === 'function') showToast('👋 Welcome to Demo Mode');
-    }
-    </script>
-
     <script src="./src/data-bridge.js"></script>
     <script>
     // Read config from setup wizard (if available)
@@ -3910,6 +3946,94 @@
         /* Check if spawnkitAPI is available (Electron preload) */
         // spawnkitAPI reference — isAvailable() is async, resolved at init time
         var API = (typeof window.spawnkitAPI !== 'undefined') ? window.spawnkitAPI : null;
+        
+        /* BRIDGE: Connect HTML API calls to SpawnKit data system */
+        function createAPIBridge() {
+            if (API && typeof API.isAvailable === 'function') return; // Already have a real API
+            if (!window.SpawnKit) return; // SpawnKit not ready yet
+            
+            console.log('🔌 Creating API bridge to SpawnKit data system');
+            API = {
+                async isAvailable() { return true; },
+                async getSessions() {
+                    if (!window.SpawnKit.data) return { subagents: [], sessions: [] };
+                    return {
+                        subagents: window.SpawnKit.data.subagents || [],
+                        sessions: window.SpawnKit.data.sessions || []
+                    };
+                },
+                async getActiveSubagents() {
+                    if (!window.SpawnKit.data || !window.SpawnKit.data.subagents) return [];
+                    return window.SpawnKit.data.subagents.filter(sa => sa.status === 'active');
+                },
+                async getCrons() {
+                    if (!window.SpawnKit.data || !window.SpawnKit.data.crons) return [];
+                    return window.SpawnKit.data.crons;
+                },
+                async getMemory() {
+                    if (!window.SpawnKit.data || !window.SpawnKit.data.memory) return null;
+                    return window.SpawnKit.data.memory;
+                },
+                async getAgentInfo(agentId) {
+                    // Return basic info for agent panels
+                    return { soul: 'Agent personality and traits would appear here.' };
+                },
+                async listAvailableSkills() {
+                    // Return basic skill list
+                    return [
+                        { name: '🔍 Web Search', description: 'Search the web for information' },
+                        { name: '📝 Note Taking', description: 'Take and manage notes' },
+                        { name: '🎯 Task Planning', description: 'Plan and organize tasks' }
+                    ];
+                },
+                async saveAgentSkills(agentId, skills) {
+                    console.log('saveAgentSkills called for', agentId, skills);
+                    return { success: true };
+                },
+                async saveAgentSoul(agentId, soul) {
+                    console.log('saveAgentSoul called for', agentId, soul);
+                    return { success: true };
+                },
+                async getApiKeys() {
+                    return {}; // No API keys in browser mode
+                },
+                async saveApiKey(provider, key) {
+                    console.log('saveApiKey called for', provider);
+                    return { success: true };
+                },
+                async deleteApiKey(provider) {
+                    console.log('deleteApiKey called for', provider);
+                    return { success: true };
+                }
+            };
+        }
+        
+        // Try to create bridge immediately (after DOM loads)
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                createAPIBridge();
+                // Trigger initial meeting preview update if needed
+                if (window.API && typeof updateMeetingPreview === 'function') {
+                    updateMeetingPreview();
+                }
+            }, 1000);
+        });
+        
+        // Also create bridge when SpawnKit initializes
+        if (window.SpawnKit && window.SpawnKit.on) {
+            window.SpawnKit.on('init:complete', createAPIBridge);
+            window.SpawnKit.on('data:refresh', createAPIBridge);
+        }
+        
+        // Fallback: Try every 2 seconds until SpawnKit is available
+        const bridgeRetryInterval = setInterval(() => {
+            if (window.SpawnKit && window.SpawnKit.data && !window.API) {
+                createAPIBridge();
+                if (window.API) {
+                    clearInterval(bridgeRetryInterval);
+                }
+            }
+        }, 2000);
 
         var AGENTS = {
             ceo:      { name: setupConfig.userName || 'ApoMac', role: setupConfig.ceoName || 'CEO', color: '#007AFF', status: 'active', task: 'Orchestrating fleet operations' },
@@ -3935,12 +4059,6 @@
         var liveCronData = null;
         var liveMemoryData = null;
         var chatHistory = [];
-
-        // Restore chat history from localStorage on init
-        try {
-            var _savedChatHistory = JSON.parse(localStorage.getItem('spawnkit-chat-history') || '[]');
-            if (_savedChatHistory.length) chatHistory = _savedChatHistory;
-        } catch(e) {}
 
         /* Pre-fetch cron + memory data for panels */
         function prefetchPanelData() {
@@ -5317,37 +5435,19 @@
             }
         }
 
-        /* ── Persist chat history to localStorage ──── */
-        function persistChatHistory() {
-            try {
-                localStorage.setItem('spawnkit-chat-history', JSON.stringify(chatHistory.slice(-200)));
-            } catch(e) {}
-        }
-
         function loadChatTabTranscript() {
             if (!API) return;
             try {
                 var transcript = API.getTranscript('agent:main:main');
                 if (transcript && transcript.length > 0) {
-                    var apiMessages = transcript.slice(-50).map(function(m) {
+                    chatHistory = transcript.slice(-50).map(function(m) {
                         return {
                             role: m.role === 'user' ? 'user' : 'ai',
                             text: m.text || m.content || '',
-                            time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '',
-                            channel: m.channel || (m.metadata && m.metadata.channel) || 'spawnkit'
+                            time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : ''
                         };
                     });
-                    // Merge: keep existing local-only messages, add new ones from API
-                    var existingTexts = new Set(chatHistory.map(function(m) { return m.text; }));
-                    apiMessages.forEach(function(m) {
-                        if (!existingTexts.has(m.text)) {
-                            chatHistory.push(m);
-                        }
-                    });
-                    // Keep only last 200
-                    if (chatHistory.length > 200) chatHistory = chatHistory.slice(-200);
                     renderChatTabMessages();
-                    persistChatHistory();
                 }
             } catch(e) { console.warn('Chat transcript load:', e); }
         }
@@ -5363,18 +5463,11 @@
                 var div = document.createElement('div');
                 div.className = 'chat-tab-msg chat-tab-msg--' + m.role;
                 var preview = m.text.length > 300 ? m.text.substring(0, 300) + '…' : m.text;
-                // Channel badge
-                var channelBadge = '';
-                if (m.channel && m.channel !== 'spawnkit') {
-                    var channelEmoji = { telegram: '✈️', signal: '🔐', whatsapp: '💬', discord: '🎮' }[m.channel] || '💬';
-                    channelBadge = '<span style="font-size:10px;background:var(--bg-tertiary);padding:1px 4px;border-radius:3px;margin-left:4px;">' + channelEmoji + '</span>';
-                }
-                div.innerHTML = '<div>' + esc(preview) + channelBadge + '</div>' +
+                div.innerHTML = '<div>' + esc(preview) + '</div>' +
                     (m.time ? '<div class="chat-tab-msg-time">' + esc(m.time) + '</div>' : '');
                 chatTabMsgsEl.appendChild(div);
             });
             chatTabMsgsEl.scrollTop = chatTabMsgsEl.scrollHeight;
-            persistChatHistory();
         }
 
         // Legacy function for compatibility
@@ -5442,14 +5535,12 @@
                     console.warn('[Chat] Unexpected response:', data);
                 }
                 renderChatTabMessages();
-                persistChatHistory();
 
             } catch (error) {
                 // Remove typing indicator
                 chatHistory = chatHistory.filter(msg => !msg.typing);
                 chatHistory.push({ role: 'ai', text: '⚠️ Network error: ' + esc(error.message), time: timeStr });
                 renderChatTabMessages();
-                persistChatHistory();
             }
         }
 
@@ -6367,52 +6458,6 @@
             renderRemote();
         }
 
-        /* ── Remote Config helpers ─────────────────── */
-        function getRemoteConfig() {
-            try { return JSON.parse(localStorage.getItem('spawnkit-remote-config') || '{}'); } catch(e) { return {}; }
-        }
-
-        function saveRemoteConfig() {
-            var url = document.getElementById('remoteRelayUrl');
-            var token = document.getElementById('remoteRelayToken');
-            var name = document.getElementById('remoteOfficeName');
-            if (!url || !url.value.trim()) { showToast('Please enter a relay URL'); return; }
-            var config = {
-                relayUrl: url.value.trim(),
-                relayToken: token ? token.value.trim() : '',
-                officeName: name ? name.value.trim() : 'My Office',
-                savedAt: Date.now()
-            };
-            localStorage.setItem('spawnkit-remote-config', JSON.stringify(config));
-            // Update global relay settings
-            window.OC_RELAY_URL = config.relayUrl;
-            if (config.relayToken) window.OC_RELAY_TOKEN = config.relayToken;
-            showToast('✅ Remote config saved');
-            testRemoteConnection();
-        }
-
-        function testRemoteConnection() {
-            var config = getRemoteConfig();
-            var statusEl = document.getElementById('remoteConnStatus');
-            if (!statusEl) return;
-            if (!config.relayUrl) { statusEl.innerHTML = '⚠️ No relay URL configured'; return; }
-            statusEl.innerHTML = '⏳ Testing connection...';
-            var headers = { 'Accept': 'application/json' };
-            if (config.relayToken) headers['Authorization'] = 'Bearer ' + config.relayToken;
-            fetch(normalizeUrl(config.relayUrl) + '/api/oc/health', { headers: headers, mode: 'cors' })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data && data.ok) {
-                        statusEl.innerHTML = '✅ Connected! Uptime: ' + Math.round((data.uptime || 0) / 60) + 'm';
-                    } else {
-                        statusEl.innerHTML = '⚠️ Server responded but health check failed';
-                    }
-                })
-                .catch(function(err) {
-                    statusEl.innerHTML = '❌ Connection failed: ' + (err.message || 'Unknown error');
-                });
-        }
-
         function renderRemote() {
             var body = document.getElementById('remoteBody');
             if (!body) return;
@@ -6429,30 +6474,14 @@
             
             var officeKeys = Object.keys(offices);
             if (officeKeys.length === 0) {
-                // Real config form (replaces old Sycopa HQ placeholder)
-                var remoteConf = getRemoteConfig();
-                var savedRelayUrl = remoteConf.relayUrl || '';
-                var savedToken = remoteConf.relayToken || '';
-                var savedName = remoteConf.officeName || '';
-                html += '<div style="padding:16px;">';
-                html += '<div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px;">Connect to Remote Office</div>';
-                html += '<div style="margin-bottom:12px;">';
-                html += '<label style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-tertiary);display:block;margin-bottom:4px;">Fleet Relay URL</label>';
-                html += '<input type="text" id="remoteRelayUrl" value="' + esc(savedRelayUrl) + '" placeholder="https://fleet.spawnkit.ai" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid var(--border-primary);background:var(--bg-tertiary);color:var(--text-primary);font-size:13px;">';
+                // Demo fallback
+                html += '<div class="remote-office-card">';
+                html += '<div class="remote-office-header">';
+                html += '<span class="remote-office-emoji">🎭</span>';
+                html += '<div><div class="remote-office-name">Sycopa HQ</div>';
+                html += '<div class="remote-office-status offline">Waiting for connection...</div></div>';
                 html += '</div>';
-                html += '<div style="margin-bottom:12px;">';
-                html += '<label style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-tertiary);display:block;margin-bottom:4px;">Auth Token</label>';
-                html += '<input type="password" id="remoteRelayToken" value="' + esc(savedToken) + '" placeholder="sk-fleet-..." style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid var(--border-primary);background:var(--bg-tertiary);color:var(--text-primary);font-size:13px;">';
-                html += '</div>';
-                html += '<div style="margin-bottom:12px;">';
-                html += '<label style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-tertiary);display:block;margin-bottom:4px;">Office Name</label>';
-                html += '<input type="text" id="remoteOfficeName" value="' + esc(savedName) + '" placeholder="My Office" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid var(--border-primary);background:var(--bg-tertiary);color:var(--text-primary);font-size:13px;">';
-                html += '</div>';
-                html += '<div style="display:flex;gap:8px;">';
-                html += '<button onclick="saveRemoteConfig()" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--exec-blue);color:white;font-weight:600;font-size:13px;cursor:pointer;">Save & Connect</button>';
-                html += '<button onclick="testRemoteConnection()" style="padding:10px 16px;border-radius:8px;border:1px solid var(--border-primary);background:transparent;color:var(--text-secondary);font-size:13px;cursor:pointer;">Test</button>';
-                html += '</div>';
-                html += '<div id="remoteConnStatus" style="margin-top:12px;font-size:12px;color:var(--text-tertiary);"></div>';
+                html += '<div style="font-size:12px;color:#8E8E93;padding:8px 0">Fleet relay: fleet.spawnkit.ai</div>';
                 html += '</div>';
             } else {
                 officeKeys.forEach(function(id) {
@@ -6543,43 +6572,6 @@
         document.getElementById('remoteBtn').addEventListener('click', openRemoteOverlay);
         document.getElementById('remoteBackdrop').addEventListener('click', closeRemotePanel);
         document.getElementById('remoteClose').addEventListener('click', closeRemotePanel);
-
-        /* ── Theme Selector ──────────────────────────── */
-        document.getElementById('themesBtn').addEventListener('click', function() {
-            closeAllPanels();
-            document.getElementById('themesOverlay').classList.add('open');
-            renderThemes();
-        });
-        document.getElementById('themesBackdrop').addEventListener('click', function() {
-            document.getElementById('themesOverlay').classList.remove('open');
-        });
-        document.getElementById('themesClose').addEventListener('click', function() {
-            document.getElementById('themesOverlay').classList.remove('open');
-        });
-
-        function renderThemes() {
-            var body = document.getElementById('themesBody');
-            if (!body) return;
-            var themes = [
-                { name: 'Executive Office', emoji: '🏢', desc: 'Professional C-suite dashboard', url: '/office-executive/', active: true },
-                { name: 'Medieval Castle', emoji: '🏰', desc: '3D castle with Kenney assets', url: 'https://themes.spawnkit.ai/office-medieval/' },
-                { name: 'SimCity', emoji: '🏙️', desc: 'Isometric city management', url: 'https://themes.spawnkit.ai/office-simcity/' },
-                { name: 'Nature Village', emoji: '🌿', desc: 'Cozy pixel-art village', url: 'https://themes.spawnkit.ai/office-simcity-nature/' }
-            ];
-            var html = '';
-            themes.forEach(function(t) {
-                html += '<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;' +
-                    (t.active ? 'background:var(--exec-blue-muted);border:1px solid var(--exec-blue);' : 'background:var(--bg-tertiary);border:1px solid var(--border-primary);cursor:pointer;') +
-                    'margin-bottom:8px;" ' +
-                    (t.active ? '' : 'onclick="window.location.href=\'' + t.url + '\'"') + '>';
-                html += '<span style="font-size:28px;">' + t.emoji + '</span>';
-                html += '<div><div style="font-weight:600;font-size:14px;color:var(--text-primary);">' + t.name +
-                    (t.active ? ' <span style="font-size:11px;color:var(--exec-blue);font-weight:500;">ACTIVE</span>' : '') + '</div>';
-                html += '<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">' + t.desc + '</div></div>';
-                html += '</div>';
-            });
-            body.innerHTML = html;
-        }
 
         /* ═══════════════════════════════════════════════
            Decommission Animation (NEW #7)
@@ -8145,58 +8137,78 @@
         function renderLeftColumn(sessions) {
             var html = '';
 
-            // Active missions from localStorage (safe parse)
-            var missions = [];
-            try { missions = JSON.parse(localStorage.getItem('spawnkit-missions') || '[]'); } catch(e) { missions = []; }
-            if (!Array.isArray(missions)) missions = [];
-            var activeMissions = missions.filter(function(m) { return m.status !== 'done'; });
-            var doneMissions = missions.filter(function(m) { return m.status === 'done'; });
-
-            html += '<div class="mc-section-title">🎯 Active Missions (' + activeMissions.length + ')</div>';
-
-            if (activeMissions.length === 0) {
-                html += '<div style="padding:16px;text-align:center;color:var(--text-tertiary);font-size:12px;">No active missions.<br>Create one from Orchestration → Missions.</div>';
+            // Parse TODO.md into structured tasks
+            function parseTodoMd(raw) {
+                if (!raw) return { active: [], done: [], queued: [] };
+                var lines = raw.split('\n');
+                var active = [], done = [], queued = [];
+                var currentSection = '';
+                var inQueued = false;
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i];
+                    if (/^##\s/.test(line)) {
+                        if (/Queued/i.test(line)) inQueued = true;
+                        else if (/Completed/i.test(line) || /🟢/.test(line)) inQueued = false;
+                        else inQueued = false;
+                    }
+                    if (/^###\s/.test(line)) currentSection = line.replace(/^###\s*/, '').replace(/\|.*/, '').trim();
+                    // Active items: >>> NEXT or 🔴 or ⬜
+                    if (/>>>\s*NEXT/.test(line)) {
+                        active.unshift({ text: currentSection || line.replace(/^.*>>>\s*NEXT:?\s*/, ''), status: 'next', icon: '🔥' });
+                    } else if (/^- 🔴/.test(line)) {
+                        active.push({ text: line.replace(/^- 🔴\s*/, '').replace(/\*\*/g, ''), status: 'blocked', icon: '🔴' });
+                    } else if (/^- ⬜/.test(line) && !inQueued) {
+                        active.push({ text: line.replace(/^- ⬜\s*/, '').replace(/\*\*/g, ''), status: 'todo', icon: '⬜' });
+                    } else if (/^- ✅/.test(line) && !inQueued) {
+                        done.push({ text: line.replace(/^- ✅\s*/, '').replace(/\*\*/g, ''), status: 'done' });
+                    } else if (/^- ⬜/.test(line) && inQueued) {
+                        queued.push({ text: line.replace(/^- ⬜\s*/, '').replace(/\*\*/g, ''), status: 'queued', icon: '📋' });
+                    }
+                }
+                return { active: active.slice(0, 8), done: done.slice(0, 5), queued: queued.slice(0, 6) };
             }
 
-            activeMissions.forEach(function(m, idx) {
-                var todos = m.todos || [];
-                var done = todos.filter(function(t) { return t.done; }).length;
-                var total = todos.length;
-                var pct = total > 0 ? Math.round(done / total * 100) : 0;
+            // Load TODO from API (cached in mcTodoContent)
+            if (!mcTodoContent) {
+                var apiUrl = (window.OC_API_URL || 'http://127.0.0.1:8222');
+                fetch(apiUrl + '/api/oc/memory').then(function(r) { return r.ok ? r.json() : null; }).then(function(data) {
+                    if (data && data.todo) { mcTodoContent = data.todo; renderLeftColumn(sessions); }
+                }).catch(function() {});
+            }
+            var todoData = parseTodoMd(mcTodoContent);
 
-                html += '<div class="mc-mission" data-midx="' + idx + '">';
-                html += '<div class="mc-mission-name">' + escMc(m.name) + '</div>';
-                html += '<div class="mc-mission-meta">';
-                if (m.agents && m.agents.length) {
-                    m.agents.forEach(function(aId) {
-                        var a = (typeof AGENTS !== 'undefined' && AGENTS[aId]) ? AGENTS[aId] : null;
-                        html += '<span class="mc-task-assignee">' + escMc(a ? a.name : aId) + '</span>';
-                    });
-                }
-                html += '<span>' + done + '/' + total + ' tasks</span>';
-                html += '</div>';
-                html += '<div class="mc-progress"><div class="mc-progress-fill" style="width:' + pct + '%"></div></div>';
+            // Active tasks from TODO.md
+            html += '<div class="mc-section-title">🎯 Active Tasks (' + todoData.active.length + ')</div>';
 
-                // Task table (expandable)
-                html += '<div class="mc-mission-tasks">';
-                todos.forEach(function(t) {
-                    var st = t.done ? 'done' : (t.review ? 'review' : (t.active ? 'active' : 'pending'));
-                    html += '<div class="mc-task-row">';
-                    html += '<input type="checkbox" ' + (t.done ? 'checked' : '') + ' class="mc-task-check" data-midx="' + idx + '" data-tidx="' + todos.indexOf(t) + '" />';
-                    html += '<span class="mc-task-name">' + escMc(t.text) + '</span>';
-                    if (t.assignee) html += '<span class="mc-task-assignee">' + escMc(t.assignee) + '</span>';
-                    html += '<span class="mc-task-status mc-task-status--' + st + '">' + st.toUpperCase() + '</span>';
-                    html += '</div>';
-                });
-                html += '</div>';
+            if (todoData.active.length === 0 && !mcTodoContent) {
+                html += '<div style="padding:16px;text-align:center;color:var(--text-tertiary);font-size:12px;">Loading tasks from TODO.md...</div>';
+            } else if (todoData.active.length === 0) {
+                html += '<div style="padding:16px;text-align:center;color:var(--text-tertiary);font-size:12px;">No active tasks. All clear! 🎉</div>';
+            }
+
+            todoData.active.forEach(function(t) {
+                var statusColor = t.status === 'next' ? '#FF9500' : t.status === 'blocked' ? '#FF3B30' : 'var(--exec-blue)';
+                var statusLabel = t.status === 'next' ? 'NEXT' : t.status === 'blocked' ? 'BLOCKED' : 'TODO';
+                html += '<div class="mc-task-row" style="padding:8px 10px;margin-bottom:4px;border-radius:8px;background:rgba(0,0,0,0.03);">';
+                html += '<span style="margin-right:6px;">' + t.icon + '</span>';
+                html += '<span class="mc-task-name" style="flex:1;font-size:12px;">' + escMc(t.text.substring(0, 80)) + '</span>';
+                html += '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:' + statusColor + '22;color:' + statusColor + ';">' + statusLabel + '</span>';
                 html += '</div>';
             });
 
-            // Completed missions (collapsed)
-            if (doneMissions.length > 0) {
-                html += '<div class="mc-section-title" style="margin-top:16px;">✅ Completed (' + doneMissions.length + ')</div>';
-                doneMissions.forEach(function(m) {
-                    html += '<div style="padding:6px 10px;border-radius:8px;background:rgba(48,209,88,0.06);margin-bottom:4px;font-size:12px;color:var(--text-tertiary);text-decoration:line-through;">' + escMc(m.name) + '</div>';
+            // Recently completed
+            if (todoData.done.length > 0) {
+                html += '<div class="mc-section-title" style="margin-top:12px;">✅ Recently Done (' + todoData.done.length + ')</div>';
+                todoData.done.slice(0, 3).forEach(function(m) {
+                    html += '<div style="padding:5px 10px;border-radius:8px;background:rgba(48,209,88,0.06);margin-bottom:3px;font-size:11px;color:var(--text-tertiary);">' + escMc(m.text.substring(0, 60)) + '</div>';
+                });
+            }
+
+            // Queued
+            if (todoData.queued.length > 0) {
+                html += '<div class="mc-section-title" style="margin-top:12px;">📋 Queued (' + todoData.queued.length + ')</div>';
+                todoData.queued.slice(0, 4).forEach(function(m) {
+                    html += '<div style="padding:5px 10px;border-radius:8px;background:rgba(0,122,255,0.04);margin-bottom:3px;font-size:11px;color:var(--text-secondary);">📋 ' + escMc(m.text.substring(0, 60)) + '</div>';
                 });
             }
 
@@ -8485,6 +8497,568 @@
             html += '<div class="mc-statusbar-item">Sessions: <strong>' + arr.length + '</strong></div>';
             mcStatus.innerHTML = html;
         }
+    })();
+    </script>
+
+    <!-- ═══ Theme Picker Overlay ═══ -->
+    <div class="theme-picker-overlay" id="themePickerOverlay">
+        <div class="theme-picker-panel">
+            <div class="theme-picker-title">🎨 Choose Your Theme</div>
+            <div class="theme-picker-subtitle">Switch between different visual experiences for your fleet</div>
+            <div class="theme-cards">
+                <div class="theme-card active" data-theme="executive">
+                    <div class="theme-card-icon">🏢</div>
+                    <div class="theme-card-info">
+                        <div class="theme-card-name">Executive Office</div>
+                        <div class="theme-card-desc">Apple-inspired premium workspace. Clean, professional, data-rich.</div>
+                    </div>
+                    <span class="theme-card-badge current">Current</span>
+                </div>
+                <div class="theme-card" data-theme="medieval">
+                    <div class="theme-card-icon">🏰</div>
+                    <div class="theme-card-info">
+                        <div class="theme-card-name">Medieval Castle</div>
+                        <div class="theme-card-desc">Knights, towers & royal command. Your fleet as a medieval kingdom.</div>
+                    </div>
+                    <span class="theme-card-badge">Switch</span>
+                </div>
+                <div class="theme-card" data-theme="simcity">
+                    <div class="theme-card-icon">🏙️</div>
+                    <div class="theme-card-info">
+                        <div class="theme-card-name">SimCity</div>
+                        <div class="theme-card-desc">Isometric city builder. Watch your agents as a living micro-city.</div>
+                    </div>
+                    <span class="theme-card-badge">Switch</span>
+                </div>
+            </div>
+            <div style="text-align:right;margin-top:18px;">
+                <button id="themePickerClose" style="padding:8px 20px;border-radius:10px;border:none;background:var(--exec-gray-100,#E5E5EA);color:var(--text-primary,#1C1C1E);font-weight:600;cursor:pointer;font-size:13px;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        // ═══════════════════════════════════════════════════════════════
+        //   LIVE AGENT BEHAVIORS — Real-time API Integration
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Global state for agent polling
+        var lastAgentState = {};
+        var lastChatMessageCount = 0;
+        var pollTimer = null;
+        var animationQueue = [];
+        
+        // API URL helper
+        function getApiUrl() {
+            return window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+        }
+        
+        // Agent polling function - fetches all necessary data
+        async function pollAgentState() {
+            try {
+                const [sessionsResp, memoryResp, chatResp, cronsResp] = await Promise.allSettled([
+                    fetch(getApiUrl() + '/api/oc/sessions'),
+                    fetch(getApiUrl() + '/api/oc/memory'),
+                    fetch(getApiUrl() + '/api/oc/chat'),
+                    fetch(getApiUrl() + '/api/oc/crons')
+                ]);
+                
+                const sessions = sessionsResp.status === 'fulfilled' && sessionsResp.value.ok ? await sessionsResp.value.json() : [];
+                const memory = memoryResp.status === 'fulfilled' && memoryResp.value.ok ? await memoryResp.value.json() : {};
+                const chat = chatResp.status === 'fulfilled' && chatResp.value.ok ? await chatResp.value.json() : [];
+                const crons = cronsResp.status === 'fulfilled' && cronsResp.value.ok ? await cronsResp.value.json() : {};
+                
+                processAgentStateChanges(sessions, memory, chat, crons);
+            } catch (error) {
+                console.warn('[LiveAgentBehaviors] Poll failed:', error.message || error);
+            }
+        }
+        
+        // Process state changes and trigger animations
+        function processAgentStateChanges(sessions, memory, chat, crons) {
+            const currentState = {};
+            
+            // Build current state from sessions
+            (sessions || []).forEach(session => {
+                const key = session.key;
+                currentState[key] = {
+                    status: session.status,
+                    model: session.model,
+                    totalTokens: session.totalTokens,
+                    lastActive: session.lastActive,
+                    label: session.label || session.displayName,
+                    kind: session.kind || 'unknown'
+                };
+            });
+            
+            // Detect changes and queue animations
+            detectSessionChanges(currentState);
+            
+            // Check for new chat messages
+            const currentMessageCount = Array.isArray(chat) ? chat.length : (chat.messages ? chat.messages.length : 0);
+            if (currentMessageCount > lastChatMessageCount && lastChatMessageCount > 0) {
+                queueAnimation('new-message', { count: currentMessageCount - lastChatMessageCount });
+            }
+            lastChatMessageCount = currentMessageCount;
+            
+            // Update status displays with real data
+            updateStatusDisplays(sessions, memory, crons);
+            
+            // Update agent tiles with real data
+            updateAgentTiles(sessions, memory);
+            
+            // Store current state
+            lastAgentState = currentState;
+        }
+        
+        // Detect session changes and queue appropriate animations
+        function detectSessionChanges(currentState) {
+            Object.keys(currentState).forEach(key => {
+                const current = currentState[key];
+                const previous = lastAgentState[key];
+                
+                if (!previous) {
+                    // New session spawned
+                    queueAnimation('agent-spawned', { key, session: current });
+                } else {
+                    // Check for status changes
+                    if (previous.status !== current.status) {
+                        if (current.status === 'active') {
+                            queueAnimation('agent-active', { key, session: current });
+                        } else if (current.status === 'idle') {
+                            queueAnimation('agent-idle', { key, session: current });
+                        }
+                    }
+                }
+            });
+            
+            // Check for decommissioned agents
+            Object.keys(lastAgentState).forEach(key => {
+                if (!currentState[key]) {
+                    queueAnimation('agent-decommissioned', { key, session: lastAgentState[key] });
+                }
+            });
+        }
+        
+        // Animation queue system
+        function queueAnimation(type, data) {
+            animationQueue.push({ type, data, timestamp: Date.now() });
+            processAnimationQueue();
+        }
+        
+        function processAnimationQueue() {
+            if (animationQueue.length === 0) return;
+            
+            const animation = animationQueue.shift();
+            executeAnimation(animation);
+            
+            // Process next animation after delay
+            if (animationQueue.length > 0) {
+                setTimeout(processAnimationQueue, 300);
+            }
+        }
+        
+        // Execute specific animations
+        function executeAnimation(animation) {
+            const { type, data } = animation;
+            
+            switch (type) {
+                case 'agent-spawned':
+                    animateAgentSpawned(data);
+                    break;
+                case 'agent-active':
+                    animateAgentActive(data);
+                    break;
+                case 'agent-idle':
+                    animateAgentIdle(data);
+                    break;
+                case 'agent-decommissioned':
+                    animateAgentDecommissioned(data);
+                    break;
+                case 'new-message':
+                    animateNewMessage(data);
+                    break;
+            }
+        }
+        
+        // Animation implementations
+        function animateAgentSpawned(data) {
+            // Find agent tile and animate spawn
+            const agentTile = findAgentTile(data.key);
+            if (agentTile) {
+                agentTile.style.transform = 'scale(0.9)';
+                agentTile.style.boxShadow = '0 0 20px rgba(0, 122, 255, 0.6)';
+                
+                requestAnimationFrame(() => {
+                    agentTile.style.transition = 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                    agentTile.style.transform = 'scale(1)';
+                    agentTile.style.boxShadow = '0 0 10px rgba(0, 122, 255, 0.3)';
+                    
+                    setTimeout(() => {
+                        agentTile.style.boxShadow = '';
+                        agentTile.style.transition = '';
+                    }, 500);
+                });
+                
+                // Add notification badge
+                addNotificationBadge(agentTile, '✨');
+            }
+        }
+        
+        function animateAgentActive(data) {
+            const agentTile = findAgentTile(data.key);
+            if (agentTile) {
+                const statusDot = agentTile.querySelector('.status-dot, .agent-status-dot');
+                if (statusDot) {
+                    statusDot.style.background = '#30D158';
+                    statusDot.style.animation = 'statusPulse 2s infinite';
+                }
+                
+                // Subtle glow effect
+                agentTile.style.boxShadow = '0 0 15px rgba(48, 209, 88, 0.3)';
+                setTimeout(() => {
+                    agentTile.style.boxShadow = '';
+                }, 1000);
+            }
+        }
+        
+        function animateAgentIdle(data) {
+            const agentTile = findAgentTile(data.key);
+            if (agentTile) {
+                const statusDot = agentTile.querySelector('.status-dot, .agent-status-dot');
+                if (statusDot) {
+                    statusDot.style.background = '#8E8E93';
+                    statusDot.style.animation = '';
+                }
+            }
+        }
+        
+        function animateAgentDecommissioned(data) {
+            const agentTile = findAgentTile(data.key);
+            if (agentTile) {
+                agentTile.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+                agentTile.style.opacity = '0';
+                agentTile.style.transform = 'scale(0.8)';
+                
+                setTimeout(() => {
+                    agentTile.style.display = 'none';
+                }, 800);
+            }
+        }
+        
+        function animateNewMessage(data) {
+            // Find mailbox or message indicators and animate them
+            const indicators = document.querySelectorAll('.message-indicator, .mail-icon, [data-role="messages"]');
+            indicators.forEach(indicator => {
+                // Add bounce animation
+                indicator.style.animation = 'messageBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                
+                // Add badge with count if not present
+                addNotificationBadge(indicator.parentElement || indicator, data.count.toString());
+                
+                // Clear animation
+                setTimeout(() => {
+                    indicator.style.animation = '';
+                }, 600);
+            });
+        }
+        
+        // Helper functions
+        function findAgentTile(sessionKey) {
+            // Look for agent tiles by various selectors
+            const selectors = [
+                `[data-session-key="${sessionKey}"]`,
+                `[data-agent-key="${sessionKey}"]`,
+                '.room-tile[data-agent]',
+                '.agent-card',
+                '.fleet-agent'
+            ];
+            
+            for (const selector of selectors) {
+                const elements = document.querySelectorAll(selector);
+                for (const element of elements) {
+                    if (element.dataset.sessionKey === sessionKey || 
+                        element.dataset.agentKey === sessionKey ||
+                        sessionKey.includes(element.dataset.agent)) {
+                        return element;
+                    }
+                }
+            }
+            
+            // Fallback: try to match by agent name
+            if (sessionKey.includes('subagent')) {
+                return document.querySelector('.room-tile[data-agent="atlas"]') || 
+                       document.querySelector('.room-tile[data-agent="forge"]');
+            } else if (sessionKey === 'agent:main:main') {
+                return document.querySelector('.room-tile[data-agent="ceo"]');
+            }
+            
+            return null;
+        }
+        
+        function addNotificationBadge(element, text) {
+            if (!element) return;
+            
+            // Remove existing badge
+            const existing = element.querySelector('.notification-badge');
+            if (existing) existing.remove();
+            
+            // Create new badge
+            const badge = document.createElement('div');
+            badge.className = 'notification-badge';
+            badge.textContent = text;
+            badge.style.cssText = `
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                background: #FF453A;
+                color: white;
+                border-radius: 50%;
+                width: 18px;
+                height: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 10px;
+                font-weight: 700;
+                z-index: 10;
+                animation: badgePop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            `;
+            
+            element.style.position = 'relative';
+            element.appendChild(badge);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (badge.parentElement) {
+                    badge.style.animation = 'badgeFadeOut 0.3s ease-out forwards';
+                    setTimeout(() => badge.remove(), 300);
+                }
+            }, 5000);
+        }
+        
+        // Update status bar with real data
+        function updateStatusDisplays(sessions, memory, crons) {
+            const statusBar = document.querySelector('.exec-status-bar');
+            if (!statusBar) return;
+            
+            const activeSessions = (sessions || []).filter(s => s.status === 'active').length;
+            const totalTokens = (sessions || []).reduce((sum, s) => sum + (s.totalTokens || 0), 0);
+            const mainSession = (sessions || []).find(s => s.key === 'agent:main:main');
+            const model = mainSession ? mainSession.model : 'Unknown';
+            
+            // Update active count
+            const activeCountEl = statusBar.querySelector('.active-count, [data-metric="active"]');
+            if (activeCountEl) {
+                activeCountEl.textContent = activeSessions.toString();
+            }
+            
+            // Update token count
+            const tokenCountEl = statusBar.querySelector('.token-count, [data-metric="tokens"]');
+            if (tokenCountEl) {
+                tokenCountEl.textContent = totalTokens.toLocaleString();
+            }
+            
+            // Update model name
+            const modelEl = statusBar.querySelector('.model-name, [data-metric="model"]');
+            if (modelEl) {
+                modelEl.textContent = model;
+            }
+        }
+        
+        // Update agent tiles with real activity text
+        function updateAgentTiles(sessions, memory) {
+            const tiles = document.querySelectorAll('.room-tile[data-agent]');
+            
+            tiles.forEach(tile => {
+                const agentId = tile.dataset.agent;
+                const speechEl = tile.querySelector('.agent-speech, .room-subtitle, .room-status');
+                
+                if (!speechEl) return;
+                
+                // Find corresponding session
+                let session = null;
+                if (agentId === 'ceo') {
+                    session = (sessions || []).find(s => s.key === 'agent:main:main');
+                } else {
+                    // For sub-agents, find by label containing agent name
+                    session = (sessions || []).find(s => 
+                        s.kind === 'subagent' && 
+                        s.label && 
+                        s.label.toLowerCase().includes(agentId.toLowerCase())
+                    );
+                }
+                
+                let statusText = '';
+                let statusColor = 'var(--text-tertiary)';
+                
+                if (session) {
+                    if (session.status === 'active') {
+                        const taskName = session.label || session.displayName || 'Unknown task';
+                        statusText = `Running: ${taskName}`;
+                        statusColor = '#30D158';
+                        
+                        // Update status dot
+                        const dot = tile.querySelector('.status-dot, .agent-status-dot');
+                        if (dot) {
+                            dot.style.background = '#30D158';
+                            dot.style.animation = 'statusPulse 2s infinite';
+                        }
+                    } else {
+                        const lastActive = new Date(session.lastActive || Date.now());
+                        const agoMs = Date.now() - lastActive.getTime();
+                        const agoStr = formatTimeAgo(agoMs);
+                        statusText = `Idle since ${agoStr}`;
+                        statusColor = 'var(--text-secondary)';
+                        
+                        const dot = tile.querySelector('.status-dot, .agent-status-dot');
+                        if (dot) {
+                            dot.style.background = '#8E8E93';
+                            dot.style.animation = '';
+                        }
+                    }
+                } else if (agentId === 'ceo' && memory && memory.todo) {
+                    // CEO shows current TODO.md >>> NEXT task
+                    const nextTask = extractNextTask(memory.todo);
+                    statusText = nextTask ? `Next: ${nextTask}` : 'Reviewing backlog...';
+                    statusColor = '#FFD60A';
+                } else {
+                    statusText = 'Ready for deployment';
+                    statusColor = 'var(--text-tertiary)';
+                }
+                
+                // Update speech text
+                speechEl.textContent = statusText;
+                speechEl.style.color = statusColor;
+            });
+        }
+        
+        // Helper to extract >>> NEXT task from TODO.md
+        function extractNextTask(todoMd) {
+            if (!todoMd) return null;
+            
+            const lines = todoMd.split('\n');
+            for (const line of lines) {
+                if (line.includes('>>> NEXT')) {
+                    return line.replace(/.*>>> NEXT:?\s*/, '').trim().substring(0, 50);
+                }
+            }
+            return null;
+        }
+        
+        // Format time ago helper
+        function formatTimeAgo(ms) {
+            const minutes = Math.floor(ms / 60000);
+            const hours = Math.floor(ms / 3600000);
+            const days = Math.floor(ms / 86400000);
+            
+            if (minutes < 1) return 'just now';
+            if (minutes < 60) return `${minutes}m ago`;
+            if (hours < 24) return `${hours}h ago`;
+            return `${days}d ago`;
+        }
+        
+        // CSS animations for live behaviors
+        const liveAnimationStyles = document.createElement('style');
+        liveAnimationStyles.textContent = `
+            @keyframes statusPulse {
+                0%, 100% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.7; transform: scale(1.1); }
+            }
+            
+            @keyframes messageBounce {
+                0%, 100% { transform: scale(1); }
+                25% { transform: scale(1.1) rotate(-5deg); }
+                75% { transform: scale(1.05) rotate(3deg); }
+            }
+            
+            @keyframes badgePop {
+                0% { transform: scale(0) rotate(180deg); opacity: 0; }
+                100% { transform: scale(1) rotate(0deg); opacity: 1; }
+            }
+            
+            @keyframes badgeFadeOut {
+                0% { transform: scale(1); opacity: 1; }
+                100% { transform: scale(0.7); opacity: 0; }
+            }
+            
+            .notification-badge {
+                animation: badgePop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            }
+        `;
+        document.head.appendChild(liveAnimationStyles);
+        
+        // Initialize live agent behaviors
+        function initLiveAgentBehaviors() {
+            console.log('[LiveAgentBehaviors] Initializing...');
+            
+            // Initial poll
+            pollAgentState();
+            
+            // Set up polling interval (15 seconds)
+            if (pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(pollAgentState, 15000);
+            
+            console.log('[LiveAgentBehaviors] Active - polling every 15s');
+        }
+        
+        // Start when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initLiveAgentBehaviors);
+        } else {
+            initLiveAgentBehaviors();
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+        });
+        
+        // ═══════════════════════════════════════════════════════════════
+        //   THEME PICKER (Original functionality preserved)
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Theme picker logic
+        var overlay = document.getElementById('themePickerOverlay');
+        var themesBtn = document.getElementById('themesBtn');
+        var closeBtn = document.getElementById('themePickerClose');
+
+        if (themesBtn) {
+            themesBtn.addEventListener('click', function() {
+                overlay.classList.add('open');
+            });
+        }
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                overlay.classList.remove('open');
+            });
+        }
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) overlay.classList.remove('open');
+        });
+
+        // Theme navigation
+        var isProduction = window.location.hostname.includes('spawnkit.ai');
+        var themeUrls = {
+            executive: isProduction ? 'https://app.spawnkit.ai' : '/office-executive/index.html',
+            medieval: isProduction ? 'https://app.spawnkit.ai/office-medieval/' : '/office-medieval/index.html',
+            simcity: isProduction ? 'https://app.spawnkit.ai/office-simcity/' : '/office-simcity/index.html'
+        };
+
+        document.querySelectorAll('.theme-card').forEach(function(card) {
+            card.addEventListener('click', function() {
+                var theme = card.dataset.theme;
+                if (theme === 'executive') {
+                    overlay.classList.remove('open');
+                    return; // Already on executive
+                }
+                window.location.href = themeUrls[theme];
+            });
+        });
     })();
     </script>
 </body>
