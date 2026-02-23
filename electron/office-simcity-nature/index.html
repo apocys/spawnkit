@@ -1457,7 +1457,7 @@ const chars = agents.map((a, i) => {
   tileC: htc, tileR: htr,           // current tile (integer)
   targetTileC: null, targetTileR: null, // destination tile (integer, null when idle)
   moveProgress: 0,                   // 0.0..1.0 lerp between tiles
-  moveSpeed: 420,                    // ms per tile
+  moveSpeed: 650,                    // ms per tile (~1.5 tiles/sec, relaxed pace)
   _moveMsElapsed: 0,                 // accumulated ms for current tile step
   // Movement
   path: [],           // BFS path waypoints [{c,r} integers]
@@ -1546,7 +1546,7 @@ function initNPCs() {
       tileC: tc, tileR: tr,
       targetTileC: null, targetTileR: null,
       moveProgress: 0, _moveMsElapsed: 0,
-      moveSpeed: 520,  // slightly slower than agents
+      moveSpeed: 750,  // slightly slower than agents
       facing: ['NE','SE','SW','NW'][i % 4],
       frame: Math.floor(Math.random() * FRAME_COUNT),
       ft: 0,
