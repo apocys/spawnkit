@@ -4007,6 +4007,14 @@
                 async deleteApiKey(provider) {
                     console.log('deleteApiKey called for', provider);
                     return { success: true };
+                },
+                async getTranscript(sessionKey, limit) {
+                    // Demo mode: return mock transcript
+                    return [
+                        { role: 'user', text: 'Status update on all active projects', ts: Date.now() - 300000 },
+                        { role: 'assistant', text: 'All systems nominal. 6 agents active, no pending escalations.', ts: Date.now() - 295000 },
+                        { role: 'user', text: 'Good. Continue monitoring.', ts: Date.now() - 120000 }
+                    ];
                 }
             };
         }
@@ -5381,11 +5389,31 @@
         var availableChatTargets = [];
 
         async function loadChatTargets() {
+            if (window.SPAWNKIT_DEMO) {
+                // Demo mode: use static targets
+                availableChatTargets = [
+                    { id: 'apomac', name: 'ApoMac HQ', emoji: '🍎' },
+                    { id: 'sycopa', name: 'Sycopa', emoji: '🎭' },
+                    { id: 'atlas', name: 'Atlas (COO)', emoji: '🔵' },
+                    { id: 'forge', name: 'Forge (CTO)', emoji: '🔴' }
+                ];
+                updateChatTargetSelector();
+                return;
+            }
             try {
-                const response = await fetch('https://fleet.spawnkit.ai/api/oc/chat/targets', {
+                var relayBase = window.OC_RELAY_URL || '';
+                if (!relayBase) {
+                    availableChatTargets = [
+                        { id: 'apomac', name: 'ApoMac HQ', emoji: '🍎' },
+                        { id: 'sycopa', name: 'Sycopa', emoji: '🎭' }
+                    ];
+                    updateChatTargetSelector();
+                    return;
+                }
+                const response = await fetch(relayBase.replace(/\/+$/, '') + '/api/oc/chat/targets', {
                     method: 'GET',
                     headers: {
-                        'Authorization': 'Bearer sk-oc-proxy-spawnkit-2026',
+                        'Authorization': 'Bearer ' + (window.OC_RELAY_TOKEN || ''),
                         'Content-Type': 'application/json'
                     }
                 });
@@ -5402,7 +5430,6 @@
                 }
             } catch (error) {
                 console.warn('Error loading chat targets:', error);
-                // Fallback to default targets
                 availableChatTargets = [
                     { id: 'apomac', name: 'ApoMac HQ', emoji: '🍎' },
                     { id: 'sycopa', name: 'Sycopa', emoji: '🎭' }
@@ -5438,16 +5465,16 @@
             }
         }
 
-        function loadChatTabTranscript() {
-            if (!API) return;
+        async function loadChatTabTranscript() {
+            if (!API || typeof API.getTranscript !== 'function') return;
             try {
-                var transcript = API.getTranscript('agent:main:main');
+                var transcript = await API.getTranscript('agent:main:main');
                 if (transcript && transcript.length > 0) {
                     chatHistory = transcript.slice(-50).map(function(m) {
                         return {
                             role: m.role === 'user' ? 'user' : 'ai',
                             text: m.text || m.content || '',
-                            time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : ''
+                            time: m.timestamp || m.ts ? new Date(m.timestamp || m.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : ''
                         };
                     });
                     renderChatTabMessages();
