@@ -858,7 +858,7 @@ const MIN_S = 0.3, MAX_S = 3.0;
 let vpX = 0, vpY = 0;
 let drag = false, dsx = 0, dsy = 0, dvx = 0, dvy = 0;
 
-const MAP = 20;
+const MAP = 40;
 window._debugFacing = new URLSearchParams(window.location.search).has('debug');
 let selectedAgentName = null;
 
@@ -905,13 +905,18 @@ function screenToTile(sx, sy) {
 // ================================================================
 // AGENTS
 // ================================================================
+// Agents spread across 40×40 map — tents along the 4 roads from central plaza (row 19-20, col 19-20)
+// North road: Sentinel watchtower area  ~r=8, c=19
+// West road: ApoMac ~r=19,c=10 | Hunter ~r=24,c=10
+// East road: Forge ~r=19,c=30 | Echo ~r=24,c=30
+// South road: Atlas ~r=30, c=19
 const agents = [
-  { name: 'ApoMac',   role: 'CEO',      emoji: '🍎', color: '#007AFF', row: 7,  col: 7  },
-  { name: 'Forge',    role: 'CTO',      emoji: '🔨', color: '#FF9F0A', row: 7,  col: 12 },
-  { name: 'Hunter',   role: 'CRO',      emoji: '🎯', color: '#FF453A', row: 11, col: 5  },
-  { name: 'Echo',     role: 'CMO',      emoji: '📢', color: '#0A84FF', row: 11, col: 14 },
-  { name: 'Sentinel', role: 'Security', emoji: '🛡️', color: '#30D158', row: 5,  col: 10 },
-  { name: 'Atlas',    role: 'COO',      emoji: '📊', color: '#BF5AF2', row: 13, col: 10 },
+  { name: 'ApoMac',   role: 'CEO',      emoji: '🍎', color: '#007AFF', row: 19, col: 11 },
+  { name: 'Forge',    role: 'CTO',      emoji: '🔨', color: '#FF9F0A', row: 19, col: 29 },
+  { name: 'Hunter',   role: 'CRO',      emoji: '🎯', color: '#FF453A', row: 24, col: 11 },
+  { name: 'Echo',     role: 'CMO',      emoji: '📢', color: '#0A84FF', row: 24, col: 29 },
+  { name: 'Sentinel', role: 'Security', emoji: '🛡️', color: '#30D158', row: 8,  col: 19 },
+  { name: 'Atlas',    role: 'COO',      emoji: '📊', color: '#BF5AF2', row: 31, col: 20 },
 ];
 agents.forEach(a => a.status = 'Active');
 
@@ -2608,8 +2613,8 @@ agents.forEach(a => {
   el.innerHTML = `<span class="dot" style="background:${a.color}"></span>${a.emoji} ${a.name}`;
   el.addEventListener('click', function(e) {
     e.stopPropagation();
-    selectedAgentName = a.name;
-    if (typeof openVillageDetail === 'function') openVillageDetail(a);
+    selectedAgentName = (selectedAgentName === a.name) ? null : a.name;
+    // Panel disabled — toggle selection only
   });
   labelsCont.appendChild(el);
   labelEls[a.name] = el;
@@ -2692,12 +2697,10 @@ cvs.addEventListener('click', e => {
     }
   });
   if (hit) {
-    selectedAgentName = hit.name;
-    if (typeof openVillageDetail === 'function') openVillageDetail(hit);
+    selectedAgentName = (selectedAgentName === hit.name) ? null : hit.name;
+    // Panel disabled — selection highlight only
   } else {
-    // Click on empty space — just deselect, no panel
     selectedAgentName = null;
-    if (typeof closeVillageDetail === 'function') closeVillageDetail();
   }
 });
 
