@@ -1807,6 +1807,19 @@
         // ── Audio ────────────────────────────────────────────────
 
         setupAudio() {
+            // Defer AudioContext creation to first user gesture to avoid Chrome warning
+            const self = this;
+            const initOnGesture = () => {
+                if (self.audioContext) return;
+                try { self._initAudioContext(); } catch(e) { self.soundEnabled = false; }
+                document.removeEventListener('click', initOnGesture);
+                document.removeEventListener('keydown', initOnGesture);
+            };
+            document.addEventListener('click', initOnGesture);
+            document.addEventListener('keydown', initOnGesture);
+        }
+
+        _initAudioContext() {
             try {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const tone = (dur, freq, decay, vol) => {
