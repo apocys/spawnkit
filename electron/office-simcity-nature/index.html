@@ -400,7 +400,9 @@
     pointer-events: none; opacity: 0;
     transition: opacity 300ms var(--v-ease);
   }
-  .v-chat-overlay.open { pointer-events: auto; opacity: 1; }
+  .v-chat-overlay.open { pointer-events: none; opacity: 1; }
+  .v-chat-overlay.open .v-chat-panel { pointer-events: auto; }
+  .v-chat-overlay.open .v-chat-backdrop { pointer-events: auto; }
   .v-chat-overlay.open .v-chat-backdrop { opacity: 1; }
   .v-chat-overlay.open .v-chat-panel { transform: translateY(0); }
   .v-chat-backdrop {
@@ -529,7 +531,9 @@
     pointer-events: none; opacity: 0;
     transition: opacity 300ms var(--v-ease);
   }
-  .v-side-overlay.open { pointer-events: auto; opacity: 1; }
+  .v-side-overlay.open { pointer-events: none; opacity: 1; }
+  .v-side-overlay.open .v-side-panel { pointer-events: auto; }
+  .v-side-overlay.open .v-side-backdrop { pointer-events: auto; }
   .v-side-overlay.open .v-side-backdrop { opacity: 1; }
   .v-side-overlay.open .v-side-panel { transform: translateX(0); }
   .v-side-backdrop {
