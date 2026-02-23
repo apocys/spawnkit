@@ -5974,6 +5974,10 @@
             if (API && !mem) {
                 try { mem = API.getMemory(); } catch(e) {}
             }
+            // Direct SpawnKit.data fallback (bridge may not have prefetched yet)
+            if (!mem && window.SpawnKit && window.SpawnKit.data && window.SpawnKit.data.memory) {
+                mem = window.SpawnKit.data.memory;
+            }
             // Normalize: data-bridge gives { longTerm: "string" }, renderer needs { longTerm: { content, size } }
             if (mem && mem.longTerm && typeof mem.longTerm === 'string') {
                 mem = Object.assign({}, mem, { longTerm: { content: mem.longTerm, size: mem.longTerm.length } });
