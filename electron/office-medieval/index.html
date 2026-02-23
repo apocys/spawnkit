@@ -847,7 +847,7 @@
                 try {
                     const gltf = await this.loadModel(`assets/characters/character-${def.char}.glb`);
                     const model = gltf.scene;
-                    model.scale.setScalar(0.5);
+                    model.scale.setScalar(0.25);
 
                     const wp = waypoints[i];
                     model.position.set(wp[0].x, 0, wp[0].z);
