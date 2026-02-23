@@ -1,59 +1,60 @@
 # Changelog
 
-All notable changes to SpawnKit Executive Office are documented here.
+## 2026-02-23 — Major Overhaul
 
----
+### Testing
+- E2E test suite: 28 steps, 88% pass rate
+- Full UX audit with structured report
 
-## [Unreleased] — 2026-02-23
+### Bug Fixes (P1)
+- Crons not rendering → async fetch from fleet relay
+- Chat "Unexpected response format" → POST proxy through fleet relay
+- Memory content not rendered → async handling fix
 
-### Added
+### UX Overhaul
+- Onboarding Wizard: 3-step flow, OAuth provider cards, localStorage persistence
+- Honest Rooms: 5 inactive agents dimmed with overlay
+- Jargon removed: "ORCHESTRATOR · NON-DECOMMISSIONABLE" → "TEAM LEAD · ALWAYS ACTIVE"
+- CEO tile cleanup: removed Inbox/Orchestration buttons (dispersed to proper locations)
 
-- **E2E test suite** — 28-step automated test plan, 88% pass rate
-- **Onboarding wizard** — First-run setup flow for new teams
-- **Activity tab** — Live agent activity feed per office
-- **Skill Library** — 17 built-in skills with visual Skill Picker UI
-- **Typing indicator** — Chat shows "typing…" while agent responds
-- **Chat persistence** — Conversation history survives page reloads
-- **Chat bubble layout** — Redesigned message UI with user/agent alignment
-- **Brainstorm inline form** — Start a session without leaving the page
-- **Brainstorm file attachment** — Attach files to brainstorm sessions
-- **Brainstorm past sessions** — Browse and reload previous sessions
-- **Brainstorm real AI** — Wired to fleet relay for actual model responses
-- **Boardroom full-page view** — Brainstorm converted from modal to full-page experience
-- **Mission Control restructure** — Chat as default tab, persistent input bar
-- **Mission Control external messages** — Ingest messages from Telegram and other channels
-- **Remote Offices** — View and interact with agents on connected fleet relay nodes (real fleet data)
-- **New Mission form** — Create missions directly from the Missions panel
-- **Follow Up + Save buttons** — Replaced the "Apply Fix" button with more intuitive actions
-- **Agent activation persistence** — Active/inactive state survives page reload
-- **API auth** — Bearer token gate on all `/api/*` routes (`SK_API_TOKEN` env var)
-- **Code split** — Monolithic 11,259-line `index.html` refactored into 7 focused modules
+### Chat
+- Typing indicator (animated dots)
+- Chat persistence (localStorage, last 50)
+- Bubble layout: Kira = blue right, Sycopa = white left
+- Telegram metadata stripping (clean messages)
+- Real-time polling (5s refresh, smart auto-scroll)
+- Chat input bar in Mission Control
 
-### Fixed
+### Brainstorm & Boardroom
+- Inline brainstorm form (no popup overlay)
+- File attachment (max 100KB)
+- Past sessions with localStorage history
+- Wired to real AI via fleet relay → CEO
+- Boardroom converted to full-page view (slide-up animation)
+- Follow Up + Save buttons (replaced hardcoded "Apply Fix")
 
-- **P1: Cron panel** — Crons were not saving or triggering correctly
-- **P1: Chat** — Messages were not being sent to the correct agent endpoint
-- **P1: Memory rendering** — Memory entries were blank / not displaying
-- **Telegram metadata stripping** — Removed raw Telegram metadata leaking into chat display
+### Mission Control Restructure
+- Chat as default tab (before Activity)
+- Active Tasks with checkbox UI
+- External Messages section
+- Remote Offices with real fleet relay data (Sycopa HQ + ApoMac HQ)
+- Status bar: connected, model, tokens, sessions
 
-### Changed
+### New Features
+- Skill Library: 17 production-grade skills
+- Skill Picker UI: 2-step activation, max 3 per agent
+- Activity tab: live feed from agents/crons
+- New Mission form with model selector
+- Agent activation persistence (localStorage)
+- CEO renamed to Sycopa throughout
 
-- **UX overhaul** — Removed jargon, renamed rooms to plain English ("Honest Rooms")
-- **CEO tile cleanup** — Removed Inbox and Orchestration buttons from CEO overview tile
-- **File structure** — `office-executive/index.html` split into:
-  - `index.html` — HTML structure only (~930 lines)
-  - `styles.css` — All CSS (~4,164 lines)
-  - `app.js` — Config, utils, onboarding, live agent behaviors
-  - `main.js` — Core logic, panels, brainstorm, settings
-  - `agents.js` — Add Agent wizard
-  - `orchestration.js` — Orchestration panel
-  - `mission-control.js` — CEO Mission Control
-  - `auth.js` — API auth gate
+### Security
+- API auth: Bearer token on all `/api/*` routes
+- Login overlay with access code
+- Auto-logout on 401
 
----
-
-## [v1.0] — 2026-01-xx (initial)
-
-- Initial release: 6 agent offices, basic chat, task panel, server.js API
-- Medieval, SimCity, and modern office themes
-- Fleet relay integration scaffold
+### Code Quality
+- Split 11,259-line index.html → 7 modular files
+- index.html: 930 lines (pure HTML)
+- styles.css: 4,164 lines
+- app.js + main.js + agents.js + orchestration.js + mission-control.js + auth.js

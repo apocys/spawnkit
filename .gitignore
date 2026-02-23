@@ -9,3 +9,6 @@ executive-office/index-backup.html
 executive-office/index-original-backup.html
 executive-office/index.html.backup
 executive-office/reference-cowork-inspiration.jpg
+executive-office/tasks.json
+executive-office/node_modules/
+executive-office/*.log
