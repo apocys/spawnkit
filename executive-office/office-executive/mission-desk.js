@@ -86,6 +86,8 @@
         '<button class="md-action" data-action="missions"><span class="md-action-icon">🎯</span><span class="md-action-label">Missions</span></button>' +
         '<button class="md-action" data-action="boardroom"><span class="md-action-icon">🧠</span><span class="md-action-label">Boardroom</span></button>' +
         '<button class="md-action" data-action="skills"><span class="md-action-icon">⚡</span><span class="md-action-label">Skills</span></button>' +
+        '<button class="md-action" data-action="forge"><span class="md-action-icon">🔨</span><span class="md-action-label">Skill Forge</span></button>' +
+        '<button class="md-action" data-action="explore"><span class="md-action-icon">🚀</span><span class="md-action-label">Explore</span></button>' +
         '<button class="md-action" data-action="marketplace"><span class="md-action-icon">🏪</span><span class="md-action-label">Marketplace</span></button>' +
       '</div>' +
       '<div class="md-section-label">Connect Anywhere</div>' +
@@ -253,6 +255,10 @@
           if (skillsTab) skillsTab.click();
         }, 100);
       }
+    } else if (name === 'forge') {
+      if (window.SkillForge) { window.SkillForge.open(); return; }
+    } else if (name === 'explore') {
+      if (window.UseCaseExplorer) { window.UseCaseExplorer.open(); return; }
     } else if (name === 'marketplace') {
       if (typeof openMarketplace === 'function') {
         openMarketplace();
