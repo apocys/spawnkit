@@ -147,22 +147,40 @@
   window.skAuthReady = function(callback) {
     var token = localStorage.getItem(STORAGE_KEY);
     if (token) {
-      // Verify token is still valid
-      fetch('/api/oc/health', { headers: { 'Authorization': 'Bearer ' + token } })
+      // Verify token is actually valid against a real endpoint
+      console.log('[Auth] Verifying token...');
+      var apiUrl = localStorage.getItem('spawnkit-instance-url') || '';
+      var healthUrl = (apiUrl || '') + '/api/oc/sessions';
+      fetch(healthUrl, { headers: { 'Authorization': 'Bearer ' + token }, signal: AbortSignal.timeout(5000) })
         .then(function(resp) {
+          console.log('[Auth] Health check:', resp.status);
           if (resp.ok) {
-            callback();
+            return resp.json().then(function(data) {
+              if (Array.isArray(data)) {
+                console.log('[Auth] ✅ Verified — ' + data.length + ' sessions');
+                callback();
+              } else {
+                console.error('[Auth] Invalid response, not an array');
+                throw new Error('invalid');
+              }
+            });
           } else {
+            console.warn('[Auth] Token rejected:', resp.status);
             localStorage.removeItem(STORAGE_KEY);
             window.__skAuthResolve = callback;
             showOverlay();
           }
         })
-        .catch(function() {
-          // Network error — still let them in with the saved token
-          callback();
+        .catch(function(err) {
+          console.error('[Auth] Connection failed:', err.message || err);
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem('spawnkit-instance-url');
+          localStorage.removeItem('spawnkit-api-token');
+          window.__skAuthResolve = callback;
+          showOverlay();
         });
     } else {
+      console.log('[Auth] No token found, showing overlay');
       window.__skAuthResolve = callback;
       showOverlay();
     }

@@ -146,17 +146,31 @@
       var tok = tokInp.value.trim();
       if (!url) { status.innerHTML = '<div class="dw-msg dw-msg-error">❌ Please enter a URL.</div>'; return; }
       btn.textContent = 'Testing…'; btn.disabled = true; status.innerHTML = '';
-      fetch(url + '/api/oc/skills', { headers: tok ? { Authorization: 'Bearer ' + tok } : {}, signal: AbortSignal.timeout(7000) })
+      console.log('[DeployWizard] Testing connection to:', url);
+      fetch(url + '/api/oc/sessions', { headers: tok ? { Authorization: 'Bearer ' + tok } : {}, signal: AbortSignal.timeout(7000) })
         .then(function(r) {
-          if (r.ok || r.status === 401) {
+          console.log('[DeployWizard] Response status:', r.status);
+          if (r.status === 401 || r.status === 403) {
+            throw new Error('Authentication failed (HTTP ' + r.status + '). Check your API token.');
+          }
+          if (!r.ok) { throw new Error('HTTP ' + r.status); }
+          return r.json().then(function(data) {
+            // Validate it's actually an OpenClaw response (must be an array of sessions)
+            if (!Array.isArray(data)) {
+              console.error('[DeployWizard] Invalid response — not an array:', data);
+              throw new Error('Server responded but doesn\'t look like OpenClaw (expected session array).');
+            }
+            console.log('[DeployWizard] ✅ Valid OpenClaw instance, sessions:', data.length);
             localStorage.setItem('spawnkit-instance-url', url);
             localStorage.setItem('spawnkit-api-token', tok);
-            status.innerHTML = '<div class="dw-msg dw-msg-success">✅ Connected! Reloading dashboard…</div>';
+            localStorage.setItem('spawnkit-token', tok); // Also set for auth.js
+            status.innerHTML = '<div class="dw-msg dw-msg-success">✅ Connected! ' + data.length + ' sessions found. Reloading…</div>';
             setTimeout(function() { location.reload(); }, 1200);
-          } else { throw new Error('HTTP ' + r.status); }
+          });
         })
         .catch(function(e) {
-          status.innerHTML = '<div class="dw-msg dw-msg-error">❌ Could not reach server: ' + e.message + '</div>';
+          console.error('[DeployWizard] Connection failed:', e.message);
+          status.innerHTML = '<div class="dw-msg dw-msg-error">❌ ' + e.message + '</div>';
           btn.textContent = 'Test Connection'; btn.disabled = false;
         });
     });

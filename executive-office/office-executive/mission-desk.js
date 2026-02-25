@@ -319,6 +319,10 @@
   /* ── Init ───────────────────────────────────────────────────────── */
 
   function init() {
+    console.log('[MissionDesk] init() called');
+    console.log('[MissionDesk] token:', localStorage.getItem('spawnkit-token') ? 'present' : 'MISSING');
+    console.log('[MissionDesk] instance-url:', localStorage.getItem('spawnkit-instance-url') || 'default');
+    console.log('[MissionDesk] onboarded:', localStorage.getItem('spawnkit-onboarded') ? 'yes' : 'no');
     /* Onboarding guard */
     if (!localStorage.getItem('spawnkit-onboarded')) {
       /* Let onboarding.js handle first run; re-check once it completes */

@@ -9,6 +9,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="mission-desk.css">
+    <script>
+    // Global error tracking
+    window.addEventListener('error', function(e) {
+      console.error('[GLOBAL ERROR]', e.filename + ':' + e.lineno, e.message);
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      console.error('[UNHANDLED PROMISE]', e.reason);
+    });
+    // Log all fetch calls
+    (function() {
+      var origFetch = window.fetch;
+      window.fetch = function(url, opts) {
+        var method = (opts && opts.method) || 'GET';
+        console.log('[fetch]', method, typeof url === 'string' ? url : url.url);
+        return origFetch.apply(this, arguments).then(function(resp) {
+          if (!resp.ok) console.warn('[fetch]', resp.status, typeof url === 'string' ? url : url.url);
+          return resp;
+        }).catch(function(err) {
+          console.error('[fetch FAIL]', typeof url === 'string' ? url : url.url, err.message);
+          throw err;
+        });
+      };
+    })();
+    </script>
 </head>
 <body>
 
