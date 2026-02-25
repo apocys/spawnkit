@@ -49,6 +49,7 @@
 
         // ── Main loader ──
         var mcLoading = false;
+        var _lastMcHash = '';
         async function loadMissionControl() {
             if (mcLoading) return;
             mcLoading = true;
@@ -62,9 +63,14 @@
                 console.warn('[MC] Failed to load sessions:', e.message || e);
             }
             try {
-                renderLeftColumn(sessions);
-                renderCenterColumn(sessions);
-                renderRightColumn(sessions);
+                // Skip re-render if data unchanged (prevents blinking)
+                var hash = JSON.stringify(sessions.map(function(s) { return s.key + ':' + (s.status || '') + ':' + (s.totalTokens || 0); }));
+                if (hash !== _lastMcHash) {
+                    _lastMcHash = hash;
+                    renderLeftColumn(sessions);
+                    renderCenterColumn(sessions);
+                    renderRightColumn(sessions);
+                }
                 renderStatusBar(sessions);
             } catch(renderErr) {
                 console.error('[MC] Render error:', renderErr);

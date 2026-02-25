@@ -2213,12 +2213,22 @@
             } catch(e) { console.warn('Chat transcript load:', e); }
         }
 
+        var _lastChatHash = '';
         function renderChatTabMessages() {
             if (chatHistory.length === 0) {
                 chatTabEmptyEl.style.display = '';
                 return;
             }
             chatTabEmptyEl.style.display = 'none';
+
+            // Only re-render if messages actually changed
+            var hash = chatHistory.map(function(m) { return m.role + ':' + m.time + ':' + m.text.substring(0,50); }).join('|');
+            if (hash === _lastChatHash) return;
+            _lastChatHash = hash;
+
+            // Preserve scroll position if user scrolled up
+            var wasAtBottom = (chatTabMsgsEl.scrollHeight - chatTabMsgsEl.scrollTop - chatTabMsgsEl.clientHeight) < 60;
+
             chatTabMsgsEl.innerHTML = '';
             chatHistory.forEach(function(m) {
                 var div = document.createElement('div');
@@ -2234,7 +2244,9 @@
                     (m.time ? '<div class="chat-tab-msg-time">' + esc(m.time) + '</div>' : '');
                 chatTabMsgsEl.appendChild(div);
             });
-            chatTabMsgsEl.scrollTop = chatTabMsgsEl.scrollHeight;
+
+            // Only scroll to bottom if user was already at bottom
+            if (wasAtBottom) chatTabMsgsEl.scrollTop = chatTabMsgsEl.scrollHeight;
         }
 
         // Legacy function for compatibility
