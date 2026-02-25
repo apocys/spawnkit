@@ -266,6 +266,11 @@
                 showToast('✨ Agent "' + wizardState.emoji + ' ' + wizardState.name + '" created!');
             }
             
+            // Refresh Mission Desk team row if it exists
+            if (window.MissionDesk && typeof window.MissionDesk.refreshTeam === 'function') {
+                window.MissionDesk.refreshTeam();
+            }
+            
             closeAddAgentWizard();
         }
         

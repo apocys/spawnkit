@@ -2913,7 +2913,7 @@
         }
         .cron-panel {
             position: absolute; top: 0; right: 0;
-            width: 420px; max-width: 90vw; height: 100%;
+            width: 680px; max-width: 90vw; height: 100%;
             background: var(--bg-secondary);
             border-left: 1px solid var(--border-medium);
             display: flex; flex-direction: column;
@@ -4162,3 +4162,17 @@
       transition: border-color 0.15s, color 0.15s;
     }
     .ob-reset-btn:hover { border-color: #007AFF; color: #007AFF; }
+
+/* Light-mode compatibility for dark overlay panels */
+.sf-overlay .sf-input, .sf-overlay .sf-textarea,
+.uce-card-container,
+.skm-container,
+.dw-container {
+    color-scheme: dark;
+}
+body:not([data-theme="dark"]) .sf-overlay,
+body:not([data-theme="dark"]) .uce-overlay,
+body:not([data-theme="dark"]) .skm-overlay,
+body:not([data-theme="dark"]) .dw-overlay {
+    color: #fff;
+}

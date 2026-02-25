@@ -3052,6 +3052,7 @@
             document.body.style.overflow = 'hidden';
             renderMissions();
         }
+        window.openMissionsPanel = openMissionsPanel;
         function closeMissionsPanel() {
             missionsOverlay.classList.remove('open');
             document.body.style.overflow = '';
@@ -3215,7 +3216,7 @@
                     html += '<span class="cron-item-icon">✅</span>';
                     html += '<div class="cron-item-info">';
                     html += '<div class="cron-item-name">' + esc(sa.name || sa.label || sa.id) + '</div>';
-                    html += '<div class="cron-item-schedule">Parent: ' + esc(sa.parentAgent || 'main') + '</div>';
+                    html += '<div class="cron-item-schedule">' + esc(sa.model || '') + (sa.totalTokens ? ' · ' + (sa.totalTokens/1000).toFixed(1) + 'k tokens' : '') + ' · Completed</div>';
                     html += '</div>';
                     html += '<span class="cron-item-status" style="color:var(--status-active);">Done</span>';
                     html += '</div>';

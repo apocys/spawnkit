@@ -38,15 +38,29 @@
 
   /* ── HTML builder ───────────────────────────────────────────────── */
 
+  function getAllAgents() {
+    var all = AGENTS.slice();
+    try {
+      var created = JSON.parse(localStorage.getItem('spawnkit-created-agents') || '[]');
+      created.forEach(function(c) {
+        all.push({ id: c.id, name: c.emoji + ' ' + c.name, role: c.role || 'Custom', avatar: null, status: 'active', color: '#007AFF' });
+      });
+    } catch(e) {}
+    return all;
+  }
+
   function buildTeamHtml() {
-    return AGENTS.map(function (a) {
-      return '<div class="md-agent" data-agent-id="' + a.id + '" tabindex="0" role="button" aria-label="' + a.name + '">' +
+    return getAllAgents().map(function (a) {
+      var avatarHtml = a.avatar ?
+        '<svg viewBox="0 0 48 48"><use href="' + a.avatar + '"/></svg>' :
+        '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px;background:' + (a.color || '#007AFF') + '22;border-radius:50%;">' + escapeHtml(a.name.charAt(0)) + '</div>';
+      return '<div class="md-agent" data-agent-id="' + a.id + '" tabindex="0" role="button" aria-label="' + escapeHtml(a.name) + '">' +
         '<div class="md-agent-avatar">' +
-          '<svg viewBox="0 0 48 48"><use href="' + a.avatar + '"/></svg>' +
+          avatarHtml +
           '<span class="md-agent-status' + (a.status === 'active' ? ' md-agent-status--active' : '') + '"></span>' +
         '</div>' +
-        '<div class="md-agent-name">' + a.name + '</div>' +
-        '<div class="md-agent-role">' + a.role + '</div>' +
+        '<div class="md-agent-name">' + escapeHtml(a.name) + '</div>' +
+        '<div class="md-agent-role">' + escapeHtml(a.role) + '</div>' +
       '</div>';
     }).join('');
   }
@@ -240,8 +254,9 @@
 
   function openPanel(name) {
     if (name === 'missions') {
-      var btn = document.getElementById('missionsBtn');
-      if (btn) { btn.click(); return; }
+      if (typeof openMissionsPanel === 'function') { openMissionsPanel(); return; }
+      var missionsBtn = document.getElementById('missionsBtn');
+      if (missionsBtn) missionsBtn.click();
     } else if (name === 'boardroom') {
       if (typeof openMeetingPanel === 'function') { openMeetingPanel(); return; }
       var overlay = document.getElementById('meetingOverlay');
@@ -427,7 +442,11 @@
       deactivate:  deactivate,
       openPanel:   openPanel,
       closePanel:  closePanel,
-      sendMessage: sendFromMissionDesk
+      sendMessage: sendFromMissionDesk,
+      refreshTeam: function() {
+        var teamEl = document.getElementById('missionDeskTeam');
+        if (teamEl) teamEl.innerHTML = buildTeamHtml();
+      }
     };
   }
 
