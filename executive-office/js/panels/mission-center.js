@@ -19,8 +19,8 @@ class MissionCenterPanel {
     }
 
     bindEvents() {
-        // Listen for navigation to missions
-        FleetEvents.on('navigate', (data) => {
+        // Store bound handlers so destroy() can actually remove them
+        this._onNavigate = (data) => {
             if (data.panel === 'missions') {
                 this.showMissionsList();
             } else if (data.panel === 'mission' && data.id) {
@@ -28,28 +28,20 @@ class MissionCenterPanel {
             } else if (data.panel !== 'missions' && data.panel !== 'mission') {
                 this.hide();
             }
-        });
-
-        // Listen for mission data updates
-        FleetEvents.on('data:missions:updated', (missions) => {
+        };
+        this._onMissionsUpdated = (missions) => {
             this.missions = missions;
             this.updateMissionsList();
-        });
+        };
+        this._onMissionUpdated = (data) => this.handleMissionUpdate(data);
+        this._onTodoUpdated = (data) => this.handleMissionTodoUpdate(data);
+        this._onMissionAction = (data) => this.handleMissionAction(data);
 
-        // Listen for mission updates
-        FleetEvents.on('mission:updated', (data) => {
-            this.handleMissionUpdate(data);
-        });
-
-        // Listen for TODO updates in missions
-        FleetEvents.on('mission:todo:updated', (data) => {
-            this.handleMissionTodoUpdate(data);
-        });
-
-        // Listen for mission action events (delete, pause)
-        FleetEvents.on('mission:action', (data) => {
-            this.handleMissionAction(data);
-        });
+        FleetEvents.on('navigate', this._onNavigate);
+        FleetEvents.on('data:missions:updated', this._onMissionsUpdated);
+        FleetEvents.on('mission:updated', this._onMissionUpdated);
+        FleetEvents.on('mission:todo:updated', this._onTodoUpdated);
+        FleetEvents.on('mission:action', this._onMissionAction);
     }
 
     render() {
@@ -298,6 +290,63 @@ class MissionCenterPanel {
         }).join('');
     }
 
+    // ─── Safe kanban refresh (avoids outerHTML detached-node bug) ────────────
+
+    _refreshKanban(mission) {
+        if (!mission || this.view !== 'detail' || this.currentMissionId !== mission.id) return;
+        const kanbanContainer = this.container.querySelector('.mission-kanban');
+        if (!kanbanContainer) return;
+        // Replace inner content, keeping the wrapper node in the DOM
+        const tmpDiv = document.createElement('div');
+        tmpDiv.innerHTML = this.renderMissionKanban(mission);
+        const newKanban = tmpDiv.firstElementChild;
+        kanbanContainer.replaceWith(newKanban);
+        // Re-bind only kanban-specific events (tasks, inputs, drag-and-drop)
+        this._bindKanbanEvents();
+    }
+
+    _bindKanbanEvents() {
+        // Task action buttons
+        this.container.querySelectorAll('.task-action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const action    = e.currentTarget.dataset.action;
+                const todoId    = parseInt(e.currentTarget.dataset.todoId, 10);
+                const missionId = e.currentTarget.dataset.missionId;
+                this.handleTaskAction(missionId, todoId, action);
+            });
+        });
+
+        // Add Task buttons
+        this.container.querySelectorAll('.kanban-add-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const missionId = btn.dataset.missionId;
+                const status    = btn.dataset.status;
+                const input = this.container.querySelector(
+                    `.kanban-add-input[data-status="${status}"][data-mission-id="${missionId}"]`
+                );
+                if (input) {
+                    this.addTaskToMission(missionId, input.value, status);
+                    input.value = '';
+                }
+            });
+        });
+
+        // Add Task Enter key
+        this.container.querySelectorAll('.kanban-add-input').forEach(input => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const missionId = input.dataset.missionId;
+                    const status    = input.dataset.status;
+                    this.addTaskToMission(missionId, input.value, status);
+                    input.value = '';
+                }
+            });
+        });
+
+        // Drag and drop
+        this.initializeDragAndDrop();
+    }
+
     renderMissionKanban(mission) {
         const todosByStatus = this.groupTodosByStatus(mission.todo || []);
         
@@ -414,8 +463,8 @@ class MissionCenterPanel {
         const mission = FleetState.getMission(missionId);
         if (!mission) return;
 
-        const existingIds = (mission.todo || []).map(t => t.id);
-        const newId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+        const existingIds = (mission.todo || []).map(t => t.id).filter(id => typeof id === 'number');
+        const newId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : Date.now();
 
         const newTodo = {
             id: newId,
@@ -427,13 +476,7 @@ class MissionCenterPanel {
 
         // Re-render kanban inline
         const updatedMission = FleetState.getMission(missionId);
-        if (updatedMission && this.view === 'detail' && this.currentMissionId === missionId) {
-            const kanbanContainer = this.container.querySelector('.mission-kanban');
-            if (kanbanContainer) {
-                kanbanContainer.outerHTML = this.renderMissionKanban(updatedMission);
-                this.bindMissionDetailEvents();
-            }
-        }
+        this._refreshKanban(updatedMission);
     }
 
     // ─── Event binding ────────────────────────────────────────────────────────
@@ -546,13 +589,7 @@ class MissionCenterPanel {
             FleetState._saveToStorage();
             FleetEvents.emit('data:missions:updated', FleetState.getMissions());
             // Re-render kanban
-            if (this.view === 'detail' && this.currentMissionId === missionId) {
-                const kanbanContainer = this.container.querySelector('.mission-kanban');
-                if (kanbanContainer) {
-                    kanbanContainer.outerHTML = this.renderMissionKanban(mission);
-                    this.bindMissionDetailEvents();
-                }
-            }
+            this._refreshKanban(mission);
             return;
         }
 
@@ -571,13 +608,7 @@ class MissionCenterPanel {
 
         // Re-render kanban
         const mission = FleetState.getMission(missionId);
-        if (mission && this.view === 'detail' && this.currentMissionId === missionId) {
-            const kanbanContainer = this.container.querySelector('.mission-kanban');
-            if (kanbanContainer) {
-                kanbanContainer.outerHTML = this.renderMissionKanban(mission);
-                this.bindMissionDetailEvents();
-            }
-        }
+        this._refreshKanban(mission);
     }
 
     handleMissionTodoUpdate(data) {
@@ -647,13 +678,7 @@ class MissionCenterPanel {
                     if (dragData.currentStatus !== newStatus) {
                         FleetState.updateTodo(dragData.missionId, parseInt(dragData.todoId, 10), { status: newStatus });
                         const mission = FleetState.getMission(dragData.missionId);
-                        if (mission && this.view === 'detail' && this.currentMissionId === dragData.missionId) {
-                            const kanbanContainer = this.container.querySelector('.mission-kanban');
-                            if (kanbanContainer) {
-                                kanbanContainer.outerHTML = this.renderMissionKanban(mission);
-                                this.bindMissionDetailEvents();
-                            }
-                        }
+                        this._refreshKanban(mission);
                     }
                 } catch (error) {
                     console.warn('Drag and drop failed:', error);
@@ -773,14 +798,7 @@ class MissionCenterPanel {
         // Handle mission updates (status changes, etc.)
         if (this.view === 'detail' && this.currentMissionId === data.missionId) {
             const mission = FleetState.getMission(data.missionId);
-            if (mission) {
-                // Update kanban and header in place
-                const kanban = this.container.querySelector('.mission-kanban');
-                if (kanban) {
-                    kanban.outerHTML = this.renderMissionKanban(mission);
-                    this.bindMissionDetailEvents();
-                }
-            }
+            this._refreshKanban(mission);
         } else if (this.view === 'list') {
             this.updateMissionsList();
         }
@@ -881,11 +899,12 @@ class MissionCenterPanel {
     }
 
     destroy() {
-        // Remove event listeners (best-effort)
-        FleetEvents.off('navigate', this.showMissionsList.bind(this));
-        FleetEvents.off('data:missions:updated', this.updateMissionsList.bind(this));
-        FleetEvents.off('mission:updated', this.handleMissionUpdate.bind(this));
-        FleetEvents.off('mission:todo:updated', this.handleMissionTodoUpdate.bind(this));
+        // Remove event listeners using stored references
+        if (this._onNavigate) FleetEvents.off('navigate', this._onNavigate);
+        if (this._onMissionsUpdated) FleetEvents.off('data:missions:updated', this._onMissionsUpdated);
+        if (this._onMissionUpdated) FleetEvents.off('mission:updated', this._onMissionUpdated);
+        if (this._onTodoUpdated) FleetEvents.off('mission:todo:updated', this._onTodoUpdated);
+        if (this._onMissionAction) FleetEvents.off('mission:action', this._onMissionAction);
     }
 }
 
