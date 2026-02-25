@@ -544,10 +544,12 @@
 </head>
 <body>
     <script>
-        if (!window.location.hostname.includes('spawnkit.ai')) {
+        if (window.location.hostname.includes('spawnkit.ai')) {
+            window.OC_RELAY_URL = window.location.origin;
+        } else {
             window.OC_RELAY_URL = 'http://localhost:18790';
         }
-        window.OC_RELAY_TOKEN = 'sk-oc-proxy-spawnkit-2026';
+        window.OC_RELAY_TOKEN = localStorage.getItem('spawnkit-token') || 'sk-oc-proxy-spawnkit-2026';
     </script>
 
     <div class="castle-layout">
@@ -1074,7 +1076,7 @@
                 try {
                     const gltf = await this.loadModel(`assets/characters/character-${def.char}.glb`);
                     const model = gltf.scene;
-                    model.scale.setScalar(1.8);
+                    model.scale.setScalar(0.6);
 
                     const wp = waypoints[i];
                     model.position.set(wp[0].x, 0, wp[0].z);
@@ -1258,7 +1260,7 @@
                 // Project 3D position to screen
                 const pos = new THREE.Vector3();
                 charData.group.getWorldPosition(pos);
-                pos.y += 2.6; // Above character head (scaled for 1.8x chars)
+                pos.y += 1.2; // Above character head (scaled for 0.6x chars)
 
                 const projected = pos.clone().project(this.camera);
                 const x = (projected.x * 0.5 + 0.5) * rect.width;
