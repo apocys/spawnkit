@@ -6,7 +6,7 @@
     <title>SpawnKit — Medieval Castle 3D</title>
     <script>
         window.OC_RELAY_URL = window.OC_RELAY_URL || 'http://127.0.0.1:18790';
-        var API_URL = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+        var API_URL = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8765');
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -608,6 +608,9 @@
 
     <div class="demo-badge" id="demo-badge" style="display: none;">Demo Mode</div>
 
+    <script src="../lib/theme-auth.js"></script>
+    <script src="../lib/routines.js"></script>
+    <script src="../lib/activity-bubbles.js"></script>
     <script src="onboarding.js"></script>
     <script src="../src/data-bridge.js"></script>
     <script type="module">
@@ -1542,7 +1545,7 @@
 
         async loadAgentSessions(agentId) {
             try {
-                const resp = await fetch(API_URL + '/api/oc/sessions');
+                const resp = await ThemeAuth.fetch(API_URL + '/api/oc/sessions');
                 if (resp.ok) {
                     const sessions = await resp.json();
                     const agentSessions = sessions.filter(s => 
@@ -1641,8 +1644,8 @@
         async refreshApiData() {
             try {
                 const [sessionsResp, memoryResp] = await Promise.allSettled([
-                    fetch(API_URL + '/api/oc/sessions'),
-                    fetch(API_URL + '/api/oc/memory')
+                    ThemeAuth.fetch(API_URL + '/api/oc/sessions'),
+                    ThemeAuth.fetch(API_URL + '/api/oc/memory')
                 ]);
 
                 let sessions = [];
@@ -1785,7 +1788,7 @@
         startApiMetricsUpdater() {
             const updateApiMetrics = async () => {
                 try {
-                    const resp = await fetch(API_URL + '/api/oc/sessions');
+                    const resp = await ThemeAuth.fetch(API_URL + '/api/oc/sessions');
                     if (resp.ok) {
                         const sessions = await resp.json();
                         const totalSessions = sessions.length;
@@ -1996,7 +1999,7 @@
             mcLoading = true;
             var sessions = [];
             try {
-                var resp = await fetch(API_URL + '/api/oc/sessions');
+                var resp = await ThemeAuth.fetch(API_URL + '/api/oc/sessions');
                 if (resp.ok) sessions = await resp.json();
             } catch(e) {
                 console.warn('[MC] Failed to load sessions:', e.message || e);
@@ -2114,7 +2117,7 @@
                     if (t) t.textContent = mcTodoExpanded ? '▾ Hide scrolls' : '▸ Show scrolls';
                     if (mcTodoExpanded && !mcTodoContent) {
                         if (r) r.textContent = 'Consulting the ancient archives...';
-                        fetch(API_URL + '/api/oc/memory').then(function(resp) { return resp.ok ? resp.json() : null; }).then(function(data) {
+                        ThemeAuth.fetch(API_URL + '/api/oc/memory').then(function(resp) { return resp.ok ? resp.json() : null; }).then(function(data) {
                             if (data && data.todo) {
                                 mcTodoContent = data.todo;
                             } else {
@@ -2239,7 +2242,7 @@
             if (mcTranscriptContent) { el.textContent = mcTranscriptContent; return; }
             el.textContent = 'Scribes are transcribing the royal conversations...';
             try {
-                var resp = await fetch(API_URL + '/api/oc/chat');
+                var resp = await ThemeAuth.fetch(API_URL + '/api/oc/chat');
                 if (resp.ok) {
                     var data = await resp.json();
                     var messages = data.messages || data || [];
@@ -2422,9 +2425,9 @@
         async function pollMedievalAgentState() {
             try {
                 const [sessionsResp, memoryResp, chatResp] = await Promise.allSettled([
-                    fetch(API_URL + '/api/oc/sessions'),
-                    fetch(API_URL + '/api/oc/memory'),
-                    fetch(API_URL + '/api/oc/chat')
+                    ThemeAuth.fetch(API_URL + '/api/oc/sessions'),
+                    ThemeAuth.fetch(API_URL + '/api/oc/memory'),
+                    ThemeAuth.fetch(API_URL + '/api/oc/chat')
                 ]);
                 
                 const sessions = sessionsResp.status === 'fulfilled' && sessionsResp.value.ok ? await sessionsResp.value.json() : [];

@@ -2190,7 +2190,7 @@ requestAnimationFrame(checkReady);
 // ═══════════════════════════════════════════════════════════════
 
 // ── Global Variables ──────────────────────────────────────────
-let API_URL = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+let API_URL = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8765');
 let orchMode = 'agents';
 let mcFeedMode = 'filtered';
 let cronTimers = {};
@@ -2236,7 +2236,7 @@ function makeAgentsClickable() {
 // ── F7: Real API Metrics Helper ───────────────────────────────
 async function relayGet(path) {
   try {
-    const resp = await fetch(API_URL + path);
+    const resp = await ThemeAuth.fetch(API_URL + path);
     return resp.ok ? await resp.json() : null;
   } catch(e) { 
     console.warn('Relay error:', e); 
@@ -3003,6 +3003,9 @@ console.log('🏢 Executive Features loaded - F1-F14 integrated with SimCity the
   }
   window.OC_RELAY_TOKEN = 'sk-oc-proxy-spawnkit-2026';
 </script>
+<script src="../../lib/theme-auth.js"></script>
+<script src="../../lib/routines.js"></script>
+<script src="../../lib/activity-bubbles.js"></script>
 <script src="../src/data-bridge.js"></script>
 
 <!-- ═══ Village Panel System ═══ -->
@@ -3763,9 +3766,9 @@ console.log('🏢 Executive Features loaded - F1-F14 integrated with SimCity the
   async function pollSimCityAgentState() {
     try {
       const [sessionsResp, memoryResp, chatResp] = await Promise.allSettled([
-        fetch(API_URL + '/api/oc/sessions'),
-        fetch(API_URL + '/api/oc/memory'),
-        fetch(API_URL + '/api/oc/chat')
+        ThemeAuth.fetch(API_URL + '/api/oc/sessions'),
+        ThemeAuth.fetch(API_URL + '/api/oc/memory'),
+        ThemeAuth.fetch(API_URL + '/api/oc/chat')
       ]);
       
       const sessions = sessionsResp.status === 'fulfilled' && sessionsResp.value.ok ? await sessionsResp.value.json() : [];
