@@ -142,9 +142,36 @@
                 sessArr.forEach(function(s) {
                     if (s.kind === 'subagent' && s.status === 'active') {
                         var already = activeTasks.some(function(t) { return t.id === s.key; });
-                        if (!already) activeTasks.push({ text: s.label || s.displayName || 'Sub-agent', status: 'active', icon: '🔥', agent: 'main' });
+                        if (!already) {
+                            var ago = Date.now() - (s.lastActive || 0);
+                            var agoStr = ago < 60000 ? 'just now' : ago < 3600000 ? Math.floor(ago/60000) + 'm ago' : Math.floor(ago/3600000) + 'h ago';
+                            activeTasks.push({
+                                text: s.label || s.displayName || 'Sub-agent',
+                                status: 'active', icon: '🔥', agent: 'main',
+                                subtasks: [
+                                    { text: 'Model: ' + (s.model || 'unknown'), done: false },
+                                    { text: 'Tokens: ' + (s.totalTokens || 0).toLocaleString(), done: false },
+                                    { text: 'Last active: ' + agoStr, done: false },
+                                    { text: 'Channel: ' + (s.channel || 'internal'), done: false }
+                                ]
+                            });
+                        }
                     }
                 });
+                // Also show main session as a context item
+                var mainSess = sessArr.find(function(s) { return s.key === 'agent:main:main'; });
+                if (mainSess) {
+                    activeTasks.unshift({
+                        text: '🎭 Main Session (Sycopa)',
+                        status: 'active', icon: '👑', agent: 'ceo',
+                        subtasks: [
+                            { text: 'Model: ' + (mainSess.model || 'unknown'), done: false },
+                            { text: 'Tokens: ' + (mainSess.totalTokens || 0).toLocaleString(), done: false },
+                            { text: 'Channel: ' + (mainSess.channel || '-'), done: false },
+                            { text: 'Status: ' + (mainSess.status || 'idle'), done: false }
+                        ]
+                    });
+                }
 
                 var totalActive = activeTasks.length;
                 var totalDone = doneTasks.length;
@@ -155,20 +182,23 @@
                     html += '<div style="padding:12px;text-align:center;color:var(--text-tertiary);font-size:12px;">All clear — no active tasks 🎉</div>';
                 }
 
-                activeTasks.forEach(function(t) {
-                    html += '<div style="padding:8px 10px;margin-bottom:4px;border-radius:8px;background:rgba(255,149,0,0.06);border-left:3px solid #FF9500;">';
+                activeTasks.forEach(function(t, idx) {
+                    var hasSubtasks = t.subtasks && t.subtasks.length > 0;
+                    html += '<div class="mc-task-card" data-task-idx="' + idx + '" style="padding:8px 10px;margin-bottom:4px;border-radius:8px;background:rgba(255,149,0,0.06);border-left:3px solid #FF9500;cursor:pointer;transition:background 0.15s;">';
                     html += '<div style="display:flex;align-items:center;gap:6px;">';
-                    html += '<span>☐</span>';
+                    html += '<span>' + (hasSubtasks ? '▸' : '☐') + '</span>';
                     html += '<span style="flex:1;font-size:12px;font-weight:500;">' + escMc(t.text) + '</span>';
                     html += '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:#FF950022;color:#FF9500;">ACTIVE</span>';
                     html += '</div>';
-                    if (t.subtasks && t.subtasks.length > 0) {
+                    if (hasSubtasks) {
+                        html += '<div class="mc-subtasks" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,149,0,0.15);">';
                         t.subtasks.forEach(function(st) {
                             html += '<div style="display:flex;align-items:center;gap:6px;margin:3px 0 0 18px;font-size:11px;' + (st.done ? 'text-decoration:line-through;color:var(--text-tertiary);' : '') + '">';
                             html += '<span>' + (st.done ? '☑' : '☐') + '</span>';
                             html += '<span>' + escMc(st.text) + '</span>';
                             html += '</div>';
                         });
+                        html += '</div>';
                     }
                     if (t.agent) {
                         html += '<div style="font-size:10px;color:var(--text-tertiary);margin-top:3px;">Agent: ' + escMc(t.agent) + (t.startedAt ? ' · ' + new Date(t.startedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '') + '</div>';
@@ -253,6 +283,24 @@
                 card.addEventListener('click', function(e) {
                     if (e.target.type === 'checkbox') return;
                     card.classList.toggle('expanded');
+                });
+            });
+
+            // Wire task card expand (click to show/hide subtasks)
+            mcLeft.querySelectorAll('.mc-task-card').forEach(function(card) {
+                card.addEventListener('click', function() {
+                    var subs = card.querySelector('.mc-subtasks');
+                    if (!subs) return;
+                    var arrow = card.querySelector('div > span:first-child');
+                    if (subs.style.display === 'none') {
+                        subs.style.display = 'block';
+                        if (arrow) arrow.textContent = '▾';
+                        card.style.background = 'rgba(255,149,0,0.12)';
+                    } else {
+                        subs.style.display = 'none';
+                        if (arrow) arrow.textContent = '▸';
+                        card.style.background = 'rgba(255,149,0,0.06)';
+                    }
                 });
             });
 

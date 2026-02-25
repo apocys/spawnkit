@@ -99,7 +99,7 @@
       '<div class="md-actions" id="missionDeskActions">' +
         '<button class="md-action" data-action="missions"><span class="md-action-icon">🎯</span><span class="md-action-label">Missions</span></button>' +
         '<button class="md-action" data-action="boardroom"><span class="md-action-icon">🧠</span><span class="md-action-label">Boardroom</span></button>' +
-        '<button class="md-action" data-action="skills"><span class="md-action-icon">⚡</span><span class="md-action-label">Skills</span></button>' +
+        '<button class="md-action" data-action="skills"><span class="md-action-icon">🔨</span><span class="md-action-label">Skill Forge</span></button>' +
         '<button class="md-action" data-action="forge"><span class="md-action-icon">🔨</span><span class="md-action-label">Skill Forge</span></button>' +
         '<button class="md-action" data-action="explore"><span class="md-action-icon">🚀</span><span class="md-action-label">Explore</span></button>' +
         '<button class="md-action" data-action="marketplace"><span class="md-action-icon">🏪</span><span class="md-action-label">Marketplace</span></button>' +
@@ -264,7 +264,7 @@
       var meetBtn = document.getElementById('meetingBtn');
       if (meetBtn) meetBtn.click();
     } else if (name === 'skills') {
-      if (window.SkillMarketplace) { window.SkillMarketplace.open(); return; }
+      if (window.SkillForge) { window.SkillForge.open(); return; }
       var orchBtn = document.getElementById('orchBtn') || document.getElementById('addAgentBtn');
       if (orchBtn) {
         orchBtn.click();
