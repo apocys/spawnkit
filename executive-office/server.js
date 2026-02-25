@@ -136,6 +136,24 @@ function getChat() {
   }
 }
 
+function getInstalledSkills() {
+  const skillsDir = process.env.OPENCLAW_SKILLS || '/mnt/HC_Volume_104509196/home_apocyz_runner/.npm-global/lib/node_modules/openclaw/skills';
+  try {
+    const dirs = fs.readdirSync(skillsDir).filter(d => {
+      try { return fs.statSync(path.join(skillsDir, d)).isDirectory(); } catch { return false; }
+    });
+    return dirs.map(id => {
+      let name = id, description = '';
+      try {
+        const md = fs.readFileSync(path.join(skillsDir, id, 'SKILL.md'), 'utf8');
+        const nm = md.match(/name:\s*(.+)/); if (nm) name = nm[1].trim();
+        const desc = md.match(/description:\s*(.+)/); if (desc) description = desc[1].trim();
+      } catch {}
+      return { id, name, description };
+    });
+  } catch { return []; }
+}
+
 function getConfig() {
   const c = readJSON(process.env.HOME + '/.openclaw/openclaw.json');
   if (!c) return {};
@@ -524,6 +542,7 @@ End with: **Confidence:** 🟢 High / 🟡 Medium / 🔴 Low — [brief justific
       case '/api/oc/chat': data = getChat(); break;
       case '/api/oc/chat/history': data = getChat(); break;
       case '/api/oc/agents': data = { agents: [] }; break;
+      case '/api/oc/skills': data = getInstalledSkills(); break;
       case '/api/oc/health': data = { ok: true, uptime: process.uptime() }; break;
       default: res.writeHead(404); res.end(JSON.stringify({error:'not found'})); return;
     }
