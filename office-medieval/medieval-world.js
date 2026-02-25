@@ -436,7 +436,7 @@ function initWorld(app) {
 
         // Village lights: fade on at night, off by day
         if (this.villageLights) {
-            const cycle = (elapsed % 60) / 60;
+            const cycle = (elapsed % 3600) / 3600;
             const sunAngle = cycle * Math.PI * 2 - Math.PI / 2;
             const targetIntensity = Math.sin(sunAngle) < -0.15 ? 2.8 : 0;
             this.villageLights.forEach(l => {

@@ -308,27 +308,29 @@
         /* ── Main Grid Layout ──────────────────────────────── */
         .castle-layout {
             display: grid;
-            grid-template-columns: 300px 1fr 320px;
-            grid-template-rows: 70px 1fr;
-            grid-template-areas:
-                "header header header"
-                "sidebar main rightpanel";
+            grid-template-areas: "header header" "main main";
+            grid-template-columns: 1fr;
+            grid-template-rows: auto 1fr;
             height: 100vh;
+            overflow: hidden;
         }
 
         /* ── Header ────────────────────────────────────────── */
         .castle-header {
             grid-area: header;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 16px;
+            height: 36px;
             background: linear-gradient(135deg, #0d0d1a 0%, var(--castle-navy) 50%, #0d0d1a 100%);
-            border-bottom: 2px solid var(--border-gold);
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 var(--space-6);
+            border-bottom: 1px solid var(--border-stone);
             z-index: 10;
         }
-        .castle-banner { display: flex; align-items: center; gap: var(--space-4); }
-        .castle-crest { font-size: 32px; filter: drop-shadow(0 0 8px rgba(201,169,89,0.6)); }
-        .castle-name { font-family: var(--font-medieval); font-size: 22px; color: var(--castle-gold); letter-spacing: 2px; }
-        .castle-subtitle { font-family: var(--font-serif); font-size: 11px; color: var(--castle-stone-light); text-transform: uppercase; letter-spacing: 3px; }
+        .castle-banner { display: flex; align-items: center; gap: 8px; }
+        .castle-crest { font-size: 18px; filter: drop-shadow(0 0 8px rgba(201,169,89,0.6)); }
+        .castle-name { font-family: var(--font-medieval); font-size: 14px; color: var(--castle-gold); letter-spacing: 2px; margin: 0; }
+        .castle-subtitle { display: none; }
         .castle-status-bar { display: flex; gap: var(--space-6); align-items: center; }
         .status-indicator { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; font-family: var(--font-serif); }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; }
@@ -337,10 +339,19 @@
 
         /* ── Left Sidebar ──────────────────────────────────── */
         .castle-sidebar {
-            grid-area: sidebar;
+            position: fixed;
+            left: -320px;
+            top: 0;
+            width: 310px;
+            height: 100vh;
+            z-index: 50;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             background: var(--bg-secondary);
             border-right: 2px solid var(--border-stone);
             display: flex; flex-direction: column; overflow: hidden;
+        }
+        .castle-sidebar.panel-open {
+            left: 0;
         }
         .sidebar-header {
             padding: var(--space-5) var(--space-4);
@@ -526,10 +537,19 @@
 
         /* ── Right Panel ───────────────────────────────────── */
         .castle-rightpanel {
-            grid-area: rightpanel;
+            position: fixed;
+            right: -380px;
+            top: 0;
+            width: 370px;
+            height: 100vh;
+            z-index: 50;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             background: var(--bg-secondary);
             border-left: 2px solid var(--border-stone);
             display: flex; flex-direction: column; overflow: hidden;
+        }
+        .castle-rightpanel.panel-open {
+            right: 0;
         }
         .rightpanel-header {
             padding: var(--space-5) var(--space-4);
@@ -581,12 +601,55 @@
         .agents-scroll::-webkit-scrollbar-track, .activity-scroll::-webkit-scrollbar-track { background: var(--castle-stone-dark); }
         .agents-scroll::-webkit-scrollbar-thumb, .activity-scroll::-webkit-scrollbar-thumb { background: var(--castle-gold); border-radius: 4px; }
 
-        /* ── Responsive ────────────────────────────────────── */
-        @media (max-width: 1200px) { .castle-layout { grid-template-columns: 260px 1fr 280px; } }
-        @media (max-width: 1024px) {
-            .castle-layout { grid-template-columns: 1fr; grid-template-rows: 70px 1fr; grid-template-areas: "header" "main"; }
-            .castle-sidebar, .castle-rightpanel { display: none; }
+        /* ── Building Panel ────────────────────────────────── */
+        .building-panel {
+            position: fixed;
+            right: -420px;
+            top: 36px;
+            width: 400px;
+            height: calc(100vh - 36px);
+            background: var(--bg-secondary);
+            border-left: 2px solid var(--border-stone);
+            z-index: 60;
+            transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.4);
         }
+        .building-panel.panel-open {
+            right: 0;
+        }
+        .building-panel-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-stone);
+            background: linear-gradient(135deg, var(--castle-stone-dark), var(--castle-navy));
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .building-panel-header span:first-child { font-size: 20px; }
+        .building-panel-header span:nth-child(2) { font-family: var(--font-medieval); font-size: 16px; color: var(--castle-gold); flex: 1; }
+        .building-panel-content {
+            padding: 16px;
+        }
+
+        /* ── Panel Close Button ────────────────────────────── */
+        .panel-close-btn {
+            background: none;
+            border: none;
+            color: var(--castle-gold);
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 51;
+            line-height: 1;
+        }
+        .panel-close-btn:hover { color: var(--castle-parchment); }
+
+        /* ── Responsive ────────────────────────────────────── */
+        @media (max-width: 1200px) { }
+        @media (max-width: 1024px) { }
     </style>
 </head>
 <body>
@@ -615,7 +678,7 @@
         </header>
 
         <aside class="castle-sidebar">
-            <div class="sidebar-header"><h2 class="sidebar-title">⚔️ Royal Court</h2></div>
+            <div class="sidebar-header" style="position:relative;"><h2 class="sidebar-title">⚔️ Royal Court</h2><button class="panel-close-btn" onclick="document.querySelector('.castle-sidebar').classList.remove('panel-open')" style="position:absolute;top:8px;right:8px;">✕</button></div>
             <div class="agents-scroll" id="agents-list"></div>
         </aside>
 
@@ -641,7 +704,7 @@
         </main>
 
         <aside class="castle-rightpanel">
-            <div class="rightpanel-header"><h2 class="rightpanel-title">📜 Royal Decrees</h2></div>
+            <div class="rightpanel-header" style="position:relative;"><h2 class="rightpanel-title">📜 Royal Decrees</h2><button class="panel-close-btn" onclick="document.querySelector('.castle-rightpanel').classList.remove('panel-open')" style="position:absolute;top:8px;left:8px;">✕</button></div>
             <div class="stats-panel">
                 <h3 class="stats-title">Castle Status</h3>
                 <div class="stats-grid">
@@ -720,5 +783,15 @@
     <div id="roblox-hotbar" style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:100;pointer-events:auto;"></div>
     <script src="medieval-hotbar.js"></script>
     <script src="medieval-audio.js"></script>
+
+    <!-- Building Contextual Panel -->
+    <div id="building-panel" class="building-panel">
+        <div class="building-panel-header">
+            <span id="building-panel-icon"></span>
+            <span id="building-panel-title"></span>
+            <button class="panel-close-btn" onclick="closeBuildingPanel()">✕</button>
+        </div>
+        <div id="building-panel-content" class="building-panel-content"></div>
+    </div>
 </body>
 </html>

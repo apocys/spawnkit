@@ -337,7 +337,14 @@ class MedievalCastle3D {
             group.add(roof);
 
             group.position.set(b.x, 0, b.z);
+            group.userData.buildingName = b.name;
+            // Tag all children for raycasting
+            group.traverse(child => { if (child.isMesh) child.userData.buildingName = b.name; });
             this.scene.add(group);
+
+            // Store for click detection
+            this.buildingGroups = this.buildingGroups || [];
+            this.buildingGroups.push(group);
 
             // Floating HTML label
             const label = document.createElement('div');
@@ -410,38 +417,37 @@ class MedievalCastle3D {
             defs.push({ path: 'assets/castle/flag-pennant.glb',       x: tc.x, y: 4, z: tc.z, ry: tc.ryFlag, scale: 1, label: tc.label + ' flag' });
         });
 
-        // Inner bailey walls — N side (z=-7), connecting NW(-7) to NE(7) in 2-unit segments
-        // Segments at x = -5, -3, -1, 1, 3, 5  (centre gap = N doorway at x=0)
-        for (let xi = -5; xi <= 5; xi += 2) {
-            const isNDoor = xi === -1 || xi === 1;
+        // Inner bailey walls — N side (z=-7), full wall segments at 2-unit intervals
+        for (let xi = -6; xi <= 6; xi += 2) {
+            const isDoor = xi === 0;
             defs.push({
-                path: isNDoor ? 'assets/castle/wall-narrow-gate.glb' : 'assets/castle/wall-half.glb',
+                path: isDoor ? 'assets/castle/wall-doorway.glb' : 'assets/castle/wall.glb',
                 x: xi, y: 0, z: -7, ry: 0, scale: 1, label: 'Inner N wall'
             });
         }
-        // Inner bailey walls — S side (z=7), south doorway + narrow stairs near it
-        for (let xi = -5; xi <= 5; xi += 2) {
-            const isSDoor = xi === -1 || xi === 1;
+        // Inner bailey walls — S side (z=7), south doorway
+        for (let xi = -6; xi <= 6; xi += 2) {
+            const isDoor = xi === 0;
             defs.push({
-                path: isSDoor ? 'assets/castle/wall-narrow-gate.glb' : 'assets/castle/wall-half.glb',
+                path: isDoor ? 'assets/castle/wall-doorway.glb' : 'assets/castle/wall.glb',
                 x: xi, y: 0, z: 7, ry: 0, scale: 1, label: 'Inner S wall'
             });
         }
         defs.push({ path: 'assets/castle/wall-narrow-stairs.glb', x: 3, y: 0, z: 7, ry: Math.PI, scale: 1, label: 'Inner S stairs' });
 
-        // Inner bailey walls — E side (x=7), z = -5,-3,-1,1,3,5
-        for (let zi = -5; zi <= 5; zi += 2) {
-            const isEDoor = zi === -1 || zi === 1;
+        // Inner bailey walls — E side (x=7)
+        for (let zi = -6; zi <= 6; zi += 2) {
+            const isDoor = zi === 0;
             defs.push({
-                path: isEDoor ? 'assets/castle/wall-narrow-gate.glb' : 'assets/castle/wall-half.glb',
+                path: isDoor ? 'assets/castle/wall-doorway.glb' : 'assets/castle/wall.glb',
                 x: 7, y: 0, z: zi, ry: Math.PI / 2, scale: 1, label: 'Inner E wall'
             });
         }
         // Inner bailey walls — W side (x=-7)
-        for (let zi = -5; zi <= 5; zi += 2) {
-            const isWDoor = zi === -1 || zi === 1;
+        for (let zi = -6; zi <= 6; zi += 2) {
+            const isDoor = zi === 0;
             defs.push({
-                path: isWDoor ? 'assets/castle/wall-narrow-gate.glb' : 'assets/castle/wall-half.glb',
+                path: isDoor ? 'assets/castle/wall-doorway.glb' : 'assets/castle/wall.glb',
                 x: -7, y: 0, z: zi, ry: Math.PI / 2, scale: 1, label: 'Inner W wall'
             });
         }
@@ -455,41 +461,29 @@ class MedievalCastle3D {
         // OUTER CURTAIN WALL — radius ±11
         // ─────────────────────────────────────────────────────────────────
 
-        // -- Outer wall N side (z=-11), x from -9 to 9 in 2-unit segments, pillar every 3rd
-        for (let xi = -9; xi <= 9; xi += 2) {
+        // -- Outer wall N side (z=-11), 1-unit intervals for seamless narrow walls
+        for (let xi = -10; xi <= 10; xi += 1) {
             defs.push({ path: 'assets/castle/wall-narrow.glb', x: xi, y: 0, z: -11, ry: 0, scale: 1, label: 'Outer N wall' });
-            if (Math.abs(xi) === 3) {
-                defs.push({ path: 'assets/castle/wall-pillar.glb', x: xi + 1, y: 0, z: -11, ry: 0, scale: 1, label: 'Outer N pillar' });
-            }
         }
         // -- Outer wall S side (z=11) — south entrance gate at centre
-        for (let xi = -9; xi <= 9; xi += 2) {
-            const isSGate = xi === -1 || xi === 1;
+        for (let xi = -10; xi <= 10; xi += 1) {
+            const isSGate = xi === 0;
             defs.push({
                 path: isSGate ? 'assets/castle/wall-narrow-gate.glb' : 'assets/castle/wall-narrow.glb',
                 x: xi, y: 0, z: 11, ry: 0, scale: 1, label: 'Outer S wall'
             });
-            if (Math.abs(xi) === 5) {
-                defs.push({ path: 'assets/castle/wall-pillar.glb', x: xi + 1, y: 0, z: 11, ry: 0, scale: 1, label: 'Outer S pillar' });
-            }
         }
         // Wall-access stairs near south gate
         defs.push({ path: 'assets/castle/wall-narrow-stairs-rail.glb', x: -3, y: 0, z: 11, ry: 0,      scale: 1, label: 'Outer S stair W' });
         defs.push({ path: 'assets/castle/wall-narrow-stairs-rail.glb', x:  3, y: 0, z: 11, ry: Math.PI, scale: 1, label: 'Outer S stair E' });
 
-        // -- Outer wall E side (x=11), z from -9 to 9
-        for (let zi = -9; zi <= 9; zi += 2) {
+        // -- Outer wall E side (x=11), 1-unit intervals
+        for (let zi = -10; zi <= 10; zi += 1) {
             defs.push({ path: 'assets/castle/wall-narrow.glb', x: 11, y: 0, z: zi, ry: Math.PI / 2, scale: 1, label: 'Outer E wall' });
-            if (Math.abs(zi) === 3) {
-                defs.push({ path: 'assets/castle/wall-pillar.glb', x: 11, y: 0, z: zi + 1, ry: Math.PI / 2, scale: 1, label: 'Outer E pillar' });
-            }
         }
-        // -- Outer wall W side (x=-11), z from -9 to 9
-        for (let zi = -9; zi <= 9; zi += 2) {
+        // -- Outer wall W side (x=-11), 1-unit intervals
+        for (let zi = -10; zi <= 10; zi += 1) {
             defs.push({ path: 'assets/castle/wall-narrow.glb', x: -11, y: 0, z: zi, ry: Math.PI / 2, scale: 1, label: 'Outer W wall' });
-            if (Math.abs(zi) === 3) {
-                defs.push({ path: 'assets/castle/wall-pillar.glb', x: -11, y: 0, z: zi + 1, ry: Math.PI / 2, scale: 1, label: 'Outer W pillar' });
-            }
         }
 
         // -- Outer wall 4 CORNERS — wall-corner-half-tower
@@ -688,7 +682,7 @@ class MedievalCastle3D {
             { id: 'Sentinel', color: 0x30D158, speed: 0.8, crown: null },
         ];
 
-        const emoticons = { idle: '\u{1F4A4}', working: '\u2694\uFE0F', chatting: '\u{1F4AC}', eating: '\u{1F356}', sleeping: '\u{1F634}' };
+        const emoticons = { idle: '💤 Idle', working: '⚔️ Working', chatting: '💬 Chatting', eating: '🍖 Eating', sleeping: '😴 Sleeping' };
 
         // Waypoints spread across entire map (castle, village, fields)
         const waypoints = [
@@ -709,12 +703,12 @@ class MedievalCastle3D {
         for (let i = 0; i < agentDefs.length; i++) {
             const def = agentDefs[i];
             const mesh = this.createCharacterMesh(def.color, def.crown);
-            mesh.scale.setScalar(0.5);
+            mesh.scale.setScalar(1.2);
 
             const wp = waypoints[i];
             mesh.position.set(wp[0].x, 0, wp[0].z);
             mesh.userData.agentId = def.id;
-            mesh.userData.emoticon = '\u{1F4A4}';
+            mesh.userData.emoticon = '💤 Idle';
             this.scene.add(mesh);
 
             this.characterModels.set(def.id, {
@@ -949,7 +943,7 @@ class MedievalCastle3D {
 
     // ── Day/Night Cycle (60s = full day) ─────────────────
     updateDayNight(elapsed) {
-        const cycle = (elapsed % 60) / 60; // 0-1 over 60 seconds
+        const cycle = (elapsed % 3600) / 3600; // 0-1 over 1 hour
         const sunAngle = cycle * Math.PI * 2 - Math.PI / 2; // -π/2 to 3π/2
         const sunHeight = Math.sin(sunAngle);
         const isNight = sunHeight < -0.1;
@@ -1000,7 +994,7 @@ class MedievalCastle3D {
             // Project 3D position to screen
             const pos = new THREE.Vector3();
             charData.group.getWorldPosition(pos);
-            pos.y += 0.7; // Above character head (scaled for 0.5x chars)
+            pos.y += 1.6; // Above character head (scaled for 1.2x chars)
 
             const projected = pos.clone().project(this.camera);
             const x = (projected.x * 0.5 + 0.5) * rect.width;
@@ -1136,7 +1130,8 @@ class MedievalCastle3D {
             else document.exitFullscreen();
         });
         document.getElementById('btn-reset-camera').addEventListener('click', () => {
-            this.resetCamera();
+            if (typeof openMissionControl === 'function') openMissionControl();
+            else this.resetCamera();
         });
     }
 
@@ -1160,6 +1155,35 @@ class MedievalCastle3D {
                 if (child.isMesh) charMeshes.push(child);
             });
         });
+
+        // Check buildings first
+        if (this.buildingGroups) {
+            const buildingMeshes = [];
+            this.buildingGroups.forEach(g => g.traverse(c => { if (c.isMesh) buildingMeshes.push(c); }));
+            const bHits = this.raycaster.intersectObjects(buildingMeshes, false);
+            if (bHits.length > 0 && bHits[0].object.userData.buildingName) {
+                const name = bHits[0].object.userData.buildingName;
+                if (typeof window.openBuildingPanel === 'function') {
+                    window.openBuildingPanel(name);
+                }
+                // Glow effect on selected building
+                if (this._selectedBuildingGroup) {
+                    this._selectedBuildingGroup.traverse(c => { if (c.isMesh && c._origEmissive !== undefined) c.material.emissiveIntensity = 0; });
+                }
+                let bg = bHits[0].object;
+                while (bg.parent && !bg.userData.buildingName) bg = bg.parent;
+                this._selectedBuildingGroup = bg.parent || bg;
+                this._selectedBuildingGroup.traverse(c => {
+                    if (c.isMesh) {
+                        c._origEmissive = c.material.emissiveIntensity || 0;
+                        c.material.emissive = c.material.emissive || new THREE.Color(0xffaa00);
+                        c.material.emissive.set(0xffaa00);
+                        c.material.emissiveIntensity = 0.4;
+                    }
+                });
+                return;
+            }
+        }
 
         const intersects = this.raycaster.intersectObjects(charMeshes, false);
         if (intersects.length > 0) {

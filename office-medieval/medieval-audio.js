@@ -7,7 +7,7 @@
   function sunAngle() {
     var a = window.castleApp;
     if (!a || !a.clock) return 0;
-    return (a.clock.getElapsedTime() % 60) / 60 * Math.PI * 2 - Math.PI / 2;
+    return (a.clock.getElapsedTime() % 3600) / 3600 * Math.PI * 2 - Math.PI / 2;
   }
   function isNight() { return Math.sin(sunAngle()) < -0.1; }
   function dayVol() { return Math.max(0, Math.sin(sunAngle())); }

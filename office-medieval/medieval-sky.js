@@ -77,7 +77,7 @@ function initSky(app) {
         const elapsed = now / 1000;
         twinkleTime += delta;
 
-        const cycle = (elapsed % 60) / 60;
+        const cycle = (elapsed % 3600) / 3600;
         const sunAngle = cycle * Math.PI * 2 - Math.PI / 2;
         const sunHeight = Math.sin(sunAngle);
         const isNight = sunHeight < -0.1;

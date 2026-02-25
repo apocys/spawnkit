@@ -254,7 +254,7 @@ window.addEventListener('load', () => {
             const elapsed = now / 1000;
 
             // Day/night state for fireflies
-            const cycle = (elapsed % 60) / 60;
+            const cycle = (elapsed % 3600) / 3600;
             const sunAngle = cycle * Math.PI * 2 - Math.PI / 2;
             const isNight = Math.sin(sunAngle) < -0.1;
 
