@@ -266,7 +266,117 @@
       }).catch(function() {});
     }, 10000);
 
-    console.log('🏰 Medieval integration: routines + bubbles + chat active');
+    // ── WS-3: Agent Drag ────────────────────────────────────
+    if (window.AgentDrag) {
+      window.AgentDrag.init({
+        container: document.getElementById('scene-container'),
+        theme: 'medieval',
+        getAgentAtPoint: function(x, y) {
+          if (!app.raycaster || !app.camera) return null;
+          var rect = app.renderer.domElement.getBoundingClientRect();
+          app.mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
+          app.mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
+          app.raycaster.setFromCamera(app.mouse, app.camera);
+          var intersects = app.raycaster.intersectObjects(app.scene.children, true);
+          for (var i = 0; i < intersects.length; i++) {
+            if (intersects[i].object.userData && intersects[i].object.userData.agentId) {
+              return intersects[i].object.userData.agentId;
+            }
+          }
+          return null;
+        },
+        getAgentScreenPos: function(agentId) {
+          var charData = app.characterModels.get(agentId);
+          if (!charData) return { x: 0, y: 0 };
+          var pos = new THREE.Vector3();
+          charData.group.getWorldPosition(pos);
+          pos.project(app.camera);
+          var rect = app.renderer.domElement.getBoundingClientRect();
+          return { x: (pos.x * 0.5 + 0.5) * rect.width, y: (-pos.y * 0.5 + 0.5) * rect.height };
+        },
+        getBuildingAtPoint: function() { return null; },
+      });
+      window.AgentDrag.onClick(function(agentId) { app.selectAgent(agentId); });
+      window.AgentDrag.onDrop(function(agentId, pos) {
+        var charData = app.characterModels.get(agentId);
+        if (!charData) return;
+        var rect = app.renderer.domElement.getBoundingClientRect();
+        var ndcX = ((pos.x - rect.left) / rect.width) * 2 - 1;
+        var ndcY = -((pos.y - rect.top) / rect.height) * 2 + 1;
+        app.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), app.camera);
+        var plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        var target = new THREE.Vector3();
+        app.raycaster.ray.intersectPlane(plane, target);
+        if (target) {
+          charData._routineTarget = { x: target.x, z: target.z };
+          charData._routineCallback = null;
+        }
+      });
+    }
+
+    // ── WS-4: Kanban Board ───────────────────────────────────
+    if (window.KanbanBoard) {
+      var kanbanContainer = document.createElement('div');
+      kanbanContainer.id = 'medievalKanban';
+      kanbanContainer.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;z-index:150;display:none;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);';
+      document.body.appendChild(kanbanContainer);
+      var kanbanInner = document.createElement('div');
+      kanbanInner.style.cssText = 'width:90%;max-width:1000px;height:80vh;margin:10vh auto;';
+      kanbanContainer.appendChild(kanbanInner);
+
+      var agentList = [];
+      app.characterModels.forEach(function(cd, aid) { agentList.push({ id: aid, name: aid, emoji: '⚔️' }); });
+      window.KanbanBoard.init(kanbanInner, { theme: 'medieval', agents: agentList, storageKey: 'spawnkit-medieval-missions' });
+
+      kanbanContainer.addEventListener('click', function(e) { if (e.target === kanbanContainer) { kanbanContainer.style.display = 'none'; window.KanbanBoard.hide(); } });
+
+      var kanbanBtn = document.createElement('button');
+      kanbanBtn.className = 'control-btn';
+      kanbanBtn.title = 'Quest Board';
+      kanbanBtn.textContent = '📋';
+      kanbanBtn.style.cssText = 'position:fixed;bottom:20px;right:80px;z-index:101;width:48px;height:48px;border-radius:50%;background:rgba(62,48,30,0.9);border:1px solid rgba(180,150,100,0.4);color:#E8D5B0;font-size:20px;cursor:pointer;';
+      kanbanBtn.addEventListener('click', function() { kanbanContainer.style.display = kanbanContainer.style.display === 'none' ? 'block' : 'none'; });
+      document.body.appendChild(kanbanBtn);
+    }
+
+    // ── WS-5: Customization Panel ────────────────────────────
+    if (window.ThemeCustomize) {
+      var agentData = [];
+      app.characterModels.forEach(function(cd, aid) { agentData.push({ id: aid, name: aid, emoji: '⚔️', role: 'Knight' }); });
+      var buildings = medievalAdapter.getBuildings();
+      window.ThemeCustomize.init({
+        theme: 'medieval',
+        agents: agentData,
+        buildings: buildings,
+        characters: [],
+        storageKey: 'spawnkit-medieval-custom',
+      });
+
+      var customBtn = document.createElement('button');
+      customBtn.className = 'control-btn';
+      customBtn.title = 'Customize';
+      customBtn.textContent = '⚙️';
+      customBtn.style.cssText = 'position:fixed;bottom:20px;right:140px;z-index:101;width:48px;height:48px;border-radius:50%;background:rgba(62,48,30,0.9);border:1px solid rgba(180,150,100,0.4);color:#E8D5B0;font-size:20px;cursor:pointer;';
+      customBtn.addEventListener('click', function() { window.ThemeCustomize.toggle(); });
+      document.body.appendChild(customBtn);
+
+      window.ThemeCustomize.onUpdate(function(config) {
+        if (config.agentNames) {
+          Object.keys(config.agentNames).forEach(function(aid) {
+            var label = app.labelElements.get(aid);
+            if (label) label.textContent = config.agentNames[aid];
+          });
+        }
+        if (config.agentBuildings && window.AgentRoutines) {
+          Object.keys(config.agentBuildings).forEach(function(aid) {
+            var state = window.AgentRoutines.getState(aid);
+            if (state) state.building = config.agentBuildings[aid];
+          });
+        }
+      });
+    }
+
+    console.log('🏰 Medieval integration: routines + bubbles + chat + drag + kanban + customize active');
   }
 
   if (document.readyState === 'loading') {

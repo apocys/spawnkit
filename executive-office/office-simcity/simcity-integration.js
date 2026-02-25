@@ -100,6 +100,61 @@
         });
       }).catch(function() {});
     }, 10000);
+
+    // ── WS-4: Kanban Board ───────────────────────────────────
+    if (window.KanbanBoard) {
+      var kanbanContainer = document.createElement('div');
+      kanbanContainer.id = 'simcityKanban';
+      kanbanContainer.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;z-index:150;display:none;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);';
+      document.body.appendChild(kanbanContainer);
+      var kanbanInner = document.createElement('div');
+      kanbanInner.style.cssText = 'width:90%;max-width:1000px;height:80vh;margin:10vh auto;';
+      kanbanContainer.appendChild(kanbanInner);
+
+      var agentList = [];
+      agents.forEach(function(a) { agentList.push({ id: a.name, name: a.name, emoji: a.emoji }); });
+      window.KanbanBoard.init(kanbanInner, { theme: 'simcity', agents: agentList, storageKey: 'spawnkit-simcity-missions' });
+
+      kanbanContainer.addEventListener('click', function(e) { if (e.target === kanbanContainer) { kanbanContainer.style.display = 'none'; } });
+
+      var kanbanBtn = document.createElement('button');
+      kanbanBtn.textContent = '📋';
+      kanbanBtn.title = 'Mission Board';
+      kanbanBtn.style.cssText = 'position:fixed;bottom:20px;right:80px;z-index:101;width:48px;height:48px;border-radius:50%;background:rgba(20,25,35,0.9);border:1px solid rgba(50,200,100,0.3);color:#B0FFB0;font-size:20px;cursor:pointer;';
+      kanbanBtn.addEventListener('click', function() { kanbanContainer.style.display = kanbanContainer.style.display === 'none' ? 'block' : 'none'; });
+      document.body.appendChild(kanbanBtn);
+    }
+
+    // ── WS-5: Customization Panel ────────────────────────────
+    if (window.ThemeCustomize) {
+      var agentData = [];
+      agents.forEach(function(a) { agentData.push({ id: a.name, name: a.name, emoji: a.emoji, role: a.role }); });
+      window.ThemeCustomize.init({
+        theme: 'simcity',
+        agents: agentData,
+        buildings: [],
+        characters: [],
+        storageKey: 'spawnkit-simcity-custom',
+      });
+
+      var customBtn = document.createElement('button');
+      customBtn.textContent = '⚙️';
+      customBtn.title = 'Customize';
+      customBtn.style.cssText = 'position:fixed;bottom:20px;right:140px;z-index:101;width:48px;height:48px;border-radius:50%;background:rgba(20,25,35,0.9);border:1px solid rgba(50,200,100,0.3);color:#B0FFB0;font-size:20px;cursor:pointer;';
+      customBtn.addEventListener('click', function() { window.ThemeCustomize.toggle(); });
+      document.body.appendChild(customBtn);
+
+      window.ThemeCustomize.onUpdate(function(config) {
+        if (config.agentNames) {
+          agents.forEach(function(a) {
+            if (config.agentNames[a.name]) {
+              var el = labelEls[a.name];
+              if (el) el.innerHTML = '<span class="dot" style="background:' + (config.agentColors && config.agentColors[a.name] || a.color) + '"></span>' + a.emoji + ' ' + config.agentNames[a.name];
+            }
+          });
+        }
+      });
+    }
   }
 
   // Wait 2 seconds after load for canvas/chars to initialize
