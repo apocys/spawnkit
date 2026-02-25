@@ -8,7 +8,7 @@ const ZONES = [
     { name: 'forge',     x: 8,   z: 16,  r: 3, emoji: '🔨', phrase: 'The steel sings!' },
     { name: 'market',    x: 5,   z: 20,  r: 3, emoji: '💰', phrase: 'Fresh wares!' },
     { name: 'chapel',    x: -6,  z: 20,  r: 3, emoji: '🙏', phrase: 'May the light guide us.' },
-    { name: 'castle',    x: 0,   z: 0,   r: 8, emoji: '👑', phrase: 'For the realm!' },
+    { name: 'castle',    x: 0,   z: 0,   r: 8, emoji: '🏰', phrase: 'For the realm!' },
     { name: 'mission',   x: -8,  z: 16,  r: 3, emoji: '⚔️', phrase: 'To battle, knights!' },
     { name: 'graveyard', x: -15, z: -10, r: 5, emoji: '💀', phrase: '...silence...' },
     { name: 'farm',      x: -16, z: 10,  r: 5, emoji: '🌾', phrase: 'Good harvest today!' },

@@ -387,17 +387,19 @@ class MedievalCastle3D {
         // MAIN KEEP — 8-story tower at scale 1.0 (pieces tile perfectly)
         // ─────────────────────────────────────────────────────────────────
         const ks = 1.0;
-        // Keep tower — 0.93 floor spacing eliminates visible gaps between pieces
-        var kf = 0.93; // floor height for tight stacking
-        defs.push({ path: 'assets/castle/tower-square-base-color.glb',          x: 0, y: 0,      z: 0, ry: 0, scale: 1, label: 'Keep base' });
-        defs.push({ path: 'assets/castle/tower-square-mid-windows.glb',         x: 0, y: kf*1,   z: 0, ry: 0, scale: 1, label: 'Keep mid 1' });
-        defs.push({ path: 'assets/castle/tower-square-mid-color.glb',           x: 0, y: kf*2,   z: 0, ry: 0, scale: 1, label: 'Keep mid 2' });
-        defs.push({ path: 'assets/castle/tower-square-mid-windows.glb',         x: 0, y: kf*3,   z: 0, ry: 0, scale: 1, label: 'Keep mid 3' });
-        defs.push({ path: 'assets/castle/tower-square-mid-color.glb',           x: 0, y: kf*4,   z: 0, ry: 0, scale: 1, label: 'Keep mid 4' });
-        defs.push({ path: 'assets/castle/tower-square-mid-windows.glb',         x: 0, y: kf*5,   z: 0, ry: 0, scale: 1, label: 'Keep mid 5' });
-        defs.push({ path: 'assets/castle/tower-square-mid-open.glb',            x: 0, y: kf*6,   z: 0, ry: 0, scale: 1, label: 'Keep mid 6' });
-        defs.push({ path: 'assets/castle/tower-square-top-roof-high.glb',       x: 0, y: kf*7,   z: 0, ry: 0, scale: 1, label: 'Keep roof' });
-        defs.push({ path: 'assets/castle/flag-wide.glb',                        x: 0, y: kf*8,   z: 0, ry: 0, scale: 1, label: 'Keep flag' });
+        // Keep tower — scale 1.05 vertically to fill micro-gaps between pieces
+        // GLB pieces are ~1.01 units tall. Integer stacking + slight Y-scale overlap.
+        var ks = 1; // tower piece scale
+        var tsy = 1.05; // Y-scale stretch to fill gaps
+        defs.push({ path: 'assets/castle/tower-square-base-color.glb',          x: 0, y: 0, z: 0, ry: 0, scale: ks, scaleY: tsy, label: 'Keep base' });
+        defs.push({ path: 'assets/castle/tower-square-mid-windows.glb',         x: 0, y: 1, z: 0, ry: 0, scale: ks, scaleY: tsy, label: 'Keep mid 1' });
+        defs.push({ path: 'assets/castle/tower-square-mid-color.glb',           x: 0, y: 2, z: 0, ry: 0, scale: ks, scaleY: tsy, label: 'Keep mid 2' });
+        defs.push({ path: 'assets/castle/tower-square-mid-windows.glb',         x: 0, y: 3, z: 0, ry: 0, scale: ks, scaleY: tsy, label: 'Keep mid 3' });
+        defs.push({ path: 'assets/castle/tower-square-mid-color.glb',           x: 0, y: 4, z: 0, ry: 0, scale: ks, scaleY: tsy, label: 'Keep mid 4' });
+        defs.push({ path: 'assets/castle/tower-square-mid-windows.glb',         x: 0, y: 5, z: 0, ry: 0, scale: ks, scaleY: tsy, label: 'Keep mid 5' });
+        defs.push({ path: 'assets/castle/tower-square-mid-open.glb',            x: 0, y: 6, z: 0, ry: 0, scale: ks, scaleY: tsy, label: 'Keep mid 6' });
+        defs.push({ path: 'assets/castle/tower-square-top-roof-high.glb',       x: 0, y: 7, z: 0, ry: 0, scale: ks, label: 'Keep roof' });
+        defs.push({ path: 'assets/castle/flag-wide.glb',                        x: 0, y: 8, z: 0, ry: 0, scale: ks, label: 'Keep flag' });
         // Keep entrance details at scale 1
         defs.push({ path: 'assets/castle/door.glb',                x:  0,   y: 0, z:  0.5, ry: 0, scale: 1, label: 'Keep door' });
         defs.push({ path: 'assets/castle/stairs-stone-square.glb', x:  0,   y: 0, z:  1.5, ry: 0, scale: 1, label: 'Keep stairs' });
@@ -413,9 +415,9 @@ class MedievalCastle3D {
         ];
         innerHexTowers.forEach((tc) => {
             defs.push({ path: 'assets/castle/tower-hexagon-base.glb', x: tc.x, y: 0,       z: tc.z, ry: 0, scale: 1,   label: tc.label + ' base' });
-            defs.push({ path: 'assets/castle/tower-hexagon-mid.glb',  x: tc.x, y: kf*1,   z: tc.z, ry: 0, scale: 1,   label: tc.label + ' mid' });
-            defs.push({ path: 'assets/castle/tower-hexagon-roof.glb', x: tc.x, y: kf*2,   z: tc.z, ry: 0, scale: 1,   label: tc.label + ' roof' });
-            defs.push({ path: 'assets/castle/tower-hexagon-top.glb',  x: tc.x, y: kf*3,   z: tc.z, ry: 0, scale: 1,   label: tc.label + ' top' });
+            defs.push({ path: 'assets/castle/tower-hexagon-mid.glb',  x: tc.x, y: 1,   z: tc.z, ry: 0, scale: 1,   label: tc.label + ' mid' });
+            defs.push({ path: 'assets/castle/tower-hexagon-roof.glb', x: tc.x, y: 2,   z: tc.z, ry: 0, scale: 1,   label: tc.label + ' roof' });
+            defs.push({ path: 'assets/castle/tower-hexagon-top.glb',  x: tc.x, y: 3,   z: tc.z, ry: 0, scale: 1,   label: tc.label + ' top' });
             defs.push({ path: 'assets/castle/flag-pennant.glb',       x: tc.x, y: 4, z: tc.z, ry: tc.ryFlag, scale: 1, label: tc.label + ' flag' });
         });
 
@@ -424,7 +426,7 @@ class MedievalCastle3D {
         for (let xi = -6; xi <= 6; xi += 1) {
             const isDoor = xi === 0;
             defs.push({
-                path: isDoor ? 'assets/castle/wall-narrow-gate.glb' : 'assets/castle/wall-half.glb',
+                path: 'assets/castle/wall-half.glb',
                 x: xi, y: 0, z: -7, ry: 0, scale: 1, label: 'Inner N wall'
             });
         }
@@ -432,7 +434,7 @@ class MedievalCastle3D {
         for (let xi = -6; xi <= 6; xi += 1) {
             const isDoor = xi === 0;
             defs.push({
-                path: isDoor ? 'assets/castle/wall-narrow-gate.glb' : 'assets/castle/wall-half.glb',
+                path: 'assets/castle/wall-half.glb',
                 x: xi, y: 0, z: 7, ry: 0, scale: 1, label: 'Inner S wall'
             });
         }
@@ -442,7 +444,7 @@ class MedievalCastle3D {
         for (let zi = -6; zi <= 6; zi += 1) {
             const isDoor = zi === 0;
             defs.push({
-                path: isDoor ? 'assets/castle/wall-narrow-gate.glb' : 'assets/castle/wall-half.glb',
+                path: 'assets/castle/wall-half.glb',
                 x: 7, y: 0, z: zi, ry: Math.PI / 2, scale: 1, label: 'Inner E wall'
             });
         }
@@ -450,7 +452,7 @@ class MedievalCastle3D {
         for (let zi = -6; zi <= 6; zi += 1) {
             const isDoor = zi === 0;
             defs.push({
-                path: isDoor ? 'assets/castle/wall-narrow-gate.glb' : 'assets/castle/wall-half.glb',
+                path: 'assets/castle/wall-half.glb',
                 x: -7, y: 0, z: zi, ry: Math.PI / 2, scale: 1, label: 'Inner W wall'
             });
         }
@@ -466,13 +468,13 @@ class MedievalCastle3D {
 
         // -- Outer wall N side (z=-11), 1-unit intervals for seamless narrow walls
         for (let xi = -10; xi <= 10; xi += 1) {
-            defs.push({ path: 'assets/castle/wall-narrow.glb', x: xi, y: 0, z: -11, ry: 0, scale: 1, label: 'Outer N wall' });
+            defs.push({ path: 'assets/castle/wall-half.glb', x: xi, y: 0, z: -11, ry: 0, scale: 1, label: 'Outer N wall' });
         }
         // -- Outer wall S side (z=11) — south entrance gate at centre
         for (let xi = -10; xi <= 10; xi += 1) {
             const isSGate = xi === 0;
             defs.push({
-                path: isSGate ? 'assets/castle/wall-narrow-gate.glb' : 'assets/castle/wall-narrow.glb',
+                path: isSGate ? 'assets/castle/wall-half.glb' : 'assets/castle/wall-half.glb',
                 x: xi, y: 0, z: 11, ry: 0, scale: 1, label: 'Outer S wall'
             });
         }
@@ -482,11 +484,11 @@ class MedievalCastle3D {
 
         // -- Outer wall E side (x=11), 1-unit intervals
         for (let zi = -10; zi <= 10; zi += 1) {
-            defs.push({ path: 'assets/castle/wall-narrow.glb', x: 11, y: 0, z: zi, ry: Math.PI / 2, scale: 1, label: 'Outer E wall' });
+            defs.push({ path: 'assets/castle/wall-half.glb', x: 11, y: 0, z: zi, ry: Math.PI / 2, scale: 1, label: 'Outer E wall' });
         }
         // -- Outer wall W side (x=-11), 1-unit intervals
         for (let zi = -10; zi <= 10; zi += 1) {
-            defs.push({ path: 'assets/castle/wall-narrow.glb', x: -11, y: 0, z: zi, ry: Math.PI / 2, scale: 1, label: 'Outer W wall' });
+            defs.push({ path: 'assets/castle/wall-half.glb', x: -11, y: 0, z: zi, ry: Math.PI / 2, scale: 1, label: 'Outer W wall' });
         }
 
         // -- Outer wall 4 CORNERS — wall-corner-half-tower
@@ -508,8 +510,8 @@ class MedievalCastle3D {
         ];
         outerSquareTowers.forEach((ot) => {
             defs.push({ path: 'assets/castle/tower-base.glb',              x: ot.x, y: 0, z: ot.z, ry: ot.ry, scale: 1, label: ot.label + ' base' });
-            defs.push({ path: 'assets/castle/tower-square-mid-color.glb',  x: ot.x, y: kf*1, z: ot.z, ry: ot.ry, scale: 1, label: ot.label + ' mid' });
-            defs.push({ path: 'assets/castle/tower-top.glb',               x: ot.x, y: kf*2, z: ot.z, ry: ot.ry, scale: 1, label: ot.label + ' top' });
+            defs.push({ path: 'assets/castle/tower-square-mid-color.glb',  x: ot.x, y: 1, z: ot.z, ry: ot.ry, scale: 1, label: ot.label + ' mid' });
+            defs.push({ path: 'assets/castle/tower-top.glb',               x: ot.x, y: 2, z: ot.z, ry: ot.ry, scale: 1, label: ot.label + ' top' });
             defs.push({ path: 'assets/castle/flag-banner-short.glb',       x: ot.x, y: 3, z: ot.z, ry: ot.ry, scale: 1, label: ot.label + ' flag' });
         });
 
@@ -537,8 +539,8 @@ class MedievalCastle3D {
         // Slant roofs on inner bailey walls for added silhouette
         defs.push({ path: 'assets/castle/tower-slant-roof.glb',       x:  0,  y: 0, z: -7.5, ry: 0,           scale: 1, label: 'Inner N roof accent' });
         defs.push({ path: 'assets/castle/tower-slant-roof.glb',       x:  0,  y: 0, z:  7.5, ry: Math.PI,     scale: 1, label: 'Inner S roof accent' });
-        defs.push({ path: 'assets/castle/tower-square-top-color.glb', x:  7,  y: kf*1, z:  0,   ry: Math.PI / 2, scale: 1, label: 'Inner E wall top' });
-        defs.push({ path: 'assets/castle/tower-square-top-color.glb', x: -7,  y: kf*1, z:  0,   ry: Math.PI / 2, scale: 1, label: 'Inner W wall top' });
+        defs.push({ path: 'assets/castle/tower-square-top-color.glb', x:  7,  y: 1, z:  0,   ry: Math.PI / 2, scale: 1, label: 'Inner E wall top' });
+        defs.push({ path: 'assets/castle/tower-square-top-color.glb', x: -7,  y: 1, z:  0,   ry: Math.PI / 2, scale: 1, label: 'Inner W wall top' });
         // Wall studs on outer walls
         defs.push({ path: 'assets/castle/wall-stud.glb',              x: -7,  y: 0, z: -11,  ry: 0,           scale: 1, label: 'Outer N stud W' });
         defs.push({ path: 'assets/castle/wall-stud.glb',              x:  7,  y: 0, z: -11,  ry: 0,           scale: 1, label: 'Outer N stud E' });
@@ -557,14 +559,14 @@ class MedievalCastle3D {
         defs.push({ path: 'assets/castle/wall-half-modular.glb',      x: -2,  y: 0, z:  3,   ry: 0,           scale: 1, label: 'Keep courtyard wall W' });
         defs.push({ path: 'assets/castle/wall-half-modular.glb',      x:  2,  y: 0, z:  3,   ry: 0,           scale: 1, label: 'Keep courtyard wall E' });
         // Top-wood hex tower accent (one variant for variety)
-        defs.push({ path: 'assets/castle/tower-hexagon-top-wood.glb', x: -7,  y: kf*4, z: -7, ry: 0,           scale: 1, label: 'Inner NW hex top wood' });
+        defs.push({ path: 'assets/castle/tower-hexagon-top-wood.glb', x: -7,  y: 4, z: -7, ry: 0,           scale: 1, label: 'Inner NW hex top wood' });
         // Round roof tops on two outer corner towers for visual variety
         defs.push({ path: 'assets/castle/tower-square-top-roof-rounded.glb', x: -11, y: 3, z: -11, ry: 0, scale: 1, label: 'Outer NW round roof' });
         defs.push({ path: 'assets/castle/tower-square-top-roof-rounded.glb', x:  11, y: 3, z:  11, ry: 0, scale: 1, label: 'Outer SE round roof' });
         // Square arch on outer north wall mid-tower
         defs.push({ path: 'assets/castle/tower-square-arch.glb',      x:  0,  y: 0, z: -11.5, ry: Math.PI,   scale: 1, label: 'Outer N arch' });
         // Mid-door tower piece on keep outer face
-        defs.push({ path: 'assets/castle/tower-square-mid-door.glb',  x:  0,  y: kf*1, z: 0.5, ry: 0,           scale: 1,   label: 'Keep mid door' });
+        defs.push({ path: 'assets/castle/tower-square-mid-door.glb',  x:  0,  y: 1, z: 0.5, ry: 0,           scale: 1,   label: 'Keep mid door' });
         // Base-border accent at base of keep
         defs.push({ path: 'assets/castle/tower-square-base-border.glb', x: 0, y: 0, z: 0,    ry: 0,           scale: ks,  label: 'Keep base border' });
         // Ground terrain patches around base
@@ -631,6 +633,10 @@ class MedievalCastle3D {
         model.rotation.y = def.ry || 0;
         if (def.scale && def.scale !== 1) {
             model.scale.setScalar(def.scale);
+        }
+        // Optional Y-scale stretch to fill gaps between stacked pieces
+        if (def.scaleY) {
+            model.scale.y = def.scaleY;
         }
 
         // Enable shadows on all meshes
