@@ -215,26 +215,12 @@
     if (window.SkillForge) window.SkillForge.open();
   }
 
-  // ── Mission filter: only show isolated (mission) sessions ──────────────────
+  // ── Mission filter: only subagent sessions (spawned via /mission or sessions_spawn) ──
 
   function isMissionSession(session) {
-    // A mission is an isolated/spawned sub-agent session — not the main session
-    var kind = String(session.kind || session.type || '').toLowerCase();
-    var key = String(session.key || '');
-    
-    // Include isolated sessions (spawned via /mission or sessions_spawn)
-    if (kind === 'isolated' || kind === 'subagent' || kind === 'spawn') return true;
-    
-    // Include any session with a label (missions typically have labels)
-    if (session.label && session.label !== 'main') return true;
-    
-    // Exclude main sessions
-    if (kind === 'main' || key.indexOf(':main:') !== -1) return false;
-    
-    // Exclude cron-type sessions
-    if (kind === 'cron') return false;
-    
-    return false;
+    var kind = String(session.kind || '').toLowerCase();
+    // Only subagent sessions are real missions — everything else (main, cron, whatsapp groups) is excluded
+    return kind === 'subagent';
   }
 
   // ── History List ───────────────────────────────────────────────────────────
