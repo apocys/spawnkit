@@ -105,7 +105,14 @@
     var msg = el('div', {class:'dw-msg dw-msg-success'}, '✅ This is the live demo. No setup required. Click around and explore!');
     d.appendChild(msg);
     var btn = el('button', {class:'dw-btn dw-btn-primary'}, 'Start Exploring →');
-    btn.addEventListener('click', window.DeployWizard.close);
+    btn.addEventListener('click', function() {
+      window.DeployWizard.close();
+      // Resolve auth gate so app initializes in demo mode
+      if (typeof window.__skAuthResolve === 'function') {
+        window.__skAuthResolve();
+        window.__skAuthResolve = null;
+      }
+    });
     d.appendChild(btn);
   }
 
