@@ -448,9 +448,7 @@
 
         function openMailbox(tab) {
             if (typeof tab === 'object') tab = undefined; // Handle event object
-            closeTodoPanel();
-            closeDetailPanel();
-            closeChatPanel(); // Close old chat panel if open
+            closeAllPanels();
             mailboxOverlay.classList.add('open');
             
             // Switch to specified tab or default to Messages when opened via mailbox button
@@ -533,8 +531,7 @@
                 return;
             }
             
-            closeMailbox();
-            closeTodoPanel();
+            closeAllPanels();
 
             var agent = AGENTS[agentId] || (window._spawnkitAgents && window._spawnkitAgents[agentId]);
             if (!agent) { console.warn('Agent registry unavailable for:', agentId); return; }
@@ -1301,8 +1298,7 @@
 
         window.openMeetingPanel = openMeetingPanel;
         async function openMeetingPanel() {
-            closeTodoPanel(); // Close TODO panel if open
-            closeMailbox();   // Close mailbox if open
+            closeAllPanels();
 
             var activeSubagents = [];
             if (API) {
