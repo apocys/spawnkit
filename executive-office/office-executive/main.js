@@ -2915,6 +2915,14 @@
             closeCronPanel();
             closeMemoryPanel();
             closeRemotePanel();
+            // Close any remaining overlays not covered above
+            ['missionsOverlay','settingsOverlay','chatHistoryOverlay',
+             'addAgentOverlay','orchestrationOverlay','activateAgentModal',
+             'missionControlOverlay'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.classList.remove('open');
+            });
+            document.body.style.overflow = '';
         }
 
         /* ═══════════════════════════════════════════════

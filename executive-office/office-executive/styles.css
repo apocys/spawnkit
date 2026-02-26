@@ -4,6 +4,37 @@
            SVG Avatars + Hierarchy View + Agent TODO Panel
            ═══════════════════════════════════════════════════════════════ */
 
+/* ── Z-Index Scale (single source of truth) ──────────────────────────────
+   100  base panels / dropdowns
+   200  side panels (cron, remote, settings, missions, chat)
+   300  full-screen overlays (add-agent, orchestration, chat-history)
+   400  dialogs / modals (activate-agent, meeting)
+   500  Mission Control (full-screen takeover)
+   9000 deploy wizard / skill marketplace / use-case explorer
+   9999 auth overlay (always on top)
+   ──────────────────────────────────────────────────────────────────── */
+:root {
+  --z-panel:          200;
+  --z-overlay:        300;
+  --z-dialog:         400;
+  --z-mission-ctrl:   500;
+  --z-wizard:        9000;
+  --z-auth:          9999;
+}
+
+/* Apply scale to known overlay containers */
+.cron-overlay           { z-index: var(--z-panel) !important; }
+.chat-history-overlay   { z-index: var(--z-overlay) !important; }
+#addAgentOverlay        { z-index: var(--z-overlay) !important; }
+#orchestrationOverlay   { z-index: var(--z-overlay) !important; }
+.meeting-overlay        { z-index: var(--z-dialog) !important; }
+#activateAgentModal     { z-index: var(--z-dialog) !important; }
+.mc-overlay             { z-index: var(--z-mission-ctrl) !important; }
+#deployWizardOverlay    { z-index: var(--z-wizard) !important; }
+#skillMarketplaceOverlay{ z-index: var(--z-wizard) !important; }
+#useCaseExplorerOverlay { z-index: var(--z-wizard) !important; }
+#authOverlay            { z-index: var(--z-auth) !important; }
+
         :root {
             /* ── Executive Palette ──────────────────────────── */
             --exec-blue: #007AFF;
