@@ -527,3 +527,264 @@
   .md-actions       { gap: 8px; }
   .md-action        { padding: 8px 14px; font-size: 12px; }
 }
+
+/* ============================================================
+   Topbar — Awwwards-quality User Profile + Add Agent
+   Frosted glass, micro-interactions, premium dropdown
+   ============================================================ */
+
+.md-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.3s ease, background 0.3s ease;
+}
+.md-topbar.md-topbar--scrolled {
+  box-shadow: 0 1px 24px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+/* Logo */
+.md-topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #1C1C1E);
+  letter-spacing: -0.02em;
+  user-select: none;
+}
+.md-topbar-logo svg {
+  color: #007AFF;
+  flex-shrink: 0;
+}
+
+/* Right side */
+.md-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+/* Add Agent button */
+.md-topbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--text-secondary, #636366);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+.md-topbar-btn:hover {
+  border-color: #007AFF;
+  color: #007AFF;
+  background: rgba(0, 122, 255, 0.06);
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.08);
+  transform: translateY(-1px);
+}
+.md-topbar-btn:active {
+  transform: scale(0.97) translateY(0);
+}
+.md-topbar-btn svg { flex-shrink: 0; }
+
+/* User pill */
+.md-topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px 5px 5px;
+  border-radius: 48px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  border: 1.5px solid transparent;
+}
+.md-topbar-user:hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+/* Avatar circle */
+.md-topbar-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #007AFF, #5856D6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.md-topbar-user:hover .md-topbar-avatar {
+  transform: scale(1.08);
+  box-shadow: 0 4px 16px rgba(0, 122, 255, 0.35);
+}
+
+.md-topbar-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.md-topbar-username {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #1C1C1E);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.md-topbar-plan {
+  font-size: 11px;
+  font-weight: 600;
+  color: #007AFF;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
+}
+
+.md-topbar-chevron {
+  color: var(--text-tertiary, #AEAEB2);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+.md-topbar-user.md-topbar-user--open .md-topbar-chevron {
+  transform: rotate(180deg);
+}
+
+/* ── Dropdown ── */
+.md-topbar-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12),
+              0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 8px;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+  pointer-events: none;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 51;
+}
+.md-topbar-dropdown.md-topbar-dropdown--open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.md-topbar-dd-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+}
+.md-topbar-dd-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #007AFF, #5856D6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.md-topbar-dd-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #1C1C1E);
+  line-height: 1.3;
+}
+.md-topbar-dd-email {
+  font-size: 12px;
+  color: var(--text-tertiary, #AEAEB2);
+  line-height: 1.3;
+}
+
+.md-topbar-dd-sep {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.06);
+  margin: 4px 10px;
+}
+
+.md-topbar-dd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #1C1C1E);
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
+  text-align: left;
+}
+.md-topbar-dd-item span:first-child {
+  font-size: 15px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.md-topbar-dd-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+.md-topbar-dd-logout {
+  color: #FF453A;
+}
+.md-topbar-dd-logout:hover {
+  background: rgba(255, 69, 58, 0.08);
+}
+
+/* Adjust landing to account for topbar */
+#missionDesk {
+  padding-top: 72px !important;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .md-topbar { padding: 10px 16px; }
+  .md-topbar-user-info { display: none; }
+  .md-topbar-btn span { display: none; }
+  .md-topbar-btn { padding: 7px 10px; }
+  .md-topbar-chevron { display: none; }
+}

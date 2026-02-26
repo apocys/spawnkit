@@ -361,11 +361,6 @@
       '<div class="mc-sl-footer-icons">' +
         '<button class="mc-sl-footer-icon" title="Settings" onclick="if(window.openSettings)window.openSettings()">&#9881;</button>' +
         '<button class="mc-sl-footer-icon" title="Back to Office" onclick="if(window.closeMissionControl)window.closeMissionControl()">&#10005;</button>' +
-        '<button class="mc-sl-footer-icon" title="Logout" onclick="if(confirm(\'Log out of SpawnKit?\')){\
-localStorage.removeItem(\'spawnkit-token\');\
-localStorage.removeItem(\'spawnkit-instance-url\');\
-localStorage.removeItem(\'spawnkit-demo-mode\');\
-window.location.reload();}">&#x23FB;</button>' +
       '</div>';
   }
 
