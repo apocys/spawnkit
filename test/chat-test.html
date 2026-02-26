@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpawnKit Chat Panel - Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            color: #1a1a1a;
+            transition: all 0.3s ease;
+        }
+
+        body.dark {
+            background: #1a1a1a;
+            color: #f5f5f7;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark .header {
+            background: #2a2a2a;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid #d1d1d6;
+            border-radius: 8px;
+            background: white;
+            color: #1a1a1a;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        body.dark .btn {
+            background: #3a3a3a;
+            border-color: #5a5a5a;
+            color: #f5f5f7;
+        }
+
+        .btn:hover {
+            background: #f5f5f7;
+            border-color: #007aff;
+        }
+
+        body.dark .btn:hover {
+            background: #4a4a4a;
+        }
+
+        .btn.primary {
+            background: #007aff;
+            color: white;
+            border-color: #007aff;
+        }
+
+        .btn.primary:hover {
+            background: #0056cc;
+        }
+
+        .demo-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark .demo-content {
+            background: #2a2a2a;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .demo-section {
+            margin-bottom: 24px;
+        }
+
+        .demo-section h3 {
+            margin: 0 0 12px 0;
+            color: #007aff;
+        }
+
+        .demo-input {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .demo-input input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #d1d1d6;
+            border-radius: 8px;
+            background: #f5f5f7;
+            color: #1a1a1a;
+        }
+
+        body.dark .demo-input input {
+            background: #3a3a3a;
+            border-color: #5a5a5a;
+            color: #f5f5f7;
+        }
+
+        .demo-input input:focus {
+            outline: none;
+            border-color: #007aff;
+        }
+
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        body.dark .log {
+            background: #1e1e1e;
+            border-color: #404040;
+            color: #d4d4d4;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+        }
+
+        .log-entry.user {
+            color: #007aff;
+        }
+
+        .log-entry.system {
+            color: #888;
+        }
+
+        .log-entry.error {
+            color: #ff3b30;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .feature-card {
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007aff;
+        }
+
+        body.dark .feature-card {
+            background: #1e1e1e;
+        }
+
+        .feature-card h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .feature-card p {
+            margin: 0;
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        body.dark .feature-card p {
+            color: #aaa;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        body.dark .status-indicator {
+            background: #3a3a3a;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff3b30;
+        }
+
+        .status-indicator.connected .status-dot {
+            background: #34c759;
+        }
+
+        #chatContainer {
+            position: relative;
+        }
+
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 16px;
+                align-items: stretch;
+            }
+
+            .controls {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .demo-content {
+                margin: 0;
+                border-radius: 0;
+            }
+
+            body {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 SpawnKit Chat Panel</h1>
+        <div class="controls">
+            <div class="status-indicator" id="connectionStatus">
+                <div class="status-dot"></div>
+                <span>Relay Disconnected</span>
+            </div>
+            <button class="btn" onclick="toggleTheme()">🌙 Dark Mode</button>
+            <button class="btn" onclick="toggleChat()">💬 Toggle Chat</button>
+            <button class="btn primary" onclick="simulateMessage()">📨 Send Test</button>
+        </div>
+    </div>
+
+    <div class="demo-content">
+        <div class="demo-section">
+            <h3>🎮 Interactive Demo</h3>
+            <p>This is a standalone test of the SpawnKit Chat Panel component. The chat panel appears on the right side of the screen (or bottom on mobile) and shows a rich demo conversation since the OpenClaw relay is not running.</p>
+            
+            <div class="demo-input">
+                <input type="text" id="testMessage" placeholder="Type a test message..." maxlength="500">
+                <button class="btn primary" onclick="sendTestMessage()">Send</button>
+                <select id="agentSelect" class="btn">
+                    <option value="forge">Forge</option>
+                    <option value="sentinel">Sentinel</option>
+                    <option value="echo">Echo</option>
+                    <option value="apomac">ApoMac</option>
+                    <option value="hunter">Hunter</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h3>📊 Message Log</h3>
+            <div class="log" id="messageLog">
+                <div class="log-entry system">Chat panel initialized</div>
+                <div class="log-entry system">Demo mode active - OpenClaw relay not available</div>
+                <div class="log-entry system">Loaded 5 demo agents with rich conversation history</div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h3>✨ Key Features</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>🎨 Apple Messages Design</h4>
+                    <p>Clean, modern interface with smooth animations and responsive design</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🌓 Light/Dark Themes</h4>
+                    <p>Automatic theme switching with CSS variables</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🔄 Real-time Updates</h4>
+                    <p>Polls OpenClaw relay every 10s for new messages and agent status</p>
+                </div>
+                <div class="feature-card">
+                    <h4>👥 Multi-Agent Support</h4>
+                    <p>Tabbed interface for switching between different agents</p>
+                </div>
+                <div class="feature-card">
+                    <h4>📱 Mobile Responsive</h4>
+                    <p>Adapts to mobile with bottom sheet layout</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🔊 Audio Feedback</h4>
+                    <p>Subtle notification sounds for new messages</p>
+                </div>
+                <div class="feature-card">
+                    <h4>💬 Rich Message Types</h4>
+                    <p>Supports agent, user, system, and event messages with icons</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🚀 Demo Fallback</h4>
+                    <p>Rich demo conversation when relay is unavailable</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h3>🔧 API Usage</h3>
+            <pre><code>// Initialize the chat
+const chat = new SpawnKitChat(containerElement, {
+  relayUrl: 'http://localhost:18790',
+  theme: 'dark',
+  onSendMessage: (text, agentId) => console.log('Sent:', text),
+  collapsed: false
+});
+
+// Control the chat
+chat.toggle();                    // Show/hide
+chat.setTheme('light');          // Change theme
+chat.addMessage({                // Add message
+  agent: 'Forge',
+  text: 'Task completed!',
+  type: 'agent'
+});
+chat.destroy();                  // Cleanup</code></pre>
+        </div>
+    </div>
+
+    <div id="chatContainer"></div>
+
+    <!-- Load the chat component -->
+    <script src="../src/components/chat-panel.js"></script>
+
+    <script>
+        let chat;
+        let isDark = false;
+
+        // Initialize chat when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('chatContainer');
+            
+            chat = new SpawnKitChat(container, {
+                relayUrl: window.OC_RELAY_URL || 'http://localhost:18790',
+                theme: 'dark',
+                onSendMessage: handleSendMessage,
+                collapsed: false
+            });
+
+            // Update connection status
+            updateConnectionStatus();
+            
+            // Set up test message input
+            const testInput = document.getElementById('testMessage');
+            testInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendTestMessage();
+                }
+            });
+
+            logMessage('system', 'SpawnKit Chat Panel ready');
+        });
+
+        function handleSendMessage(text, agentId) {
+            logMessage('user', `Sent to ${agentId}: "${text}"`);
+            
+            // Simulate agent response after delay
+            setTimeout(() => {
+                const responses = [
+                    'Message received and processed',
+                    'Task queued for execution',
+                    'Analyzing your request...',
+                    'Processing complete',
+                    'Ready for next instruction'
+                ];
+                const response = responses[Math.floor(Math.random() * responses.length)];
+                
+                chat.addMessage({
+                    type: 'agent',
+                    agent: getAgentName(agentId),
+                    avatar: agentId.substring(0, 2).toUpperCase(),
+                    text: response,
+                    timestamp: new Date()
+                });
+                
+                logMessage('system', `${getAgentName(agentId)} responded: "${response}"`);
+            }, 1000 + Math.random() * 2000);
+        }
+
+        function getAgentName(agentId) {
+            const agents = {
+                'apomac': 'ApoMac',
+                'forge': 'Forge',
+                'sentinel': 'Sentinel',
+                'echo': 'Echo',
+                'hunter': 'Hunter'
+            };
+            return agents[agentId] || agentId;
+        }
+
+        function toggleTheme() {
+            isDark = !isDark;
+            document.body.classList.toggle('dark', isDark);
+            chat.setTheme(isDark ? 'dark' : 'light');
+            
+            const btn = document.querySelector('button[onclick="toggleTheme()"]');
+            btn.textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+            
+            logMessage('system', `Theme switched to ${isDark ? 'dark' : 'light'} mode`);
+        }
+
+        function toggleChat() {
+            const isVisible = chat.toggle();
+            logMessage('system', `Chat panel ${isVisible ? 'shown' : 'hidden'}`);
+        }
+
+        function simulateMessage() {
+            const agents = ['forge', 'sentinel', 'echo', 'apomac', 'hunter'];
+            const messages = [
+                'System optimization complete',
+                'New deployment ready for review',
+                'Security scan passed with 0 vulnerabilities',
+                'Performance metrics looking great',
+                'User engagement up 15% this week',
+                'Backend services running smoothly',
+                'New feature request from customer',
+                'Database backup completed successfully'
+            ];
+
+            const randomAgent = agents[Math.floor(Math.random() * agents.length)];
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+
+            chat.addMessage({
+                type: 'agent',
+                agent: getAgentName(randomAgent),
+                avatar: randomAgent.substring(0, 2).toUpperCase(),
+                text: randomMessage,
+                timestamp: new Date()
+            });
+
+            logMessage('system', `Simulated message from ${getAgentName(randomAgent)}`);
+        }
+
+        function sendTestMessage() {
+            const input = document.getElementById('testMessage');
+            const agentSelect = document.getElementById('agentSelect');
+            const text = input.value.trim();
+            
+            if (!text) return;
+
+            chat.addMessage({
+                type: 'user',
+                text: text,
+                timestamp: new Date()
+            });
+
+            handleSendMessage(text, agentSelect.value);
+            
+            input.value = '';
+            input.focus();
+        }
+
+        function updateConnectionStatus() {
+            // Simulate connection check
+            fetch('http://localhost:18790/api/oc/health', { timeout: 2000 })
+                .then(response => {
+                    if (response.ok) {
+                        document.getElementById('connectionStatus').innerHTML = `
+                            <div class="status-dot" style="background: #34c759;"></div>
+                            <span>Relay Connected</span>
+                        `;
+                        document.getElementById('connectionStatus').classList.add('connected');
+                        logMessage('system', 'OpenClaw relay connection established');
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('connectionStatus').innerHTML = `
+                        <div class="status-dot" style="background: #ff3b30;"></div>
+                        <span>Relay Disconnected</span>
+                    `;
+                    logMessage('system', 'OpenClaw relay not available - using demo mode');
+                });
+        }
+
+        function logMessage(type, message) {
+            const log = document.getElementById('messageLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+            
+            // Keep log size manageable
+            const entries = log.querySelectorAll('.log-entry');
+            if (entries.length > 50) {
+                entries[0].remove();
+            }
+        }
+
+        // Auto-refresh connection status every 10 seconds
+        setInterval(updateConnectionStatus, 10000);
+
+        // Add some demo activity
+        setInterval(() => {
+            if (Math.random() < 0.3) { // 30% chance every 15 seconds
+                simulateMessage();
+            }
+        }, 15000);
+
+        // Simulate typing indicator occasionally
+        setInterval(() => {
+            if (Math.random() < 0.1) { // 10% chance
+                chat.addMessage({
+                    type: 'system',
+                    text: '💭 Agent typing...',
+                    timestamp: new Date()
+                });
+            }
+        }, 8000);
+    </script>
+</body>
+</html>
