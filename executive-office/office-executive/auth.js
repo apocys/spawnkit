@@ -16,8 +16,11 @@
     opts.headers['Authorization'] = 'Bearer ' + token;
     return fetch(url, opts).then(function(resp) {
       if (resp.status === 401) {
-        localStorage.removeItem(STORAGE_KEY);
-        showOverlay();
+        // Only re-show overlay if NOT in demo mode and we actually had a token
+        if (token && !window.__skDemoMode) {
+          localStorage.removeItem(STORAGE_KEY);
+          showOverlay();
+        }
         return Promise.reject(new Error('Unauthorized'));
       }
       return resp;
@@ -144,6 +147,11 @@
   }
 
   // ── Auth gate: called on page load ───────────────────────────────────────
+  // Restore demo mode flag from previous session
+  if (localStorage.getItem('spawnkit-demo-mode') === '1') {
+    window.__skDemoMode = true;
+  }
+
   window.skAuthReady = function(callback) {
     var token = localStorage.getItem(STORAGE_KEY);
     if (token) {
@@ -179,6 +187,10 @@
           window.__skAuthResolve = callback;
           showOverlay();
         });
+    } else if (window.__skDemoMode) {
+      // Demo mode: no token needed, boot straight in
+      console.log('[Auth] Demo mode active — skipping auth overlay');
+      callback();
     } else {
       console.log('[Auth] No token found, showing overlay');
       window.__skAuthResolve = callback;
