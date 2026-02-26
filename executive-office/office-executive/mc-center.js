@@ -175,26 +175,28 @@
 
   function loadChat() {
     showLoading();
-    skF(API_URL + '/api/oc/transcript')
-      .then(function (r) { return r.json(); })
+    // Use /api/oc/chat which returns { messages: [...] }
+    skF(API_URL + '/api/oc/chat')
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (data) {
-        if (data && data.messages) {
-          renderMessages(data.messages);
+        var msgs = data && data.messages ? data.messages : (Array.isArray(data) ? data : []);
+        if (msgs.length > 0) {
+          renderMessages(msgs);
         } else {
-          // fallback: sessions
+          // fallback: try sessions for transcript data
           return skF(API_URL + '/api/oc/sessions')
             .then(function (r) { return r.json(); })
             .then(function (sd) {
               var sessions = sd.sessions || sd || [];
               var main = null;
               for (var i = 0; i < sessions.length; i++) {
-                if (sessions[i].type === 'main' || sessions[i].label === 'main' || i === 0) {
+                if (sessions[i].key === 'agent:main:main' || sessions[i].type === 'main' || i === 0) {
                   main = sessions[i];
                   break;
                 }
               }
-              var msgs = (main && (main.messages || main.transcript)) || [];
-              renderMessages(msgs);
+              var msgs2 = (main && (main.messages || main.transcript)) || [];
+              renderMessages(msgs2);
             });
         }
       })
