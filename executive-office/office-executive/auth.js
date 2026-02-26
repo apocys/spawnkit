@@ -16,8 +16,11 @@
     opts.headers['Authorization'] = 'Bearer ' + token;
     return fetch(url, opts).then(function(resp) {
       if (resp.status === 401) {
-        // Only re-show overlay if NOT in demo mode and we actually had a token
-        if (token && !window.__skDemoMode) {
+        console.warn('[Auth] 401 on', url);
+        // Don't clear token for /api/oc/ or /api/fleet/ — these use the same token
+        // Only clear and re-show overlay for actual auth validation failures
+        var isApiRoute = url.indexOf('/api/oc/') !== -1 || url.indexOf('/api/fleet/') !== -1 || url.indexOf('/api/tasks') !== -1;
+        if (!isApiRoute && token && !window.__skDemoMode) {
           localStorage.removeItem(STORAGE_KEY);
           showOverlay();
         }
