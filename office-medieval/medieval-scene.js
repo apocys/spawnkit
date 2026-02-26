@@ -568,7 +568,7 @@ class MedievalCastle3D {
         // Mid-door tower piece on keep outer face
         defs.push({ path: 'assets/castle/tower-square-mid-door.glb',  x:  0,  y: 1, z: 0.5, ry: 0,           scale: 1,   label: 'Keep mid door' });
         // Base-border accent at base of keep
-        defs.push({ path: 'assets/castle/tower-square-base-border.glb', x: 0, y: 0, z: 0,    ry: 0,           scale: ks,  label: 'Keep base border' });
+        defs.push({ path: 'assets/castle/tower-square-base-border.glb', x: 0, y: 0, z: 0,    ry: 0,           scale: 1,  label: 'Keep base border' });
         // Ground terrain patches around base
         defs.push({ path: 'assets/castle/ground.glb',                 x:  0,  y: 0, z:  0,   ry: 0,           scale: 3,   label: 'Castle ground' });
         defs.push({ path: 'assets/castle/ground-hills.glb',           x: -12, y: 0, z: -12,  ry: 0,           scale: 1.5, label: 'Hills NW' });
