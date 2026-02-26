@@ -195,24 +195,72 @@
 
   function renderDeploy(d) {
     d.appendChild(el('h3', {class:'dw-detail-title'}, '🚀 One-Click Deploy'));
-    d.appendChild(el('p', {class:'dw-detail-sub'}, 'Deploy your own SpawnKit server on Hetzner Cloud in ~90 seconds.'));
+    d.appendChild(el('p', {class:'dw-detail-sub'}, 'Your own SpawnKit server on Hetzner Cloud. Choose your path:'));
+
+    // ── Sub-path picker: BYOT vs Managed ──
+    var subPicker = el('div', {class:'dw-paths', style:'padding:0;margin-bottom:24px'});
+
+    var byotCard = el('div', {class:'dw-path-card'});
+    byotCard.innerHTML = '<div class="dw-path-icon">🔑</div>' +
+      '<div class="dw-path-title">Bring Your Own Token</div>' +
+      '<div class="dw-path-desc">Use your Hetzner API token. Full control over your server. Best price.</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<div class="dw-path-tag dw-tag-blue">Advanced</div>' +
+        '<div class="dw-path-tag dw-tag-green">From €4.51/mo</div>' +
+      '</div>';
+    byotCard.addEventListener('click', function() {
+      subPicker.style.display = 'none';
+      renderDeployBYOT(d);
+    });
+
+    var managedCard = el('div', {class:'dw-path-card'});
+    managedCard.innerHTML = '<div class="dw-path-icon">✨</div>' +
+      '<div class="dw-path-title">Deploy for Me</div>' +
+      '<div class="dw-path-desc">We handle everything — server, SSL, updates, DNS. Just pick a name and go.</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<div class="dw-path-tag dw-tag-purple">Recommended</div>' +
+        '<div class="dw-path-tag dw-tag-orange">€9.99/mo</div>' +
+      '</div>';
+    managedCard.addEventListener('click', function() {
+      subPicker.style.display = 'none';
+      renderDeployManaged(d);
+    });
+
+    subPicker.appendChild(byotCard);
+    subPicker.appendChild(managedCard);
+    d.appendChild(subPicker);
+  }
+
+  // ── BYOT: Bring Your Own Hetzner Token ──
+  function renderDeployBYOT(d) {
+    var wrap = el('div', {id:'dwByotFlow'});
+    var subBack = el('button', {class:'dw-back'}, '← Back to options');
+    subBack.addEventListener('click', function() {
+      wrap.remove();
+      d.querySelector('.dw-paths').style.display = 'grid';
+    });
+    wrap.appendChild(subBack);
+    wrap.appendChild(el('h3', {class:'dw-detail-title', style:'font-size:17px'}, '🔑 Deploy with Your Hetzner Token'));
+    wrap.appendChild(el('p', {class:'dw-detail-sub'}, 'You provide the API token, we provision everything else automatically.'));
+
     var sec1 = el('div', {class:'dw-section'});
     sec1.appendChild(el('div', {class:'dw-label'}, 'Step 1 — Hetzner API Token'));
-    var hRow = el('div', {style:'position:relative'});
     var hInp = el('input', {class:'dw-input', type:'password', placeholder:'hv1-xxxxxxxxxxxx'});
-    hRow.appendChild(hInp);
-    hRow.appendChild(el('div', {style:'margin-top:4px'}, '<a class="dw-link" href="https://console.hetzner.cloud" target="_blank">Get your token at console.hetzner.cloud ↗</a>'));
-    sec1.appendChild(hRow);
+    sec1.appendChild(hInp);
+    sec1.appendChild(el('div', {style:'margin-top:4px'}, '<a class="dw-link" href="https://console.hetzner.cloud" target="_blank">Get your token at console.hetzner.cloud ↗</a>'));
+
     var sec2 = el('div', {class:'dw-section'});
     sec2.appendChild(el('div', {class:'dw-label'}, 'Step 2 — Choose a username'));
     var uInp = el('input', {class:'dw-input', type:'text', placeholder:'yourname (3–20 chars, lowercase)'});
     var uPrev = el('div', {class:'dw-preview'});
     uInp.addEventListener('input', function() {
-      var v = uInp.value.trim();
+      var v = uInp.value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
+      uInp.value = v;
       uPrev.textContent = v ? 'Your instance: ' + v + '.spawnkit.ai' : '';
     });
     sec2.appendChild(uInp);
     sec2.appendChild(uPrev);
+
     var sec3 = el('div', {class:'dw-section'});
     sec3.appendChild(el('div', {class:'dw-label'}, 'Step 3 — Server location'));
     var sel = el('select', {class:'dw-input', style:'cursor:pointer'});
@@ -220,19 +268,117 @@
       sel.appendChild(el('option', {value:o[0]}, o[1]));
     });
     sec3.appendChild(sel);
-    var deployBtn = el('button', {class:'dw-btn dw-btn-primary'}, '🚀 Deploy Now');
-    var comingSoon = el('div');
+
+    var status = el('div');
+    var deployBtn = el('button', {class:'dw-btn dw-btn-primary', style:'width:100%;margin-top:8px'}, '🚀 Deploy Now');
     deployBtn.addEventListener('click', function() {
-      deployBtn.style.display = 'none';
-      comingSoon.innerHTML = '<div class="dw-msg dw-msg-info">🚧 One-Click Deploy is coming soon! Join the waitlist and we\'ll notify you the moment it launches.</div><div class="dw-waitlist-wrap"><div class="dw-label">Your email</div><div class="dw-row"><input class="dw-input" type="email" placeholder="you@example.com" id="dwDeployEmail" style="margin-bottom:0;flex:1"><button class="dw-btn dw-btn-primary" id="dwDeployNotify">Notify me</button></div></div>';
-      var nb = comingSoon.querySelector('#dwDeployNotify');
-      nb.addEventListener('click', function() {
-        var v = comingSoon.querySelector('#dwDeployEmail').value;
-        if (v) { localStorage.setItem('spawnkit-deploy-waitlist', v); nb.textContent = '✓ You\'re on the list!'; nb.disabled = true; }
-      });
+      var token = hInp.value.trim();
+      var username = uInp.value.trim();
+      var location = sel.value;
+      if (!token) { status.innerHTML = '<div class="dw-msg dw-msg-error">❌ Please enter your Hetzner API token.</div>'; return; }
+      if (!username || username.length < 3) { status.innerHTML = '<div class="dw-msg dw-msg-error">❌ Username must be at least 3 characters.</div>'; return; }
+      deployBtn.textContent = '⏳ Provisioning…'; deployBtn.disabled = true;
+      status.innerHTML = '<div class="dw-msg dw-msg-info">🔄 Creating server ' + username + '.spawnkit.ai in ' + location + '…</div>';
+      // TODO: POST to provisioning API
+      setTimeout(function() {
+        status.innerHTML = '<div class="dw-msg dw-msg-info">🚧 Provisioning API coming soon! Your details have been saved. We\'ll email you when BYOT deploy goes live.</div>';
+        localStorage.setItem('spawnkit-byot-username', username);
+        localStorage.setItem('spawnkit-byot-location', location);
+        deployBtn.textContent = '✓ Saved'; deployBtn.disabled = true;
+      }, 1500);
     });
-    d.appendChild(sec1); d.appendChild(sec2); d.appendChild(sec3);
-    d.appendChild(deployBtn); d.appendChild(comingSoon);
+
+    wrap.appendChild(sec1); wrap.appendChild(sec2); wrap.appendChild(sec3);
+    wrap.appendChild(deployBtn); wrap.appendChild(status);
+
+    var pricing = el('div', {style:'margin-top:20px;padding:16px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.06)'});
+    pricing.innerHTML = '<div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.4);margin-bottom:8px">PRICING</div>' +
+      '<div style="font-size:14px;color:#fff;margin-bottom:4px">CX22 — €4.51/mo <span style="color:rgba(255,255,255,0.35)">(2 vCPU, 4 GB RAM, 40 GB SSD)</span></div>' +
+      '<div style="font-size:12px;color:rgba(255,255,255,0.4)">Billed directly by Hetzner to your account. SpawnKit charges nothing extra.</div>';
+    wrap.appendChild(pricing);
+    d.appendChild(wrap);
+  }
+
+  // ── Managed: We handle everything ──
+  function renderDeployManaged(d) {
+    var wrap = el('div', {id:'dwManagedFlow'});
+    var subBack = el('button', {class:'dw-back'}, '← Back to options');
+    subBack.addEventListener('click', function() {
+      wrap.remove();
+      d.querySelector('.dw-paths').style.display = 'grid';
+    });
+    wrap.appendChild(subBack);
+    wrap.appendChild(el('h3', {class:'dw-detail-title', style:'font-size:17px'}, '✨ Managed Deploy'));
+    wrap.appendChild(el('p', {class:'dw-detail-sub'}, 'Pick a name, pay, and we handle everything — server, SSL, updates, backups, DNS.'));
+
+    var sec1 = el('div', {class:'dw-section'});
+    sec1.appendChild(el('div', {class:'dw-label'}, 'Step 1 — Choose your subdomain'));
+    var uInp = el('input', {class:'dw-input', type:'text', placeholder:'yourname (3–20 chars, lowercase)'});
+    var uPrev = el('div', {class:'dw-preview'});
+    uInp.addEventListener('input', function() {
+      var v = uInp.value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
+      uInp.value = v;
+      uPrev.textContent = v ? '🌐 ' + v + '.spawnkit.ai' : '';
+    });
+    sec1.appendChild(uInp);
+    sec1.appendChild(uPrev);
+
+    var sec2 = el('div', {class:'dw-section'});
+    sec2.appendChild(el('div', {class:'dw-label'}, 'Step 2 — Server location'));
+    var sel = el('select', {class:'dw-input', style:'cursor:pointer'});
+    [['fsn1','Falkenstein, Germany'],['nbg1','Nuremberg, Germany'],['hel1','Helsinki, Finland'],['ash','Ashburn, Virginia']].forEach(function(o) {
+      sel.appendChild(el('option', {value:o[0]}, o[1]));
+    });
+    sec2.appendChild(sel);
+
+    // ── Pricing card ──
+    var pricingCard = el('div', {style:'margin:20px 0;padding:20px;background:linear-gradient(135deg,rgba(175,82,222,0.12),rgba(0,122,255,0.08));border:1.5px solid rgba(175,82,222,0.25);border-radius:16px'});
+    pricingCard.innerHTML =
+      '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:12px">' +
+        '<span style="font-size:32px;font-weight:800;color:#fff">€9.99</span>' +
+        '<span style="font-size:14px;color:rgba(255,255,255,0.5)">/month</span>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;color:rgba(255,255,255,0.7)">' +
+        '<div>✅ Hetzner CX22 server</div>' +
+        '<div>✅ Auto SSL certificates</div>' +
+        '<div>✅ yourname.spawnkit.ai</div>' +
+        '<div>✅ Automatic updates</div>' +
+        '<div>✅ Daily backups</div>' +
+        '<div>✅ Priority support</div>' +
+      '</div>' +
+      '<div style="margin-top:12px;font-size:11px;color:rgba(255,255,255,0.35)">Cancel anytime. No lock-in. Server is yours to export.</div>';
+
+    var status = el('div');
+    var payBtn = el('button', {class:'dw-btn dw-btn-primary', style:'width:100%;margin-top:8px;background:linear-gradient(135deg,#af52de,#007AFF);font-size:15px;padding:14px 24px'}, '💳 Subscribe & Deploy — €9.99/mo');
+    payBtn.addEventListener('click', function() {
+      var username = uInp.value.trim();
+      if (!username || username.length < 3) { status.innerHTML = '<div class="dw-msg dw-msg-error">❌ Choose a subdomain first (min 3 chars).</div>'; return; }
+      payBtn.textContent = '⏳ Connecting to Stripe…'; payBtn.disabled = true;
+      // TODO: POST to Stripe Checkout API → redirect
+      setTimeout(function() {
+        status.innerHTML = '<div class="dw-msg dw-msg-info">🚧 Managed deploy launching soon! Join the waitlist below — early subscribers get 50% off the first 3 months.</div>' +
+          '<div class="dw-waitlist-wrap" style="margin-top:12px"><div class="dw-label">Your email</div>' +
+          '<div class="dw-row"><input class="dw-input" type="email" placeholder="you@example.com" id="dwManagedEmail" style="margin-bottom:0;flex:1">' +
+          '<button class="dw-btn dw-btn-primary" id="dwManagedNotify">Join waitlist</button></div></div>';
+        localStorage.setItem('spawnkit-managed-username', username);
+        localStorage.setItem('spawnkit-managed-location', sel.value);
+        payBtn.style.display = 'none';
+        var nb = status.querySelector('#dwManagedNotify');
+        nb.addEventListener('click', function() {
+          var email = status.querySelector('#dwManagedEmail').value;
+          if (email) { localStorage.setItem('spawnkit-managed-waitlist', email); nb.textContent = '✓ You\'re on the list!'; nb.disabled = true; }
+        });
+      }, 1200);
+    });
+
+    wrap.appendChild(sec1); wrap.appendChild(sec2); wrap.appendChild(pricingCard);
+    wrap.appendChild(payBtn); wrap.appendChild(status);
+
+    // Comparison note
+    var compare = el('div', {style:'margin-top:16px;padding:12px 16px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.06)'});
+    compare.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.4)">💡 <strong>Want to save?</strong> Use "Bring Your Own Token" to pay Hetzner directly at €4.51/mo — you just need a <a class="dw-link" href="https://console.hetzner.cloud" target="_blank">Hetzner account</a>.</div>';
+    wrap.appendChild(compare);
+    d.appendChild(wrap);
   }
 
   function buildOverlay() {
