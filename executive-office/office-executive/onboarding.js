@@ -673,6 +673,13 @@ window.__skOnboardingV2 = true;
     setTimeout(function() {
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
     }, 320);
+    // Close Deploy Wizard if still open (z-index stacking issue)
+    if (window.DeployWizard) window.DeployWizard.close();
+    // Resolve auth gate if waiting
+    if (typeof window.__skAuthResolve === 'function') {
+      window.__skAuthResolve();
+      window.__skAuthResolve = null;
+    }
   }
 
   // ── Init ───────────────────────────────────────────────────────────────────
