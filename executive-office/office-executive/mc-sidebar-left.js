@@ -39,6 +39,19 @@
     return 'mission-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
   }
 
+  function fmtTime(ts) {
+    if (!ts) return '';
+    try {
+      var d = new Date(ts);
+      var now = new Date();
+      var diff = (now - d) / 1000;
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      return d.toLocaleDateString();
+    } catch (e) { return ''; }
+  }
+
   // ── State ──────────────────────────────────────────────────────────────────
 
   var _activeMissionId = null;
@@ -76,7 +89,6 @@
     if (!historyList) return;
 
     if (_newMissionFormActive) {
-      // Already open — remove and reset
       var existing = historyList.querySelector('.mc-sl-new-mission-form');
       if (existing) existing.parentNode.removeChild(existing);
       _newMissionFormActive = false;
@@ -161,7 +173,7 @@
     if (_searchActive && existingSearch) {
       existingSearch.parentNode.removeChild(existingSearch);
       _searchActive = false;
-      renderHistory(_currentSessions); // restore full list
+      renderHistory(_currentSessions);
       return;
     }
 
@@ -203,52 +215,111 @@
     if (window.SkillForge) window.SkillForge.open();
   }
 
+  // ── Mission filter: only show isolated (mission) sessions ──────────────────
+
+  function isMissionSession(session) {
+    // A mission is an isolated/spawned sub-agent session — not the main session
+    var kind = String(session.kind || session.type || '').toLowerCase();
+    var key = String(session.key || '');
+    
+    // Include isolated sessions (spawned via /mission or sessions_spawn)
+    if (kind === 'isolated' || kind === 'subagent' || kind === 'spawn') return true;
+    
+    // Include any session with a label (missions typically have labels)
+    if (session.label && session.label !== 'main') return true;
+    
+    // Exclude main sessions
+    if (kind === 'main' || key.indexOf(':main:') !== -1) return false;
+    
+    // Exclude cron-type sessions
+    if (kind === 'cron') return false;
+    
+    return false;
+  }
+
   // ── History List ───────────────────────────────────────────────────────────
 
   function renderHistory(sessions) {
     var historyList = el('mcHistoryList');
     if (!historyList) return;
 
-    // Clear existing history items + label (but keep search bar / form if present)
-    var toRemove = historyList.querySelectorAll('.mc-sl-history-item, .mc-sl-section-label');
+    // Clear existing history items + labels (but keep search bar / form if present)
+    var toRemove = historyList.querySelectorAll('.mc-sl-history-item, .mc-sl-section-label, .mc-sl-empty-state');
     for (var r = 0; r < toRemove.length; r++) {
       toRemove[r].parentNode.removeChild(toRemove[r]);
     }
 
-    // Build combined list: missions from localStorage + passed-in sessions
+    // Build combined list: missions from localStorage + mission sessions from API
     var state = getState();
-    var missions = Array.isArray(state.missions) ? state.missions : [];
+    var localMissions = Array.isArray(state.missions) ? state.missions : [];
 
-    var label = document.createElement('div');
-    label.className = 'mc-sl-section-label';
-    label.textContent = 'Recent';
-    historyList.appendChild(label);
-
-    // Render localStorage missions
-    for (var m = 0; m < missions.length; m++) {
-      historyList.appendChild(buildHistoryItem(missions[m].id, missions[m].name));
-    }
-
-    // Render session items (deduplicate by id vs missions)
-    var missionIds = {};
-    for (var mm = 0; mm < missions.length; mm++) missionIds[missions[mm].id] = true;
-
+    // Filter API sessions to missions only
+    var missionSessions = [];
     if (Array.isArray(sessions)) {
       for (var s = 0; s < sessions.length; s++) {
-        var sess = sessions[s];
-        var sid = sess.id || sess.sessionId || ('sess-' + s);
-        if (missionIds[sid]) continue; // already listed
-        var sname = sess.name || sess.title || sess.label || ('Session ' + (s + 1));
-        historyList.appendChild(buildHistoryItem(sid, sname));
+        if (isMissionSession(sessions[s])) {
+          missionSessions.push(sessions[s]);
+        }
       }
+    }
+
+    // Label
+    var label = document.createElement('div');
+    label.className = 'mc-sl-section-label';
+    label.textContent = 'Mission History';
+    historyList.appendChild(label);
+
+    var totalItems = 0;
+
+    // Render localStorage missions first (user-created from MC)
+    for (var m = 0; m < localMissions.length; m++) {
+      var mission = localMissions[m];
+      var subtitle = mission.status === 'active' ? '🟢' : '✓';
+      historyList.appendChild(buildHistoryItem(mission.id, subtitle + ' ' + mission.name, mission.createdAt));
+      totalItems++;
+    }
+
+    // Render API mission sessions (deduplicate by id vs local missions)
+    var localIds = {};
+    for (var mm = 0; mm < localMissions.length; mm++) localIds[localMissions[mm].id] = true;
+
+    for (var j = 0; j < missionSessions.length; j++) {
+      var sess = missionSessions[j];
+      var sid = sess.id || sess.sessionId || sess.key || ('sess-' + j);
+      if (localIds[sid]) continue;
+
+      var sname = sess.label || sess.name || sess.title || ('Mission ' + (j + 1));
+      var statusIcon = (sess.status === 'active' || sess.status === 'running') ? '🟢' : '✓';
+      historyList.appendChild(buildHistoryItem(sid, statusIcon + ' ' + sname, sess.lastActive || sess.createdAt));
+      totalItems++;
+    }
+
+    // Empty state
+    if (totalItems === 0) {
+      var empty = document.createElement('div');
+      empty.className = 'mc-sl-empty-state';
+      empty.style.cssText = 'padding:20px 12px;text-align:center;color:#AEAEB2;font-size:13px;line-height:1.5;';
+      empty.innerHTML = '🎯<br>No missions yet.<br><span style="font-size:11px;">Use <strong>+ New Mission</strong> or send<br><code style="background:rgba(0,122,255,0.06);padding:2px 6px;border-radius:4px;font-size:11px;">/mission</code> in chat.</span>';
+      historyList.appendChild(empty);
     }
   }
 
-  function buildHistoryItem(id, name) {
+  function buildHistoryItem(id, name, timestamp) {
     var item = document.createElement('div');
     item.className = 'mc-sl-history-item' + (id === _activeMissionId ? ' active' : '');
     item.setAttribute('data-mission-id', escMc(id));
-    item.textContent = truncate(name, 36);
+    
+    var textSpan = document.createElement('span');
+    textSpan.textContent = truncate(name, 36);
+    item.appendChild(textSpan);
+    
+    if (timestamp) {
+      var timeEl = document.createElement('span');
+      timeEl.style.cssText = 'display:block;font-size:11px;color:#AEAEB2;margin-top:1px;';
+      timeEl.textContent = fmtTime(timestamp);
+      item.appendChild(timeEl);
+    }
+
     item.addEventListener('click', function () {
       selectMission(id, name);
     });
@@ -298,7 +369,7 @@
       '</div>' +
       '<div class="mc-sl-footer-icons">' +
         '<button class="mc-sl-footer-icon" title="Settings" onclick="if(window.openSettings)window.openSettings()">&#9881;</button>' +
-        '<button class="mc-sl-footer-icon" title="Logout" onclick="localStorage.clear();location.reload()">&#9167;</button>' +
+        '<button class="mc-sl-footer-icon" title="Back to Office" onclick="if(window.closeMissionControl)window.closeMissionControl()">&#10005;</button>' +
       '</div>';
   }
 

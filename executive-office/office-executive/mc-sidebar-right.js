@@ -22,7 +22,7 @@
   }
 
   function svgTodo() {
-    return '<svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/></svg>';
+    return '<svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="1.5"/></svg>';
   }
 
   // ─── File icon helper ─────────────────────────────────────────────────────────
@@ -91,7 +91,6 @@
       if (!taskList || taskList.length === 0) {
         var empty = document.createElement('div');
         empty.className = 'mc-sr-empty';
-        empty.style.cssText = 'padding:10px 14px;color:rgba(255,255,255,0.4);font-size:13px;';
         empty.textContent = 'No tasks yet.';
         items.appendChild(empty);
         return;
@@ -117,7 +116,6 @@
 
         var textEl = document.createElement('span');
         textEl.className = 'mc-check-text' + ((status === 'done' || status === 'completed') ? ' done' : '');
-        textEl.style.cssText = 'font-size:13px;line-height:1.4;' + ((status === 'done' || status === 'completed') ? 'text-decoration:line-through;color:rgba(255,255,255,0.4);' : 'color:rgba(255,255,255,0.85);');
         textEl.textContent = text;
 
         row.appendChild(iconWrap);
@@ -134,7 +132,6 @@
         renderTasks(list);
       })
       .catch(function () {
-        // Fallback: use tasks passed as argument
         var fallback = [];
         if (tasks && Array.isArray(tasks)) {
           fallback = tasks;
@@ -161,29 +158,31 @@
     container.appendChild(items);
 
     var desc = document.createElement('div');
-    desc.style.cssText = 'padding:8px 14px;color:rgba(255,255,255,0.45);font-size:12px;';
+    desc.className = 'mc-sr-empty';
     desc.textContent = 'View files created during this mission.';
     items.appendChild(desc);
 
     function renderFileList(fileList) {
       if (!fileList || fileList.length === 0) return;
+      // Remove default desc
+      desc.style.display = 'none';
       for (var i = 0; i < fileList.length; i++) {
         var f = fileList[i];
         var fname = typeof f === 'string' ? f : (f.name || f.filename || String(f));
         var row = document.createElement('div');
         row.className = 'mc-file-item';
-        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;border-radius:4px;';
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;border-radius:6px;transition:background 0.15s;';
         row.title = 'Click to open';
         var icon = document.createElement('span');
         icon.style.fontSize = '15px';
         icon.textContent = fileIcon(fname);
         var name = document.createElement('span');
-        name.style.cssText = 'font-size:13px;color:rgba(255,255,255,0.75);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+        name.style.cssText = 'font-size:13px;color:#636366;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
         name.textContent = escMc(fname);
         row.appendChild(icon);
         row.appendChild(name);
         (function (file) {
-          row.addEventListener('mouseenter', function () { row.style.background = 'rgba(255,255,255,0.06)'; });
+          row.addEventListener('mouseenter', function () { row.style.background = 'rgba(0,0,0,0.04)'; });
           row.addEventListener('mouseleave', function () { row.style.background = ''; });
           row.addEventListener('click', function () {
             var url = typeof file === 'object' && file.url ? file.url : null;
@@ -194,7 +193,6 @@
       }
     }
 
-    // Pull files from API tasks response if available
     skF(API_URL + '/api/tasks')
       .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function (data) {
@@ -209,7 +207,6 @@
         renderFileList(files);
       })
       .catch(function () {
-        // No files from API; check tasks arg
         var files = [];
         if (tasks && Array.isArray(tasks)) {
           for (var i = 0; i < tasks.length; i++) {
@@ -234,14 +231,14 @@
 
     var label = document.createElement('div');
     label.className = 'mc-ctx-label';
-    label.style.cssText = 'padding:6px 14px 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.35);font-weight:600;';
+    label.style.cssText = 'padding:6px 14px 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#AEAEB2;font-weight:600;';
     label.textContent = 'Connectors';
     items.appendChild(label);
 
     function makeConnectorItem(icon, name, detail, expandContent) {
       var row = document.createElement('div');
       row.className = 'mc-ctx-item';
-      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;border-radius:4px;position:relative;';
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;border-radius:6px;position:relative;transition:background 0.15s;';
 
       var iconEl = document.createElement('div');
       iconEl.className = 'mc-ctx-icon';
@@ -250,29 +247,28 @@
 
       var nameEl = document.createElement('span');
       nameEl.className = 'mc-ctx-name';
-      nameEl.style.cssText = 'font-size:13px;color:rgba(255,255,255,0.8);flex:1;';
+      nameEl.style.cssText = 'font-size:13px;color:#1C1C1E;flex:1;';
       nameEl.textContent = name;
 
       var detailEl = document.createElement('span');
-      detailEl.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;';
+      detailEl.style.cssText = 'font-size:11px;color:#AEAEB2;margin-left:auto;';
       detailEl.textContent = detail || '';
 
       row.appendChild(iconEl);
       row.appendChild(nameEl);
       row.appendChild(detailEl);
 
-      // Expand inline on click
       var expanded = false;
       var expandEl = null;
       if (expandContent) {
-        row.addEventListener('mouseenter', function () { row.style.background = 'rgba(255,255,255,0.06)'; });
+        row.addEventListener('mouseenter', function () { row.style.background = 'rgba(0,0,0,0.04)'; });
         row.addEventListener('mouseleave', function () { row.style.background = ''; });
         row.addEventListener('click', function () {
           expanded = !expanded;
           if (expanded) {
             if (!expandEl) {
               expandEl = document.createElement('div');
-              expandEl.style.cssText = 'padding:6px 14px 8px 38px;font-size:12px;color:rgba(255,255,255,0.45);border-top:1px solid rgba(255,255,255,0.06);';
+              expandEl.style.cssText = 'padding:6px 14px 8px 38px;font-size:12px;color:#636366;border-top:1px solid rgba(0,0,0,0.06);';
               expandEl.textContent = expandContent;
             }
             row.parentNode.insertBefore(expandEl, row.nextSibling);
@@ -305,7 +301,6 @@
         }
       })
       .catch(function () {
-        // Fallback static skill
         items.appendChild(makeConnectorItem('⚡', 'Web search', '', 'Brave Search API connector.'));
       });
   }
