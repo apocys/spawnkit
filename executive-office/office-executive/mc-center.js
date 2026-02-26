@@ -103,7 +103,7 @@
   if (elBody) {
     elBody.addEventListener('scroll', function () {
       var atBottom = elBody.scrollTop + elBody.clientHeight >= elBody.scrollHeight - 40;
-      scrollBtn.style.display = atBottom ? 'none' : '';
+      scrollBtn.style.display = atBottom ? 'none' : 'flex';
     });
   }
 
@@ -312,7 +312,7 @@
         var sessions = data.sessions || data || [];
         elBody.innerHTML = renderAgentTree(sessions);
         // agent click → load sub-transcript
-        var rows = elBody.querySelectorAll('.mc-agent-row');
+        var rows = elBody.querySelectorAll('.mc-agent-item');
         for (var i = 0; i < rows.length; i++) {
           rows[i].addEventListener('click', function () {
             var sid = this.dataset.sessionId;
@@ -328,7 +328,7 @@
   function loadAgentTranscript(sessionId) {
     var prev = elBody.innerHTML;
     elBody.innerHTML = '<div class="mc-subview">' +
-      '<button class="mc-btn mc-btn--back" id="mcBackBtn">← Back</button>' +
+      '<button class="mc-back-btn" id="mcBackBtn">← Back</button>' +
       '<div class="mc-subview-body" id="mcSubBody"><div class="mc-loading"><span class="mc-spinner"></span> Loading…</div></div>' +
       '</div>';
     document.getElementById('mcBackBtn').addEventListener('click', function () {
@@ -499,6 +499,7 @@
   };
 
   /* ── Init ───────────────────────────────────────────────────────── */
+  if (elTitle) elTitle.innerHTML = 'Mission Control <span class="mc-chevron">⌄</span>';
   setTab('chat');
 
 })();
