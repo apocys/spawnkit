@@ -5263,7 +5263,9 @@
             }
 
             if (payload.agents) {
-                var count = payload.agents.length;
+                // Use display team count (6), not OC agent count (may be 1)
+                var displayTeam = document.querySelectorAll('.agent-room');
+                var count = Math.max(payload.agents.length, displayTeam ? displayTeam.length : 6);
                 document.getElementById('statusAgentCount').textContent = count + ' Agent' + (count !== 1 ? 's' : '');
             }
         }
