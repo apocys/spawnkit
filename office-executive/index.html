@@ -3893,7 +3893,7 @@
         }
         // Make API URL available globally for all panels
         if (!window.OC_API_URL) window.OC_API_URL = relayUrl;
-        var relayToken = stored.relayToken || params.get('token') || '';
+        var relayToken = stored.relayToken || localStorage.getItem('spawnkit-token') || params.get('token') || '';
         
         window.OC_RELAY_URL = relayUrl;
         if (relayToken) window.OC_RELAY_TOKEN = relayToken;
