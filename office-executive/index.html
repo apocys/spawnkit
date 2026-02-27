@@ -5263,10 +5263,9 @@
             }
 
             if (payload.agents) {
-                // Use display team count (6), not OC agent count (may be 1)
-                var displayTeam = document.querySelectorAll('.agent-room');
-                var count = Math.max(payload.agents.length, displayTeam ? displayTeam.length : 6);
-                document.getElementById('statusAgentCount').textContent = count + ' Agent' + (count !== 1 ? 's' : '');
+                // Display team is always 6 (CEO suite) — OC may report fewer actual agents
+                var count = Math.max(payload.agents.length, 6);
+                document.getElementById('statusAgentCount').textContent = count + ' Agents';
             }
         }
 
