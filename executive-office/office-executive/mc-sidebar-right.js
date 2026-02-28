@@ -292,9 +292,42 @@
       return row;
     }
 
-    // Static connectors
+    // Dynamic channel connectors — clickable → opens wizard
+    var channelMap = {
+      telegram:  { icon: '📱', name: 'Telegram' },
+      discord:   { icon: '🎮', name: 'Discord' },
+      whatsapp:  { icon: '💚', name: 'WhatsApp' },
+      signal:    { icon: '🔒', name: 'Signal' },
+      imessage:  { icon: '💬', name: 'iMessage' },
+      slack:     { icon: '💼', name: 'Slack' },
+      github:    { icon: '🐙', name: 'GitHub' }
+    };
+
+    var connectedChannels = {};
+    if (window.ChannelOnboarding && window.ChannelOnboarding.getConnectedChannels) {
+      window.ChannelOnboarding.getConnectedChannels().forEach(function(ch) { connectedChannels[ch.id] = ch; });
+    }
+
+    Object.keys(channelMap).forEach(function(chId) {
+      var ch = channelMap[chId];
+      var isConn = !!connectedChannels[chId];
+      var row = makeConnectorItem(ch.icon, ch.name, isConn ? '✓ connected' : 'connect →', isConn ? 'Click to manage connection.' : 'Click to set up ' + ch.name + '.');
+
+      // Override click to open wizard
+      row.replaceWith(row.cloneNode(true));
+      var newRow = items.appendChild(row.cloneNode(true));
+      if (isConn) newRow.querySelector('span:last-child').style.color = '#34C759';
+      newRow.style.cursor = 'pointer';
+      newRow.addEventListener('mouseenter', function () { newRow.style.background = 'rgba(0,0,0,0.04)'; });
+      newRow.addEventListener('mouseleave', function () { newRow.style.background = ''; });
+      newRow.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (window.ChannelOnboarding) window.ChannelOnboarding.open(chId);
+      });
+    });
+
+    // Fleet relay (non-channel, keep static)
     items.appendChild(makeConnectorItem('🔗', 'Fleet Relay', 'active', 'Remote relay connection for multi-node fleet coordination.'));
-    items.appendChild(makeConnectorItem('📱', 'Telegram', 'connected', 'Telegram bot channel — last ping: just now.'));
 
     // Load skills from API
     skF(API_URL + '/api/oc/skills')
