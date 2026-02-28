@@ -934,10 +934,51 @@ window.__skOnboardingV2 = true;
     });
   }
 
+  // Mark a card as connected in the onboarding UI
+  function markCardConnected(channel) {
+    connectedChannels[channel] = true;
+    var card = document.querySelector('.sk-ob-channel-card[data-channel="' + channel + '"]');
+    if (card) {
+      card.classList.add('sk-ob-connected');
+      var status = card.querySelector('.sk-ob-channel-status');
+      var btn = card.querySelector('.sk-ob-channel-btn');
+      if (status) { status.textContent = 'Connected'; status.classList.add('sk-ob-connected'); }
+      if (btn) { btn.textContent = '✓ Connected'; btn.classList.add('sk-ob-connected'); }
+    }
+  }
+
+  // Pre-check which channels are already configured (server + localStorage)
+  function preCheckChannels() {
+    // 1. Check ChannelOnboarding localStorage
+    if (window.ChannelOnboarding && window.ChannelOnboarding.getConnectedChannels) {
+      var saved = window.ChannelOnboarding.getConnectedChannels();
+      saved.forEach(function(ch) { markCardConnected(ch.id); });
+    }
+
+    // 2. Check server-side (async, updates cards when response arrives)
+    fetch('/api/oc/channels/status').then(function(r) { return r.json(); }).then(function(data) {
+      if (data.channels && Array.isArray(data.channels)) {
+        data.channels.forEach(function(ch) {
+          if (ch.connected) markCardConnected(ch.id);
+        });
+      }
+    }).catch(function() { /* silent — offline or no server */ });
+
+    // 3. Check OpenClaw config for already-active channels
+    fetch('/api/oc/config').then(function(r) { return r.json(); }).then(function(cfg) {
+      if (cfg.channels) {
+        Object.keys(cfg.channels).forEach(function(id) {
+          if (cfg.channels[id] && cfg.channels[id].enabled !== false) {
+            markCardConnected(id);
+          }
+        });
+      }
+    }).catch(function() { /* silent */ });
+  }
+
   function initBeat25() {
     var continueBtn = document.getElementById('skObContinueChannels');
     var skipBtn = document.getElementById('skObSkipChannels');
-    var activeWizard = null;
 
     if (continueBtn) {
       continueBtn.addEventListener('click', function() { goToBeat(3); });
@@ -946,64 +987,44 @@ window.__skOnboardingV2 = true;
       skipBtn.addEventListener('click', function() { goToBeat(3); });
     }
 
-    // Channel card click handlers
+    // Pre-check already-configured channels
+    preCheckChannels();
+
+    // Channel card click → open REAL ChannelOnboarding wizard
     var cards = document.querySelectorAll('.sk-ob-channel-card');
     cards.forEach(function(card) {
       var channel = card.getAttribute('data-channel');
-      var btn = card.querySelector('.sk-ob-channel-btn');
-      
+
       card.addEventListener('click', function() {
+        // Already connected → do nothing (or could offer reconnect)
         if (connectedChannels[channel]) return;
-        
-        // Hide any active wizard
-        if (activeWizard) activeWizard.classList.remove('sk-ob-active');
-        
-        // Show this channel's wizard
-        var wizardId = 'skObWizard' + channel.charAt(0).toUpperCase() + channel.slice(1);
-        activeWizard = document.getElementById(wizardId);
-        if (activeWizard) {
-          activeWizard.classList.add('sk-ob-active');
+
+        // Open the real OAuth wizard
+        if (window.ChannelOnboarding && window.ChannelOnboarding.open) {
+          window.ChannelOnboarding.open(channel);
+
+          // Watch for wizard closing → check if channel got connected
+          var checkInterval = setInterval(function() {
+            // Wizard closed when overlay is gone
+            var wizardOverlay = document.querySelector('.sk-cw-overlay');
+            if (!wizardOverlay) {
+              clearInterval(checkInterval);
+              // Check if channel is now connected
+              if (window.ChannelOnboarding.isChannelConnected && window.ChannelOnboarding.isChannelConnected(channel)) {
+                markCardConnected(channel);
+              }
+            }
+          }, 300);
         }
       });
     });
 
-    // Copy button handlers
-    var copyBtns = document.querySelectorAll('.sk-ob-copy-btn');
-    copyBtns.forEach(function(btn) {
-      btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        var text = btn.getAttribute('data-copy') || btn.textContent;
-        navigator.clipboard.writeText(text).then(function() {
-          var original = btn.textContent;
-          btn.textContent = 'Copied!';
-          setTimeout(function() { btn.textContent = original; }, 1500);
-        }).catch(function() {
-          // Fallback selection
-          btn.select();
-        });
-      });
-    });
-
-    // Make connectChannel function global for OAuth buttons
+    // Legacy global connectChannel for any inline onclick attributes
     window.connectChannel = function(channel) {
-      connectedChannels[channel] = true;
-      var card = document.querySelector('[data-channel="' + channel + '"]');
-      if (card) {
-        card.classList.add('sk-ob-connected');
-        var status = card.querySelector('.sk-ob-channel-status');
-        var btn = card.querySelector('.sk-ob-channel-btn');
-        if (status) status.textContent = 'Connected';
-        if (status) status.classList.add('sk-ob-connected');
-        if (btn) {
-          btn.textContent = 'Connected';
-          btn.classList.add('sk-ob-connected');
-        }
-      }
-      
-      // Hide wizard
-      if (activeWizard) {
-        activeWizard.classList.remove('sk-ob-active');
-        activeWizard = null;
+      if (window.ChannelOnboarding && window.ChannelOnboarding.open) {
+        window.ChannelOnboarding.open(channel);
+      } else {
+        markCardConnected(channel);
       }
     };
   }

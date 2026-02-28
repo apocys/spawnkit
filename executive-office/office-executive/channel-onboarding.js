@@ -943,14 +943,39 @@ window.__skChannelOnboarding = true;
       return;
     }
 
-    // Check server-side
+    // Check server-side channels status
     try {
       var result = await apiGet('/api/oc/channels/status');
       if (result.channels) {
         var found = result.channels.find(function(c) { return c.id === state.channel && c.connected; });
         if (found) {
-          state.verifyResult = found;
-          showAlreadyConnected(ch, found);
+          // Also save to localStorage so future checks are instant
+          saveConnected(state.channel, {
+            name: ch.name, icon: ch.icon,
+            details: found.details || found,
+            source: found.source || 'server',
+            connectedAt: found.connectedAt || Date.now()
+          });
+          state.verifyResult = found.details || found;
+          showAlreadyConnected(ch, found.details || found);
+          return;
+        }
+      }
+    } catch(e) { /* continue to auth */ }
+
+    // Also check OpenClaw config directly (channel might be configured in openclaw.json)
+    try {
+      var config = await apiGet('/api/oc/config');
+      if (config && config.channels && config.channels[state.channel]) {
+        var chConf = config.channels[state.channel];
+        if (chConf && chConf.enabled !== false) {
+          saveConnected(state.channel, {
+            name: ch.name, icon: ch.icon,
+            details: { source: 'openclaw', configured: true },
+            connectedAt: Date.now()
+          });
+          state.verifyResult = { source: 'OpenClaw Config', status: 'Active' };
+          showAlreadyConnected(ch, { source: 'OpenClaw Config', status: 'Active' });
           return;
         }
       }
