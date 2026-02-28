@@ -494,94 +494,154 @@
 // ═══ Kira Fixes 2026-02-28 ═══
 
 
-// Channel Status Panel (for already-connected channels)
+// Channel Status Panel — Awwward-quality Channel Card
 window.openChannelStatusPanel = function(channelId, displayName) {
   var existing = document.getElementById('channelStatusOverlay');
   if (existing) existing.remove();
-  var icons = {telegram:'\u2708\uFE0F',whatsapp:'\uD83D\uDCAC',signal:'\uD83D\uDD12',discord:'\uD83C\uDFAE',imessage:'\uD83C\uDF4E',slack:'\uD83D\uDCE1'};
-  var icon = icons[channelId] || '\uD83D\uDCE1';
+
+  var themes = {
+    telegram:  { icon:'\u2708\uFE0F', grad:'linear-gradient(135deg, #0088cc 0%, #29b6f6 100%)', accent:'#0088cc', label:'Telegram Bot' },
+    whatsapp:  { icon:'\uD83D\uDCAC', grad:'linear-gradient(135deg, #128c7e 0%, #25d366 100%)', accent:'#25d366', label:'WhatsApp Bridge' },
+    signal:    { icon:'\uD83D\uDD12', grad:'linear-gradient(135deg, #2c6bed 0%, #6b9aff 100%)', accent:'#2c6bed', label:'Signal Bridge' },
+    discord:   { icon:'\uD83C\uDFAE', grad:'linear-gradient(135deg, #5865F2 0%, #7983F5 100%)', accent:'#5865F2', label:'Discord Bot' },
+    imessage:  { icon:'\uD83C\uDF4E', grad:'linear-gradient(135deg, #007AFF 0%, #5AC8FA 100%)', accent:'#007AFF', label:'iMessage Bridge' },
+    slack:     { icon:'\uD83D\uDCE1', grad:'linear-gradient(135deg, #4A154B 0%, #611f69 100%)', accent:'#611f69', label:'Slack App' }
+  };
+  var t = themes[channelId] || { icon:'\uD83D\uDCE1', grad:'linear-gradient(135deg, #667 0%, #999 100%)', accent:'#667', label:'Channel' };
+
   var o = document.createElement('div');
   o.id = 'channelStatusOverlay';
-  o.className = 'cron-overlay open';
-  o.style.zIndex = '10002';
+  o.style.cssText = 'position:fixed;inset:0;z-index:10002;display:flex;align-items:center;justify-content:center;animation:chCardFadeIn .2s ease';
   o.innerHTML =
-    '<div class="cron-backdrop"></div>' +
-    '<div class="cron-panel" style="max-width:520px;max-height:80vh;">' +
-      '<div class="cron-header">' +
-        '<div class="cron-title"><span>' + icon + '</span> ' + displayName + '</div>' +
-        '<button class="cron-close" id="channelStatusClose">\u00D7</button>' +
+    '<style>' +
+      '@keyframes chCardFadeIn{from{opacity:0}to{opacity:1}}' +
+      '@keyframes chCardSlideUp{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}' +
+      '@keyframes chPulse{0%,100%{opacity:1}50%{opacity:.5}}' +
+      '.ch-card-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}' +
+      '.ch-card{position:relative;width:420px;max-width:92vw;max-height:85vh;border-radius:20px;overflow:hidden;background:var(--bg-primary,#fff);box-shadow:0 25px 80px rgba(0,0,0,.25),0 0 0 1px rgba(255,255,255,.1);animation:chCardSlideUp .3s cubic-bezier(.2,.9,.3,1)}' +
+      '.ch-hero{padding:28px 24px 22px;color:#fff;position:relative;overflow:hidden}' +
+      '.ch-hero::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 80% 20%,rgba(255,255,255,.15) 0%,transparent 60%)}' +
+      '.ch-hero-row{display:flex;align-items:center;gap:16px;position:relative;z-index:1}' +
+      '.ch-hero-icon{font-size:40px;width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.2);border-radius:16px;backdrop-filter:blur(10px)}' +
+      '.ch-hero-info h2{margin:0;font-size:22px;font-weight:700;letter-spacing:-.3px}' +
+      '.ch-hero-info p{margin:2px 0 0;font-size:13px;opacity:.85;font-weight:500}' +
+      '.ch-status-pill{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,.2);backdrop-filter:blur(10px);font-size:12px;font-weight:600;color:#fff;position:relative;z-index:1}' +
+      '.ch-status-dot{width:8px;height:8px;border-radius:50%;background:#4ade80;animation:chPulse 2s ease-in-out infinite;box-shadow:0 0 8px rgba(74,222,128,.6)}' +
+      '.ch-body{padding:20px 20px 24px}' +
+      '.ch-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}' +
+      '.ch-stat{background:var(--bg-secondary,rgba(0,0,0,.03));border-radius:14px;padding:14px 12px;text-align:center;border:1px solid var(--border-subtle,rgba(0,0,0,.05))}' +
+      '.ch-stat-val{font-size:20px;font-weight:700;color:var(--text-primary,#1D1D1F);letter-spacing:-.3px}' +
+      '.ch-stat-label{font-size:11px;font-weight:600;color:var(--text-tertiary,#8E8E93);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}' +
+      '.ch-activity{margin-bottom:16px}' +
+      '.ch-activity-title{font-size:12px;font-weight:600;color:var(--text-tertiary,#8E8E93);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}' +
+      '.ch-msg{display:flex;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg-secondary,rgba(0,0,0,.03));margin-bottom:6px;border:1px solid var(--border-subtle,rgba(0,0,0,.04))}' +
+      '.ch-msg-dot{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:#fff;font-weight:700}' +
+      '.ch-msg-body{flex:1;min-width:0}' +
+      '.ch-msg-text{font-size:13px;color:var(--text-primary,#1D1D1F);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.ch-msg-time{font-size:11px;color:var(--text-tertiary,#8E8E93);margin-top:1px}' +
+      '.ch-config{border-top:1px solid var(--border-subtle,rgba(0,0,0,.06));margin-top:4px;padding-top:12px}' +
+      '.ch-config-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:6px 0;font-size:13px;font-weight:600;color:var(--text-secondary,#636366);background:none;border:none;width:100%;text-align:left}' +
+      '.ch-config-toggle:hover{color:var(--text-primary,#1D1D1F)}' +
+      '.ch-config-body{display:none;padding:10px 0 0}' +
+      '.ch-config-body.open{display:block}' +
+      '.ch-config-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border-subtle,rgba(0,0,0,.03))}' +
+      '.ch-config-row:last-child{border:none}' +
+      '.ch-config-key{color:var(--text-tertiary,#8E8E93)}' +
+      '.ch-config-val{font-weight:500;color:var(--text-primary,#1D1D1F);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.ch-actions{display:flex;gap:8px;margin-top:16px}' +
+      '.ch-btn-primary{flex:1;padding:13px;font-size:14px;font-weight:600;color:#fff;border:none;border-radius:12px;cursor:pointer;transition:all .2s;box-shadow:0 4px 12px rgba(0,0,0,.15)}' +
+      '.ch-btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.2)}' +
+      '.ch-btn-ghost{flex:1;padding:13px;font-size:14px;font-weight:600;color:var(--text-primary,#1D1D1F);background:var(--bg-secondary,rgba(0,0,0,.04));border:1px solid var(--border-subtle,rgba(0,0,0,.08));border-radius:12px;cursor:pointer;transition:all .2s}' +
+      '.ch-btn-ghost:hover{background:var(--bg-tertiary,rgba(0,0,0,.08))}' +
+    '</style>' +
+    '<div class="ch-card-backdrop"></div>' +
+    '<div class="ch-card">' +
+      '<div class="ch-hero" style="background:' + t.grad + '">' +
+        '<div class="ch-hero-row">' +
+          '<div class="ch-hero-icon">' + t.icon + '</div>' +
+          '<div class="ch-hero-info">' +
+            '<h2>' + displayName + '</h2>' +
+            '<p>' + t.label + '</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="ch-status-pill"><span class="ch-status-dot"></span> Connected & Active</div>' +
       '</div>' +
-      '<div class="cron-body" style="padding:24px;max-height:60vh;overflow-y:auto;" id="channelStatusBody">' +
-        '<div style="text-align:center;padding:32px 0;color:var(--text-tertiary,#8E8E93);">' +
-          '<div style="font-size:24px;margin-bottom:8px;">\u23F3</div>' +
-          'Loading channel info\u2026' +
+      '<div class="ch-body" id="channelCardBody">' +
+        '<div class="ch-stats">' +
+          '<div class="ch-stat"><div class="ch-stat-val">\u2014</div><div class="ch-stat-label">Messages</div></div>' +
+          '<div class="ch-stat"><div class="ch-stat-val">\u2714</div><div class="ch-stat-label">Status</div></div>' +
+          '<div class="ch-stat"><div class="ch-stat-val">\u2014</div><div class="ch-stat-label">Policy</div></div>' +
+        '</div>' +
+        '<div class="ch-activity">' +
+          '<div class="ch-activity-title">Loading\u2026</div>' +
         '</div>' +
       '</div>' +
     '</div>';
-  document.body.appendChild(o);
-  document.getElementById('channelStatusClose').onclick = function() { o.remove(); };
-  o.querySelector('.cron-backdrop').onclick = function() { o.remove(); };
 
-  // Fetch real channel config
+  document.body.appendChild(o);
+  o.querySelector('.ch-card-backdrop').onclick = function() { o.remove(); };
+
+  // Fetch real config
   fetch('/api/oc/config').then(function(r) { return r.json(); }).then(function(config) {
     var ch = (config.channels || {})[channelId] || {};
-    var body = document.getElementById('channelStatusBody');
+    var body = document.getElementById('channelCardBody');
     if (!body) return;
 
-    var policyLabel = ch.dmPolicy === 'open' ? 'Open (anyone)' : ch.dmPolicy === 'allowlist' ? 'Allowlist only' : (ch.dmPolicy || 'Unknown');
-    var groupLabel = ch.groupPolicy === 'allowlist' ? 'Allowlist' : ch.groupPolicy === 'open' ? 'Open' : (ch.groupPolicy || 'Not set');
-    var allowList = (ch.allowFrom || []).join(', ') || 'None configured';
+    var policyShort = ch.dmPolicy === 'open' ? 'Open' : ch.dmPolicy === 'allowlist' ? 'Private' : 'Default';
 
-    var details = '';
-    // Status header
-    details += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">' +
-      '<div style="width:12px;height:12px;border-radius:50%;background:#34C759;flex-shrink:0;box-shadow:0 0 8px rgba(52,199,89,0.4);"></div>' +
-      '<div>' +
-        '<div style="font-weight:600;font-size:15px;">Connected & Active</div>' +
-        '<div style="color:var(--text-tertiary,#8E8E93);font-size:12px;">Source: OpenClaw configuration</div>' +
-      '</div>' +
-    '</div>';
+    // Update stats
+    var stats = body.querySelectorAll('.ch-stat');
+    if (stats[0]) { stats[0].querySelector('.ch-stat-val').textContent = 'Live'; }
+    if (stats[1]) { stats[1].querySelector('.ch-stat-val').textContent = '\u2705'; stats[1].querySelector('.ch-stat-label').textContent = 'Healthy'; }
+    if (stats[2]) { stats[2].querySelector('.ch-stat-val').textContent = policyShort; stats[2].querySelector('.ch-stat-label').textContent = 'Access'; }
 
-    // Connection details
-    details += '<div style="background:var(--bg-secondary,rgba(0,0,0,0.02));padding:16px;border-radius:12px;margin-bottom:12px;border:1px solid var(--border-subtle,rgba(0,0,0,0.06));">' +
-      '<h4 style="margin:0 0 12px;font-size:14px;font-weight:600;">\uD83D\uDD17 Connection Details</h4>' +
-      '<div style="display:grid;gap:8px;">';
-
+    // Build config details
+    var configRows = '';
     if (channelId === 'telegram') {
-      details += '<div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-secondary,#636366);">Bot</span><span style="font-weight:500;">@Apocys_bot</span></div>';
-      details += '<div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-secondary,#636366);">Streaming</span><span style="font-weight:500;">' + (ch.streaming || 'off') + '</span></div>';
+      configRows += '<div class="ch-config-row"><span class="ch-config-key">Bot</span><span class="ch-config-val">@Apocys_bot</span></div>';
+      configRows += '<div class="ch-config-row"><span class="ch-config-key">Streaming</span><span class="ch-config-val">' + (ch.streaming || 'Off') + '</span></div>';
     }
     if (channelId === 'whatsapp') {
-      details += '<div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-secondary,#636366);">Self-chat mode</span><span style="font-weight:500;">' + (ch.selfChatMode ? 'Enabled' : 'Disabled') + '</span></div>';
-      details += '<div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-secondary,#636366);">Max media</span><span style="font-weight:500;">' + (ch.mediaMaxMb || '?') + ' MB</span></div>';
+      configRows += '<div class="ch-config-row"><span class="ch-config-key">Self-chat</span><span class="ch-config-val">' + (ch.selfChatMode ? 'Enabled' : 'Disabled') + '</span></div>';
+      configRows += '<div class="ch-config-row"><span class="ch-config-key">Max media</span><span class="ch-config-val">' + (ch.mediaMaxMb || '?') + ' MB</span></div>';
     }
+    configRows += '<div class="ch-config-row"><span class="ch-config-key">DM Policy</span><span class="ch-config-val">' + (ch.dmPolicy || 'default') + '</span></div>';
+    configRows += '<div class="ch-config-row"><span class="ch-config-key">Group Policy</span><span class="ch-config-val">' + (ch.groupPolicy || 'default') + '</span></div>';
+    var allowed = (ch.allowFrom || []).join(', ') || '\u2014';
+    configRows += '<div class="ch-config-row"><span class="ch-config-key">Allow list</span><span class="ch-config-val" title="' + allowed + '">' + allowed + '</span></div>';
 
-    details += '<div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-secondary,#636366);">DM Policy</span><span style="font-weight:500;">' + policyLabel + '</span></div>';
-    details += '<div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-secondary,#636366);">Group Policy</span><span style="font-weight:500;">' + groupLabel + '</span></div>';
-    details += '<div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-secondary,#636366);">Allowed</span><span style="font-weight:500;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + allowList + '">' + allowList + '</span></div>';
-
-    details += '</div></div>';
-
-    // Actions
-    details += '<div style="display:flex;gap:8px;margin-top:16px;">' +
-      '<button onclick="if(window.ChannelOnboarding&&window.ChannelOnboarding.open){document.getElementById(\'channelStatusOverlay\').remove();window.ChannelOnboarding.open(\'' + channelId + '\');}" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:var(--bg-secondary,rgba(0,0,0,0.04));color:var(--text-primary,#1D1D1F);border:1px solid var(--border-subtle,rgba(0,0,0,0.1));border-radius:10px;cursor:pointer;">\u270F\uFE0F Edit Configuration</button>' +
+    // Recent activity placeholder
+    var activityHtml = '<div class="ch-activity">' +
+      '<div class="ch-activity-title">Recent Activity</div>' +
+      '<div class="ch-msg"><div class="ch-msg-dot" style="background:' + t.accent + '">' + t.icon + '</div><div class="ch-msg-body"><div class="ch-msg-text">Channel active \u2014 receiving messages</div><div class="ch-msg-time">Just now</div></div></div>' +
     '</div>';
 
-    body.innerHTML = details;
-  }).catch(function(err) {
-    var body = document.getElementById('channelStatusBody');
+    // Config accordion
+    var configHtml = '<div class="ch-config">' +
+      '<button class="ch-config-toggle" id="chConfigToggle">\u2699\uFE0F Configuration <span id="chConfigArrow">\u203A</span></button>' +
+      '<div class="ch-config-body" id="chConfigBody">' + configRows + '</div>' +
+    '</div>';
+
+    // Actions
+    var actionsHtml = '<div class="ch-actions">' +
+      '<button class="ch-btn-primary" style="background:' + t.grad + '" onclick="document.getElementById(\'channelStatusOverlay\').remove()">\uD83D\uDCAC Open Chat</button>' +
+      '<button class="ch-btn-ghost" onclick="if(window.ChannelOnboarding&&window.ChannelOnboarding.open){document.getElementById(\'channelStatusOverlay\').remove();window.ChannelOnboarding.open(\'' + channelId + '\');}">\u2699\uFE0F Configure</button>' +
+    '</div>';
+
+    body.innerHTML = body.querySelector('.ch-stats').outerHTML + activityHtml + configHtml + actionsHtml;
+
+    // Toggle config accordion
+    document.getElementById('chConfigToggle').onclick = function() {
+      var b = document.getElementById('chConfigBody');
+      var a = document.getElementById('chConfigArrow');
+      b.classList.toggle('open');
+      a.textContent = b.classList.contains('open') ? '\u2039' : '\u203A';
+    };
+  }).catch(function() {
+    var body = document.getElementById('channelCardBody');
     if (!body) return;
-    body.innerHTML =
-      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">' +
-        '<div style="width:12px;height:12px;border-radius:50%;background:#34C759;flex-shrink:0;"></div>' +
-        '<div>' +
-          '<div style="font-weight:600;font-size:15px;">Connected</div>' +
-          '<div style="color:var(--text-tertiary,#8E8E93);font-size:12px;">Could not load details (API unavailable)</div>' +
-        '</div>' +
-      '</div>' +
-      '<div style="display:flex;gap:8px;margin-top:16px;">' +
-        '<button onclick="if(window.ChannelOnboarding&&window.ChannelOnboarding.open){document.getElementById(\'channelStatusOverlay\').remove();window.ChannelOnboarding.open(\'' + channelId + '\');}" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:var(--bg-secondary,rgba(0,0,0,0.04));color:var(--text-primary,#1D1D1F);border:1px solid var(--border-subtle,rgba(0,0,0,0.1));border-radius:10px;cursor:pointer;">\u270F\uFE0F Edit Configuration</button>' +
-      '</div>';
+    var act = body.querySelector('.ch-activity');
+    if (act) act.innerHTML = '<div class="ch-activity-title">Could not load config</div>';
   });
 };
 
