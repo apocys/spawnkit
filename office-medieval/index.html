@@ -611,6 +611,10 @@
             transition: transform 0.2s ease;
         }
         .activity-item:first-child { border-color: var(--castle-gold); box-shadow: 0 1px 6px rgba(201,169,89,0.15); }
+        .activity-item[style*="cursor"] { transition: background 0.15s; }
+        .activity-item[style*="cursor"]:hover { background: rgba(201,169,89,0.1); }
+        @keyframes activityPulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        .activity-item:first-child { animation: activityPulse 1s ease-in-out; }
         .activity-time { font-size: 11px; color: var(--castle-brown); margin-bottom: 2px; }
         .activity-message { font-size: 13px; line-height: 1.5; color: var(--castle-navy); }
         .activity-agent { font-weight: 600; color: var(--castle-red); }

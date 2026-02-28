@@ -42,6 +42,11 @@
             overlay.style.display = 'flex';
             setTimeout(function() { overlay.classList.add('visible'); }, 50);
         }},
+        { key: '7', icon: '🏗️', label: 'Edit', action: function() {
+            if (window.castleApp && window.castleApp.toggleEditMode) {
+                window.castleApp.toggleEditMode();
+            }
+        }},
     ];
     items.forEach(function(item) {
         var slot = document.createElement('div');

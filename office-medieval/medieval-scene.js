@@ -1139,9 +1139,37 @@ class MedievalCastle3D {
                     if (cd) cd._paused = true;
                 }
             }
+            // Building drag (edit mode only)
+            if (!this._dragTarget && this._editMode && this.buildingGroups) {
+                const buildingMeshes = [];
+                this.buildingGroups.forEach(g => g.traverse(c => { if (c.isMesh) buildingMeshes.push(c); }));
+                const bHits = this.raycaster.intersectObjects(buildingMeshes, false);
+                if (bHits.length > 0) {
+                    let bg = bHits[0].object;
+                    while (bg.parent && !bg.userData.buildingName) bg = bg.parent;
+                    const buildingRoot = bg.userData.buildingName ? bg : bg.parent;
+                    if (buildingRoot) {
+                        this._dragBuilding = buildingRoot;
+                        this._wasDragging = false;
+                        this.controls.enabled = false;
+                        container.style.cursor = 'grabbing';
+                    }
+                }
+            }
         });
 
         container.addEventListener('pointermove', (e) => {
+            // Building drag (edit mode)
+            if (this._dragBuilding) {
+                this._wasDragging = true;
+                const ndc = this.getMouseNDC(e);
+                this.raycaster.setFromCamera(ndc, this.camera);
+                if (this.raycaster.ray.intersectPlane(this._dragPlane, this._dragIntersect)) {
+                    this._dragBuilding.position.x = this._dragIntersect.x;
+                    this._dragBuilding.position.z = this._dragIntersect.z;
+                }
+                return;
+            }
             if (!this._dragTarget) return;
             this._wasDragging = true;
             const ndc = this.getMouseNDC(e);
@@ -1157,7 +1185,6 @@ class MedievalCastle3D {
                 const agentId = this._dragTarget.userData.agentId;
                 const cd = this.characterModels.get(agentId);
                 if (cd) {
-                    // Update waypoints to new position + generate new patrol area
                     const px = this._dragTarget.position.x;
                     const pz = this._dragTarget.position.z;
                     cd.waypoints = [
@@ -1171,10 +1198,22 @@ class MedievalCastle3D {
                     cd.nextWaypointIndex = 1;
                     cd.progress = 0;
                     cd._paused = false;
+                    // Persist position
+                    this.saveAgentPosition(agentId, px, pz);
                 }
                 this._dragTarget = null;
                 this.controls.enabled = true;
                 container.style.cursor = '';
+            }
+            // Building drag end (edit mode)
+            if (this._dragBuilding) {
+                const bg = this._dragBuilding;
+                const name = bg.userData.buildingName || '';
+                this.saveBuildingPosition(name, bg.position.x, bg.position.z);
+                this._dragBuilding = null;
+                this.controls.enabled = true;
+                container.style.cursor = '';
+                this.addActivityLog('🏗️ Moved ' + name + ' to new location', 'system');
             }
         });
 
@@ -1649,6 +1688,118 @@ class MedievalCastle3D {
         }
     }
 
+    // ── Position Persistence ─────────────────────────────────
+
+    saveAgentPosition(agentId, x, z) {
+        try {
+            const data = JSON.parse(localStorage.getItem('medieval-agent-positions') || '{}');
+            data[agentId] = { x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10 };
+            localStorage.setItem('medieval-agent-positions', JSON.stringify(data));
+        } catch(e) {}
+    }
+
+    loadAgentPositions() {
+        try {
+            return JSON.parse(localStorage.getItem('medieval-agent-positions') || '{}');
+        } catch(e) { return {}; }
+    }
+
+    saveBuildingPosition(name, x, z) {
+        try {
+            const data = JSON.parse(localStorage.getItem('medieval-building-positions') || '{}');
+            data[name] = { x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10 };
+            localStorage.setItem('medieval-building-positions', JSON.stringify(data));
+        } catch(e) {}
+    }
+
+    loadBuildingPositions() {
+        try {
+            return JSON.parse(localStorage.getItem('medieval-building-positions') || '{}');
+        } catch(e) { return {}; }
+    }
+
+    applyPersistedPositions() {
+        // Characters
+        const agentPos = this.loadAgentPositions();
+        for (const [agentId, pos] of Object.entries(agentPos)) {
+            const cd = this.characterModels?.get(agentId);
+            if (cd?.group) {
+                cd.group.position.x = pos.x;
+                cd.group.position.z = pos.z;
+                cd.waypoints = [
+                    { x: pos.x, z: pos.z },
+                    { x: pos.x + 2, z: pos.z + 1.5 },
+                    { x: pos.x - 1.5, z: pos.z + 2 },
+                ];
+            }
+        }
+        // Buildings
+        const buildPos = this.loadBuildingPositions();
+        if (this.buildingGroups) {
+            this.buildingGroups.forEach(bg => {
+                const name = bg.userData?.buildingName;
+                if (name && buildPos[name]) {
+                    bg.position.x = buildPos[name].x;
+                    bg.position.z = buildPos[name].z;
+                }
+            });
+        }
+    }
+
+    // ── Edit Mode ────────────────────────────────────────────
+
+    toggleEditMode() {
+        this._editMode = !this._editMode;
+        window._editMode = this._editMode;
+
+        // Toggle visual indicator
+        let banner = document.getElementById('edit-mode-banner');
+        if (this._editMode) {
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'edit-mode-banner';
+                banner.style.cssText = 'position:fixed;top:40px;left:50%;transform:translateX(-50%);z-index:300;background:linear-gradient(135deg,#f59e0b,#d97706);color:#1a1a2e;padding:8px 24px;border-radius:20px;font-family:var(--font-medieval,serif);font-size:14px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.3);display:flex;align-items:center;gap:12px;';
+                banner.innerHTML = '🏗️ Edit Mode — drag buildings & agents <button id="edit-mode-exit" style="background:#1a1a2e;color:#f59e0b;border:none;border-radius:12px;padding:4px 12px;cursor:pointer;font-size:12px;font-weight:600;">Save & Exit</button> <button id="edit-mode-reset" style="background:rgba(0,0,0,0.2);color:#1a1a2e;border:none;border-radius:12px;padding:4px 12px;cursor:pointer;font-size:12px;">Reset All</button>';
+                document.body.appendChild(banner);
+                document.getElementById('edit-mode-exit').addEventListener('click', () => this.toggleEditMode());
+                document.getElementById('edit-mode-reset').addEventListener('click', () => {
+                    localStorage.removeItem('medieval-agent-positions');
+                    localStorage.removeItem('medieval-building-positions');
+                    this.addActivityLog('🔄 All positions reset to defaults', 'system');
+                    location.reload();
+                });
+            }
+            banner.style.display = 'flex';
+            // Add glow to buildings
+            if (this.buildingGroups) {
+                this.buildingGroups.forEach(bg => {
+                    bg.traverse(c => {
+                        if (c.isMesh && c.material) {
+                            c._editOrigEmissive = c.material.emissiveIntensity || 0;
+                            c.material.emissive = c.material.emissive || new THREE.Color(0xffaa00);
+                            c.material.emissive.set(0xf59e0b);
+                            c.material.emissiveIntensity = 0.2;
+                        }
+                    });
+                });
+            }
+            this.addActivityLog('🏗️ Edit mode activated — drag to rearrange', 'system');
+        } else {
+            if (banner) banner.style.display = 'none';
+            // Remove building glow
+            if (this.buildingGroups) {
+                this.buildingGroups.forEach(bg => {
+                    bg.traverse(c => {
+                        if (c.isMesh && c.material && c._editOrigEmissive !== undefined) {
+                            c.material.emissiveIntensity = c._editOrigEmissive;
+                        }
+                    });
+                });
+            }
+            this.addActivityLog('✅ Edit mode saved', 'system');
+        }
+    }
+
     // ── Audio ────────────────────────────────────────────────
 
     setupAudio() {
@@ -1883,6 +2034,8 @@ class MedievalCastle3D {
                     // Update activity with real data
                     if (Date.now() - this.lastMetricsUpdate > 30000) { // Every 30s
                         this.addActivityLog(`Royal court status: ${totalSessions} sessions, ${(totalTokens/1000).toFixed(1)}k wisdom gathered`, 'Royal Herald');
+                    // Apply persisted positions after data loads
+                    this.applyPersistedPositions();
                         this.lastMetricsUpdate = Date.now();
                     }
                 }
@@ -1931,12 +2084,27 @@ class MedievalCastle3D {
         }).join('');
     }
 
-    addActivityLog(msg, agent = 'system', ts = null) {
+    addActivityLog(msg, agent = 'system', ts = null, meta = null) {
         const c = document.getElementById('activity-log');
         const time = ts ? new Date(ts) : new Date();
         const item = document.createElement('div');
         item.className = 'activity-item';
-        item.innerHTML = `<div class="activity-time">${time.toLocaleTimeString()}</div><div class="activity-message">${agent !== 'system' ? `<span class="activity-agent">${agent}</span>: ` : ''}${msg}</div>`;
+        // Make clickable if has agent context
+        const clickable = (agent && agent !== 'system') || (meta && meta.agentId);
+        if (clickable) {
+            item.style.cursor = 'pointer';
+            item.addEventListener('click', () => {
+                const targetAgent = meta?.agentId || agent;
+                if (targetAgent && this.agents.has(targetAgent)) {
+                    this.selectAgent(targetAgent);
+                } else if (meta?.action === 'chat') {
+                    const chatEl = document.getElementById('medievalChat');
+                    if (chatEl) { chatEl.style.display = 'flex'; chatEl.style.flexDirection = 'column'; }
+                    if (window.ThemeChat) ThemeChat.show();
+                }
+            });
+        }
+        item.innerHTML = `<div class="activity-time">${time.toLocaleTimeString()}</div><div class="activity-message">${agent !== 'system' ? `<span class="activity-agent">${agent}</span>: ` : ''}${msg}${clickable ? ' <span style="font-size:10px;opacity:0.4;">tap to view</span>' : ''}</div>`;
         c.insertBefore(item, c.firstChild);
         while (c.children.length > 20) c.removeChild(c.lastChild);
     }
