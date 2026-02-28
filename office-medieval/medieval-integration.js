@@ -210,7 +210,7 @@
       if (!chatContainer) {
         chatContainer = document.createElement('div');
         chatContainer.id = 'medievalChat';
-        chatContainer.style.cssText = 'position:fixed;right:8px;bottom:72px;width:380px;height:480px;z-index:200;display:none;border-radius:16px;overflow:hidden;border:2px solid rgba(180,150,100,0.4);box-shadow:0 8px 32px rgba(0,0,0,0.4);background:rgba(20,20,30,0.95);backdrop-filter:blur(12px);';
+        chatContainer.style.cssText = 'position:fixed;right:8px;bottom:72px;width:380px;max-width:calc(100vw - 16px);height:min(480px, calc(100vh - 140px));z-index:200;display:none;flex-direction:column;border-radius:16px;overflow:hidden;border:2px solid rgba(180,150,100,0.4);box-shadow:0 8px 32px rgba(0,0,0,0.4);background:rgba(20,20,30,0.95);backdrop-filter:blur(12px);';
         // Chat header with close button
         var chatHeader = document.createElement('div');
         chatHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(30,25,20,0.8);border-bottom:1px solid rgba(180,150,100,0.3);';
