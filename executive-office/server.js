@@ -67,7 +67,7 @@ function performUpdate() {
     const syncCmds = [
       `rsync -a --delete "${REPO_DIR}/office-executive/" "${STATIC_DIR}/" --exclude='auto-sync.sh' --exclude='caddy-patch.sh'`,
       `rsync -a --delete "${REPO_DIR}/lib/" "${STATIC_DIR}/lib/" 2>/dev/null || true`,
-      `rsync -a --delete "${REPO_DIR}/office-medieval/" "${path.dirname(STATIC_DIR)}/office-medieval/" 2>/dev/null || true`,
+      `rsync -a --delete "${REPO_DIR}/office-medieval/" "${STATIC_DIR}/office-medieval/" 2>/dev/null || true`,
     ];
     for (const cmd of syncCmds) {
       try { execSync(cmd, { timeout: 15000 }); } catch(e) { log.push('Warning: ' + e.message); }
