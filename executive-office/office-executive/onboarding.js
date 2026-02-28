@@ -1,6 +1,6 @@
 /**
- * SpawnKit Executive Office — "First 90 Seconds" Onboarding v2
- * Award-winning onboarding experience. Self-contained IIFE.
+ * SpawnKit Executive Office — "First 90 Seconds" Onboarding v2.1
+ * Award-winning onboarding experience with channel connections. Self-contained IIFE.
  */
 
 window.__skOnboardingV2 = true;
@@ -56,6 +56,23 @@ window.__skOnboardingV2 = true;
     @keyframes sk-ob-pulse-ring {
       0%   { transform: scale(0.8); opacity: 0.8; }
       100% { transform: scale(1.4); opacity: 0; }
+    }
+    @keyframes sk-ob-channel-card-appear {
+      from { opacity: 0; transform: translateY(24px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes sk-ob-channel-card-glow {
+      0%   { box-shadow: 0 0 0 rgba(0, 122, 255, 0); }
+      50%  { box-shadow: 0 0 20px rgba(0, 122, 255, 0.3); }
+      100% { box-shadow: 0 0 0 rgba(0, 122, 255, 0); }
+    }
+    @keyframes sk-ob-checkmark-draw {
+      from { stroke-dashoffset: 16; }
+      to   { stroke-dashoffset: 0; }
+    }
+    @keyframes sk-ob-mini-wizard-slide {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
     .sk-ob-overlay {
@@ -214,11 +231,163 @@ window.__skOnboardingV2 = true;
     }
     .sk-ob-btn-skip {
       background: transparent; border: none;
-      color: rgba(255,255,255,0.4); font-size: 13px;
+      color: rgba(255,255,255,0.45); font-size: 14px;
       font-family: inherit; cursor: pointer;
-      padding: 0; transition: color 0.2s ease;
+      padding: 12px 20px; transition: color 0.2s ease;
+      position: relative; z-index: 10;
+      -webkit-tap-highlight-color: rgba(255,255,255,0.1);
+      touch-action: manipulation;
     }
-    .sk-ob-btn-skip:hover { color: rgba(255,255,255,0.65); }
+    .sk-ob-btn-skip:hover, .sk-ob-btn-skip:active { color: rgba(255,255,255,0.75); }
+
+    /* Beat 2.5: Channel Cards */
+    #skObBeat25 .sk-ob-card {
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .sk-ob-channels-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px; margin: 24px 0;
+    }
+    .sk-ob-channel-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 16px 14px;
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; gap: 8px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 0; transform: translateY(24px) scale(0.96);
+      position: relative; overflow: hidden;
+    }
+    .sk-ob-channel-card.sk-ob-appearing {
+      animation: sk-ob-channel-card-appear 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    .sk-ob-channel-card:hover {
+      transform: translateY(-2px) scale(1.02);
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.08);
+    }
+    .sk-ob-channel-card.sk-ob-connected {
+      border-color: #34C759;
+      background: rgba(52, 199, 89, 0.08);
+      animation: sk-ob-channel-card-glow 1s ease;
+    }
+    .sk-ob-channel-card.sk-ob-connected:hover {
+      border-color: #34C759;
+      background: rgba(52, 199, 89, 0.12);
+    }
+    .sk-ob-channel-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+      position: relative;
+    }
+    .sk-ob-channel-icon.telegram { background: #0088CC; }
+    .sk-ob-channel-icon.signal { background: #3A76F0; }
+    .sk-ob-channel-icon.discord { background: #5865F2; }
+    .sk-ob-channel-icon.imessage { background: #34C759; }
+    .sk-ob-channel-icon.slack { background: #4A154B; }
+    .sk-ob-channel-icon.whatsapp { background: #25D366; }
+    .sk-ob-channel-name {
+      font-size: 13px; font-weight: 600; color: #fff; margin: 0;
+    }
+    .sk-ob-channel-status {
+      font-size: 11px; color: rgba(255,255,255,0.4); margin: 0;
+    }
+    .sk-ob-channel-status.sk-ob-connected { color: #34C759; }
+    .sk-ob-channel-btn {
+      background: rgba(0, 122, 255, 0.15); color: #007AFF;
+      border: 1px solid rgba(0, 122, 255, 0.3);
+      border-radius: 10px; padding: 8px 16px;
+      font-size: 12px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.2s ease;
+      margin-top: 4px; min-height: 36px;
+      -webkit-tap-highlight-color: rgba(0, 122, 255, 0.3);
+    }
+    .sk-ob-channel-btn:hover, .sk-ob-channel-btn:active {
+      background: rgba(0, 122, 255, 0.3);
+      border-color: rgba(0, 122, 255, 0.6);
+      transform: scale(0.97);
+    }
+    .sk-ob-channel-btn.sk-ob-connected {
+      background: rgba(52, 199, 89, 0.15); color: #34C759;
+      border-color: rgba(52, 199, 89, 0.3); cursor: default;
+    }
+    .sk-ob-checkmark {
+      position: absolute; top: 8px; right: 8px;
+      width: 16px; height: 16px; opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .sk-ob-connected .sk-ob-checkmark { opacity: 1; }
+    .sk-ob-checkmark svg {
+      width: 100%; height: 100%;
+      stroke: #34C759; stroke-width: 2; fill: none;
+      stroke-dasharray: 16; stroke-dashoffset: 16;
+    }
+    .sk-ob-connected .sk-ob-checkmark svg {
+      animation: sk-ob-checkmark-draw 0.4s ease forwards;
+    }
+
+    /* Mini-wizards */
+    .sk-ob-mini-wizard {
+      display: none; margin-top: 20px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px; padding: 16px;
+      animation: sk-ob-mini-wizard-slide 0.3s ease;
+    }
+    .sk-ob-mini-wizard.sk-ob-active { display: block; }
+    .sk-ob-wizard-title {
+      font-size: 14px; font-weight: 600; color: #fff;
+      margin: 0 0 8px; display: flex; align-items: center; gap: 8px;
+    }
+    .sk-ob-wizard-desc {
+      font-size: 12px; color: rgba(255,255,255,0.5);
+      margin: 0 0 12px; line-height: 1.4;
+    }
+    .sk-ob-wizard-actions {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .sk-ob-copy-btn {
+      background: rgba(0, 122, 255, 0.12); color: #007AFF;
+      border: 1px solid rgba(0, 122, 255, 0.25);
+      border-radius: 8px; padding: 6px 10px;
+      font-size: 11px; font-weight: 500; font-family: 'SF Mono', Monaco, monospace;
+      cursor: pointer; transition: all 0.2s ease;
+      flex: 1; min-width: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
+    }
+    .sk-ob-copy-btn:hover {
+      background: rgba(0, 122, 255, 0.18);
+      border-color: rgba(0, 122, 255, 0.4);
+    }
+    .sk-ob-qr-placeholder {
+      width: 80px; height: 80px; margin: 0 auto 8px;
+      background: rgba(255,255,255,0.1);
+      border: 1px dashed rgba(255,255,255,0.2);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; color: rgba(255,255,255,0.3);
+    }
+    .sk-ob-oauth-btn {
+      background: #007AFF; color: #fff; border: none;
+      border-radius: 8px; padding: 8px 16px;
+      font-size: 12px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.2s ease;
+      width: 100%;
+    }
+    .sk-ob-oauth-btn:hover {
+      background: #0066D6;
+      transform: translateY(-1px);
+    }
+    .sk-ob-requirement-note {
+      background: rgba(255, 159, 0, 0.1);
+      border: 1px solid rgba(255, 159, 0, 0.2);
+      color: #FF9F00; font-size: 11px;
+      padding: 8px 10px; border-radius: 6px; margin-top: 8px;
+    }
 
     /* Beat 3: First Mission */
     .sk-ob-chat-bubble {
@@ -342,11 +511,23 @@ window.__skOnboardingV2 = true;
   var currentBeat = 0;
   var overlay, beatEls;
   var confettiTimer = null;
+  var connectedChannels = {};
+  // Map beat number → array index (since we use non-sequential beat numbers)
+  var beatMap = { 1: 0, 2: 1, 25: 2, 3: 3, 4: 4 };
 
   // ── Build DOM ──────────────────────────────────────────────────────────────
   function buildOverlay() {
     overlay = document.createElement('div');
     overlay.className = 'sk-ob-overlay';
+    overlay.addEventListener('click', function(e) {
+      console.log('[OB-DEBUG] overlay click:', e.target.tagName, e.target.id || e.target.className, 'x:', e.clientX, 'y:', e.clientY);
+    }, true);
+    overlay.addEventListener('touchstart', function(e) {
+      console.log('[OB-DEBUG] overlay touchstart:', e.target.tagName, e.target.id || e.target.className);
+    }, true);
+    // Hide statusbar during onboarding to prevent z-index conflicts
+    var statusBar = document.querySelector('.exec-statusbar');
+    if (statusBar) statusBar.style.display = 'none';
     overlay.id = 'skObOverlay';
 
     // Beat 1: Welcome
@@ -359,6 +540,7 @@ window.__skOnboardingV2 = true;
           <div class="sk-ob-progress-fill" id="skObProgressFill"></div>
         </div>
         <button class="sk-ob-skip-link" id="skObSkipWelcome">Tap to continue →</button>
+        <button class="sk-ob-skip-link" id="skObSkipAll" style="margin-top:8px;color:rgba(255,255,255,0.5);font-size:14px;font-weight:500;">Already set up? Skip →</button>
       </div>
     `);
 
@@ -367,6 +549,7 @@ window.__skOnboardingV2 = true;
       <div class="sk-ob-card">
         <div class="sk-ob-stepdots">
           <div class="sk-ob-stepdot sk-ob-stepdot-active"></div>
+          <div class="sk-ob-stepdot"></div>
           <div class="sk-ob-stepdot"></div>
           <div class="sk-ob-stepdot"></div>
         </div>
@@ -388,10 +571,146 @@ window.__skOnboardingV2 = true;
       </div>
     `);
 
+    // Beat 2.5: Connect Your Channels
+    var channelsHTML = `
+      <div class="sk-ob-channel-card" data-channel="telegram">
+        <div class="sk-ob-channel-icon telegram">💬</div>
+        <h4 class="sk-ob-channel-name">Telegram</h4>
+        <p class="sk-ob-channel-status">Not connected</p>
+        <button class="sk-ob-channel-btn">Connect</button>
+        <div class="sk-ob-checkmark">
+          <svg viewBox="0 0 16 16">
+            <path d="M3 8l3 3 7-7"></path>
+          </svg>
+        </div>
+      </div>
+      <div class="sk-ob-channel-card" data-channel="signal">
+        <div class="sk-ob-channel-icon signal">🔒</div>
+        <h4 class="sk-ob-channel-name">Signal</h4>
+        <p class="sk-ob-channel-status">Not connected</p>
+        <button class="sk-ob-channel-btn">Connect</button>
+        <div class="sk-ob-checkmark">
+          <svg viewBox="0 0 16 16">
+            <path d="M3 8l3 3 7-7"></path>
+          </svg>
+        </div>
+      </div>
+      <div class="sk-ob-channel-card" data-channel="discord">
+        <div class="sk-ob-channel-icon discord">🎮</div>
+        <h4 class="sk-ob-channel-name">Discord</h4>
+        <p class="sk-ob-channel-status">Not connected</p>
+        <button class="sk-ob-channel-btn">Connect</button>
+        <div class="sk-ob-checkmark">
+          <svg viewBox="0 0 16 16">
+            <path d="M3 8l3 3 7-7"></path>
+          </svg>
+        </div>
+      </div>
+      <div class="sk-ob-channel-card" data-channel="imessage">
+        <div class="sk-ob-channel-icon imessage">💬</div>
+        <h4 class="sk-ob-channel-name">iMessage</h4>
+        <p class="sk-ob-channel-status">Not connected</p>
+        <button class="sk-ob-channel-btn">Connect</button>
+        <div class="sk-ob-checkmark">
+          <svg viewBox="0 0 16 16">
+            <path d="M3 8l3 3 7-7"></path>
+          </svg>
+        </div>
+      </div>
+      <div class="sk-ob-channel-card" data-channel="slack">
+        <div class="sk-ob-channel-icon slack">💼</div>
+        <h4 class="sk-ob-channel-name">Slack</h4>
+        <p class="sk-ob-channel-status">Not connected</p>
+        <button class="sk-ob-channel-btn">Connect</button>
+        <div class="sk-ob-checkmark">
+          <svg viewBox="0 0 16 16">
+            <path d="M3 8l3 3 7-7"></path>
+          </svg>
+        </div>
+      </div>
+      <div class="sk-ob-channel-card" data-channel="whatsapp">
+        <div class="sk-ob-channel-icon whatsapp">📱</div>
+        <h4 class="sk-ob-channel-name">WhatsApp</h4>
+        <p class="sk-ob-channel-status">Not connected</p>
+        <button class="sk-ob-channel-btn">Connect</button>
+        <div class="sk-ob-checkmark">
+          <svg viewBox="0 0 16 16">
+            <path d="M3 8l3 3 7-7"></path>
+          </svg>
+        </div>
+      </div>
+    `;
+
+    var b25 = makeBeat(25, `
+      <div class="sk-ob-card" style="width: 520px; padding: 36px 32px 28px;">
+        <div class="sk-ob-stepdots">
+          <div class="sk-ob-stepdot"></div>
+          <div class="sk-ob-stepdot sk-ob-stepdot-active"></div>
+          <div class="sk-ob-stepdot"></div>
+          <div class="sk-ob-stepdot"></div>
+        </div>
+        <p class="sk-ob-section-label">Connect</p>
+        <h2 class="sk-ob-card-title">Connect Your Channels</h2>
+        <p class="sk-ob-card-sub">Choose where your team can reach you. All connections are optional.</p>
+        <div class="sk-ob-channels-grid">
+          ${channelsHTML}
+        </div>
+        
+        <!-- Mini-wizards for each channel -->
+        <div class="sk-ob-mini-wizard" id="skObWizardTelegram">
+          <h4 class="sk-ob-wizard-title">💬 Connect Telegram</h4>
+          <p class="sk-ob-wizard-desc">Add our bot to your group or start a private chat</p>
+          <div class="sk-ob-wizard-actions">
+            <button class="sk-ob-copy-btn" data-copy="@SpawnKit_bot">@SpawnKit_bot</button>
+            <button class="sk-ob-oauth-btn" onclick="connectChannel('telegram')">Add Bot</button>
+          </div>
+        </div>
+        
+        <div class="sk-ob-mini-wizard" id="skObWizardSignal">
+          <h4 class="sk-ob-wizard-title">🔒 Connect Signal</h4>
+          <p class="sk-ob-wizard-desc">Scan QR code with Signal app to link your account</p>
+          <div class="sk-ob-qr-placeholder">📱</div>
+          <button class="sk-ob-oauth-btn" onclick="connectChannel('signal')">Generate QR Code</button>
+        </div>
+        
+        <div class="sk-ob-mini-wizard" id="skObWizardDiscord">
+          <h4 class="sk-ob-wizard-title">🎮 Connect Discord</h4>
+          <p class="sk-ob-wizard-desc">Add SpawnKit bot to your Discord server</p>
+          <button class="sk-ob-oauth-btn" onclick="connectChannel('discord')">Add to Discord</button>
+        </div>
+        
+        <div class="sk-ob-mini-wizard" id="skObWizardImessage">
+          <h4 class="sk-ob-wizard-title">💬 Connect iMessage</h4>
+          <p class="sk-ob-wizard-desc">Enable secure iMessage bridge on your Mac</p>
+          <div class="sk-ob-requirement-note">⚠️ Requires macOS 12+ and permissions</div>
+          <button class="sk-ob-oauth-btn" onclick="connectChannel('imessage')">Enable Bridge</button>
+        </div>
+        
+        <div class="sk-ob-mini-wizard" id="skObWizardSlack">
+          <h4 class="sk-ob-wizard-title">💼 Connect Slack</h4>
+          <p class="sk-ob-wizard-desc">Install SpawnKit app to your workspace</p>
+          <button class="sk-ob-oauth-btn" onclick="connectChannel('slack')">Add to Slack</button>
+        </div>
+        
+        <div class="sk-ob-mini-wizard" id="skObWizardWhatsapp">
+          <h4 class="sk-ob-wizard-title">📱 Connect WhatsApp</h4>
+          <p class="sk-ob-wizard-desc">Scan QR code with WhatsApp to connect</p>
+          <div class="sk-ob-qr-placeholder">📱</div>
+          <button class="sk-ob-oauth-btn" onclick="connectChannel('whatsapp')">Generate QR Code</button>
+        </div>
+
+        <div class="sk-ob-actions">
+          <button class="sk-ob-btn-skip" id="skObSkipChannels">Skip for now →</button>
+          <button class="sk-ob-btn-primary" id="skObContinueChannels">Continue →</button>
+        </div>
+      </div>
+    `);
+
     // Beat 3: First Mission
     var b3 = makeBeat(3, `
       <div class="sk-ob-card" id="skObMissionCard">
         <div class="sk-ob-stepdots">
+          <div class="sk-ob-stepdot"></div>
           <div class="sk-ob-stepdot"></div>
           <div class="sk-ob-stepdot sk-ob-stepdot-active"></div>
           <div class="sk-ob-stepdot"></div>
@@ -442,6 +761,7 @@ window.__skOnboardingV2 = true;
         <div class="sk-ob-stepdots">
           <div class="sk-ob-stepdot"></div>
           <div class="sk-ob-stepdot"></div>
+          <div class="sk-ob-stepdot"></div>
           <div class="sk-ob-stepdot sk-ob-stepdot-active"></div>
         </div>
         <p class="sk-ob-section-label">Your Office</p>
@@ -454,11 +774,12 @@ window.__skOnboardingV2 = true;
 
     overlay.appendChild(b1);
     overlay.appendChild(b2);
+    overlay.appendChild(b25);
     overlay.appendChild(b3);
     overlay.appendChild(b4);
 
     document.body.appendChild(overlay);
-    beatEls = [b1, b2, b3, b4];
+    beatEls = [b1, b2, b25, b3, b4];
   }
 
   function makeBeat(num, html) {
@@ -471,31 +792,59 @@ window.__skOnboardingV2 = true;
 
   // ── Beat transitions ───────────────────────────────────────────────────────
   function goToBeat(n) {
-    var from = beatEls[currentBeat - 1];
-    var to   = beatEls[n - 1];
+    console.log('[OB-DEBUG] goToBeat from:', currentBeat, 'to:', n);
+    var fromIdx = beatMap[currentBeat];
+    var toIdx = beatMap[n];
+    var from = fromIdx !== undefined ? beatEls[fromIdx] : null;
+    var to   = toIdx !== undefined ? beatEls[toIdx] : null;
     if (!to) { complete(); return; }
 
     if (from) {
       from.classList.add('sk-ob-leaving');
+      // Use both animationend AND timeout fallback (in case animation doesn't fire)
+      var fromCleaned = false;
+      function cleanFrom() {
+        if (fromCleaned) return;
+        fromCleaned = true;
+        from.classList.remove('sk-ob-active', 'sk-ob-leaving', 'sk-ob-entering');
+      }
       from.addEventListener('animationend', function handler() {
-        from.classList.remove('sk-ob-active', 'sk-ob-leaving');
+        cleanFrom();
         from.removeEventListener('animationend', handler);
       });
+      setTimeout(cleanFrom, 500); // Fallback
     }
 
     setTimeout(function() {
       to.classList.add('sk-ob-active', 'sk-ob-entering');
-      to.addEventListener('animationend', function handler() {
+      var toCleaned = false;
+      function cleanTo() {
+        if (toCleaned) return;
+        toCleaned = true;
         to.classList.remove('sk-ob-entering');
-        to.removeEventListener('animationend', handler);
+        if (n === 25) animateChannelCards();
         if (n === 4) animateFeatureCards();
+      }
+      to.addEventListener('animationend', function handler() {
+        cleanTo();
+        to.removeEventListener('animationend', handler);
       });
+      setTimeout(cleanTo, 500); // Fallback
       currentBeat = n;
-    }, from ? 180 : 0);
+    }, from ? 200 : 0);
   }
 
   // ── Beat 1: Welcome logic ──────────────────────────────────────────────────
   function initBeat1() {
+    var skipAllBtn = document.getElementById('skObSkipAll');
+    if (skipAllBtn) {
+      skipAllBtn.addEventListener('click', function() {
+        localStorage.setItem('spawnkit-onboarded', 'true');
+        var overlay = document.getElementById('skOnboardingOverlay');
+        if (overlay) { overlay.style.opacity = '0'; setTimeout(function() { overlay.remove(); }, 300); }
+        var sb = document.querySelector('.exec-statusbar'); if (sb) sb.style.display = '';
+      });
+    }
     beatEls[0].classList.add('sk-ob-active');
     currentBeat = 1;
 
@@ -542,11 +891,22 @@ window.__skOnboardingV2 = true;
     if (continueBtn) {
       continueBtn.addEventListener('click', function() {
         saveConfig(nameInput.value.trim(), ceoInput.value.trim());
-        goToBeat(3);
+        goToBeat(25); // Go to channels step
       });
     }
     if (skipBtn) {
-      skipBtn.addEventListener('click', function() { goToBeat(3); });
+      console.log('[OB-DEBUG] skipBtn found, id:', skipBtn.id);
+      skipBtn.addEventListener('click', function(e) { 
+        console.log('[OB-DEBUG] SKIP SETUP CLICKED!', e.type, e.isTrusted);
+        goToBeat(25); 
+      });
+      skipBtn.addEventListener('touchend', function(e) {
+        console.log('[OB-DEBUG] SKIP SETUP TOUCHEND!');
+        e.preventDefault();
+        goToBeat(25);
+      });
+    } else {
+      console.error('[OB-DEBUG] skipBtn #skObSkipSetup NOT FOUND!');
     }
 
     // Focus name input
@@ -562,6 +922,90 @@ window.__skOnboardingV2 = true;
       var ceoEls = document.querySelectorAll('[data-agent="ceo"] .agent-name, .agent-ceo .agent-name');
       ceoEls.forEach(function(el) { el.textContent = ceoName; });
     }
+  }
+
+  // ── Beat 2.5: Channel Connection logic ─────────────────────────────────────
+  function animateChannelCards() {
+    var cards = document.querySelectorAll('.sk-ob-channel-card');
+    cards.forEach(function(card, i) {
+      setTimeout(function() {
+        card.classList.add('sk-ob-appearing');
+      }, i * 120);
+    });
+  }
+
+  function initBeat25() {
+    var continueBtn = document.getElementById('skObContinueChannels');
+    var skipBtn = document.getElementById('skObSkipChannels');
+    var activeWizard = null;
+
+    if (continueBtn) {
+      continueBtn.addEventListener('click', function() { goToBeat(3); });
+    }
+    if (skipBtn) {
+      skipBtn.addEventListener('click', function() { goToBeat(3); });
+    }
+
+    // Channel card click handlers
+    var cards = document.querySelectorAll('.sk-ob-channel-card');
+    cards.forEach(function(card) {
+      var channel = card.getAttribute('data-channel');
+      var btn = card.querySelector('.sk-ob-channel-btn');
+      
+      card.addEventListener('click', function() {
+        if (connectedChannels[channel]) return;
+        
+        // Hide any active wizard
+        if (activeWizard) activeWizard.classList.remove('sk-ob-active');
+        
+        // Show this channel's wizard
+        var wizardId = 'skObWizard' + channel.charAt(0).toUpperCase() + channel.slice(1);
+        activeWizard = document.getElementById(wizardId);
+        if (activeWizard) {
+          activeWizard.classList.add('sk-ob-active');
+        }
+      });
+    });
+
+    // Copy button handlers
+    var copyBtns = document.querySelectorAll('.sk-ob-copy-btn');
+    copyBtns.forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var text = btn.getAttribute('data-copy') || btn.textContent;
+        navigator.clipboard.writeText(text).then(function() {
+          var original = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = original; }, 1500);
+        }).catch(function() {
+          // Fallback selection
+          btn.select();
+        });
+      });
+    });
+
+    // Make connectChannel function global for OAuth buttons
+    window.connectChannel = function(channel) {
+      connectedChannels[channel] = true;
+      var card = document.querySelector('[data-channel="' + channel + '"]');
+      if (card) {
+        card.classList.add('sk-ob-connected');
+        var status = card.querySelector('.sk-ob-channel-status');
+        var btn = card.querySelector('.sk-ob-channel-btn');
+        if (status) status.textContent = 'Connected';
+        if (status) status.classList.add('sk-ob-connected');
+        if (btn) {
+          btn.textContent = 'Connected';
+          btn.classList.add('sk-ob-connected');
+        }
+      }
+      
+      // Hide wizard
+      if (activeWizard) {
+        activeWizard.classList.remove('sk-ob-active');
+        activeWizard = null;
+      }
+    };
   }
 
   // ── Beat 3: First Mission logic ────────────────────────────────────────────
@@ -669,6 +1113,9 @@ window.__skOnboardingV2 = true;
   function complete() {
     stopConfetti();
     localStorage.setItem('spawnkit-onboarded', 'true');
+    // Restore statusbar
+    var statusBar = document.querySelector('.exec-statusbar');
+    if (statusBar) statusBar.style.display = '';
     overlay.classList.add('sk-ob-hiding');
     setTimeout(function() {
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
@@ -683,12 +1130,18 @@ window.__skOnboardingV2 = true;
   }
 
   // ── Init ───────────────────────────────────────────────────────────────────
+  var _initDone = false;
   function init() {
     // Skip if already onboarded
     if (localStorage.getItem('spawnkit-onboarded') === 'true') return;
+    // Guard: prevent double init (skAuthResolved + fallback both fire)
+    if (_initDone) { console.log('[OB-DEBUG] init() already ran, skipping duplicate'); return; }
+    _initDone = true;
     buildOverlay();
+    console.log('[OB-DEBUG] init() starting. beatEls:', beatEls.length);
     initBeat1();
     initBeat2();
+    initBeat25(); // Initialize channels step
     initBeat3();
     initBeat4();
   }

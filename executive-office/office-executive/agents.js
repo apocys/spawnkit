@@ -283,6 +283,9 @@
             if (addBtn) addBtn.addEventListener('click', openAddAgentWizard);
             if (closeBtn) closeBtn.addEventListener('click', closeAddAgentWizard);
             if (backdrop) backdrop.addEventListener('click', closeAddAgentWizard);
+
+            // Expose globally so mission-desk.js can trigger it
+            window.openAddAgentWizard = openAddAgentWizard;
             
             // F10: Wire all fleet grid room tiles → open detail panel on click
             document.querySelectorAll('.exec-room[data-agent]').forEach(function(room) {

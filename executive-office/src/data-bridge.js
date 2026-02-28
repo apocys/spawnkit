@@ -43,7 +43,11 @@
     const hasElectronAPI = typeof window.spawnkitAPI !== 'undefined';
     const hasRelayAPI = !!(window.OC_RELAY_URL || (typeof process !== 'undefined' && process.env && process.env.OC_RELAY_URL));
     const relayURL = window.OC_RELAY_URL || (typeof process !== 'undefined' && process.env && process.env.OC_RELAY_URL) || null;
-    const relayToken = window.OC_RELAY_TOKEN || (typeof process !== 'undefined' && process.env && process.env.OC_RELAY_TOKEN) || null;
+    // Read token dynamically — app.js may set OC_RELAY_TOKEN after data-bridge loads
+    function getRelayToken() {
+        return window.OC_RELAY_TOKEN || localStorage.getItem('spawnkit-token') || (typeof process !== 'undefined' && process.env && process.env.OC_RELAY_TOKEN) || null;
+    }
+    const relayToken = getRelayToken(); // initial snapshot for compat
     SpawnKit.mode = hasElectronAPI ? 'live' : (hasRelayAPI ? 'live' : 'demo');
 
     // ── Agent OS Naming System v2.0 — MINIMAL, PERFECT & EXTENSIBLE ──────────
@@ -416,7 +420,8 @@
         if (!relayURL) return null;
         const url = relayURL.replace(/\/+$/, '') + endpoint;
         const headers = { 'Accept': 'application/json' };
-        if (relayToken) headers['Authorization'] = 'Bearer ' + relayToken;
+        const token = getRelayToken();
+        if (token) headers['Authorization'] = 'Bearer ' + token;
         try {
             const resp = await fetch(url, { headers, mode: 'cors' });
             if (!resp.ok) {

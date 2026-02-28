@@ -448,7 +448,9 @@
 
         function openMailbox(tab) {
             if (typeof tab === 'object') tab = undefined; // Handle event object
-            closeAllPanels();
+            closeTodoPanel();
+            closeDetailPanel();
+            closeChatPanel(); // Close old chat panel if open
             mailboxOverlay.classList.add('open');
             
             // Switch to specified tab or default to Messages when opened via mailbox button
@@ -527,11 +529,13 @@
         async function openDetailPanel(agentId) {
             // F13: Redirect CEO to Mission Control full-screen
             if (agentId === 'ceo' && typeof window.openMissionControl === 'function') {
+                closeDetailPanel();
                 window.openMissionControl();
                 return;
             }
             
-            closeAllPanels();
+            closeMailbox();
+            closeTodoPanel();
 
             var agent = AGENTS[agentId] || (window._spawnkitAgents && window._spawnkitAgents[agentId]);
             if (!agent) { console.warn('Agent registry unavailable for:', agentId); return; }
@@ -902,6 +906,10 @@
 
         detailBackdrop.addEventListener('click', closeDetailPanel);
         detailClose.addEventListener('click', closeDetailPanel);
+
+        // Expose globally so mission-desk.js can call it directly
+        window.openDetailPanel = openDetailPanel;
+        window.closeDetailPanel = closeDetailPanel;
 
         /* Keep the old openTodoPanel as a wrapper for backwards compat */
         function openTodoPanel(agentId) {
@@ -1298,7 +1306,8 @@
 
         window.openMeetingPanel = openMeetingPanel;
         async function openMeetingPanel() {
-            closeAllPanels();
+            closeTodoPanel(); // Close TODO panel if open
+            closeMailbox();   // Close mailbox if open
 
             var activeSubagents = [];
             if (API) {
@@ -2101,14 +2110,28 @@
             });
         });
 
-        // ── Override openTodoPanel to intercept inactive rooms ──
+        // ── Override openTodoPanel — always open detail panel, show activate CTA if inactive ──
         var _originalOpenTodoPanel = openTodoPanel;
         openTodoPanel = function(agentId) {
-            if (agentId !== 'ceo' && !ACTIVE_AGENT_IDS.has(agentId)) {
-                openActivateModal(agentId);
-                return;
-            }
+            // Always open the detail panel — even for inactive agents
             _originalOpenTodoPanel(agentId);
+            // If agent is not activated, add an activate CTA inside the detail panel
+            if (agentId !== 'ceo' && !ACTIVE_AGENT_IDS.has(agentId)) {
+                setTimeout(function() {
+                    var body = document.getElementById('detailBody');
+                    if (body && !body.querySelector('.detail-activate-cta')) {
+                        var cta = document.createElement('div');
+                        cta.className = 'detail-activate-cta detail-section';
+                        cta.innerHTML = '<div style="text-align:center;padding:16px 0;">' +
+                            '<div style="font-size:32px;margin-bottom:8px;">🔒</div>' +
+                            '<div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">Not Yet Activated</div>' +
+                            '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;">Activate this agent to assign skills and start working</div>' +
+                            '<button onclick="openActivateModal(\'' + agentId + '\')" style="padding:8px 20px;border:none;border-radius:8px;background:var(--exec-blue);color:white;font-family:var(--font-family);font-size:13px;font-weight:600;cursor:pointer;">Activate Agent</button>' +
+                            '</div>';
+                        body.insertBefore(cta, body.firstChild);
+                    }
+                }, 50);
+            }
         };
 
         // Run initially (offline state = only CEO)
@@ -2911,14 +2934,6 @@
             closeCronPanel();
             closeMemoryPanel();
             closeRemotePanel();
-            // Close any remaining overlays not covered above
-            ['missionsOverlay','settingsOverlay','chatHistoryOverlay',
-             'addAgentOverlay','orchestrationOverlay','activateAgentModal',
-             'missionControlOverlay'].forEach(function(id) {
-                var el = document.getElementById(id);
-                if (el) el.classList.remove('open');
-            });
-            document.body.style.overflow = '';
         }
 
         /* ═══════════════════════════════════════════════

@@ -14,7 +14,7 @@
       '.dw-close{position:absolute;top:0;right:32px;background:rgba(255,255,255,0.08);border:none;color:#fff;font-size:20px;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s}',
       '.dw-close:hover{background:rgba(255,255,255,0.18)}',
       '.dw-paths{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:28px 32px 32px}',
-      '.dw-path-card{background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;cursor:pointer;transition:border-color 0.2s,background 0.2s,box-shadow 0.2s}',
+      '.dw-path-card{-webkit-tap-highlight-color:rgba(0,122,255,0.3);touch-action:manipulation;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;cursor:pointer;transition:border-color 0.2s,background 0.2s,box-shadow 0.2s}',
       '.dw-path-card:hover{border-color:#007AFF;background:rgba(0,122,255,0.08);box-shadow:0 0 0 3px rgba(0,122,255,0.15)}',
       '.dw-path-icon{font-size:32px;margin-bottom:12px}',
       '.dw-path-title{font-size:16px;font-weight:700;color:#fff;margin-bottom:6px}',
@@ -76,7 +76,7 @@
     ];
     var grid = el('div', {class:'dw-paths', id:'dwPaths'});
     cards.forEach(function(c) {
-      var card = el('div', {class:'dw-path-card', 'data-path':c.path});
+      var card = el('div', {class:'dw-path-card',role:'button',tabindex:'0', 'data-path':c.path});
       card.innerHTML = '<div class="dw-path-icon">'+c.icon+'</div><div class="dw-path-title">'+c.title+'</div><div class="dw-path-desc">'+c.desc+'</div><div class="dw-path-tag '+c.tagCls+'">'+c.tag+'</div>';
       card.addEventListener('click', function() { showDetail(c.path); });
       grid.appendChild(card);
@@ -200,7 +200,7 @@
     // ── Sub-path picker: BYOT vs Managed ──
     var subPicker = el('div', {class:'dw-paths', style:'padding:0;margin-bottom:24px'});
 
-    var byotCard = el('div', {class:'dw-path-card'});
+    var byotCard = el('div', {class:'dw-path-card',role:'button',tabindex:'0'});
     byotCard.innerHTML = '<div class="dw-path-icon">🔑</div>' +
       '<div class="dw-path-title">Bring Your Own Token</div>' +
       '<div class="dw-path-desc">Use your Hetzner API token. Full control over your server. Best price.</div>' +
@@ -213,7 +213,7 @@
       renderDeployBYOT(d);
     });
 
-    var managedCard = el('div', {class:'dw-path-card'});
+    var managedCard = el('div', {class:'dw-path-card',role:'button',tabindex:'0'});
     managedCard.innerHTML = '<div class="dw-path-icon">✨</div>' +
       '<div class="dw-path-title">Deploy for Me</div>' +
       '<div class="dw-path-desc">We handle everything — server, SSL, updates, DNS. Just pick a name and go.</div>' +

@@ -63,10 +63,11 @@
         '<div class="md-agent-role">' + escapeHtml(a.role) + '</div>' +
       '</div>';
     }).join('') +
-    // Minimal circle + button — inline with agent grid
-    '<button class="md-agent-add" id="mdAddAgentCircle" tabindex="0" aria-label="Add Agent" title="Add Agent">' +
-      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
-    '</button>';
+    '<div class="md-agent md-agent--add" tabindex="0" role="button" aria-label="Add Agent">' +
+      '<div class="md-agent-avatar"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px;border-radius:50%;border:2px dashed rgba(255,255,255,0.3);">+</div></div>' +
+      '<div class="md-agent-name">Add Agent</div>' +
+      '<div class="md-agent-role">New</div>' +
+    '</div>';
   }
 
   function buildAgentBarHtml() {
@@ -82,44 +83,7 @@
     var sendSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
       '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
 
-    var _username = (function() { try { return localStorage.getItem('spawnkit-username') || 'User'; } catch(e) { return 'User'; } })();
-    var _avatarLetter = _username.charAt(0).toUpperCase();
-
     var landing = '<div id="missionDesk" class="md-landing">' +
-      // ── Awwwards-quality top bar: user profile + add agent ──
-      '<div class="md-topbar" id="mdTopbar">' +
-        '<div class="md-topbar-left">' +
-          '<div class="md-topbar-logo">' +
-            '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>' +
-            '<span>SpawnKit</span>' +
-          '</div>' +
-        '</div>' +
-        '<div class="md-topbar-right">' +
-          <!-- Add Agent circle button is inline with agent fleet grid -->
-          '<div class="md-topbar-user" id="mdUserMenu">' +
-            '<div class="md-topbar-avatar" id="mdUserAvatar">' + _avatarLetter + '</div>' +
-            '<div class="md-topbar-user-info">' +
-              '<span class="md-topbar-username">' + _username + '</span>' +
-              '<span class="md-topbar-plan">Pro</span>' +
-            '</div>' +
-            '<svg class="md-topbar-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
-          '</div>' +
-          // Dropdown (hidden by default)
-          '<div class="md-topbar-dropdown" id="mdUserDropdown">' +
-            '<div class="md-topbar-dd-header">' +
-              '<div class="md-topbar-dd-avatar">' + _avatarLetter + '</div>' +
-              '<div><div class="md-topbar-dd-name">' + _username + '</div><div class="md-topbar-dd-email">Pro Plan</div></div>' +
-            '</div>' +
-            '<div class="md-topbar-dd-sep"></div>' +
-            '<button class="md-topbar-dd-item" data-action="settings"><span>⚙️</span>Settings</button>' +
-            '<button class="md-topbar-dd-item" data-action="theme"><span>🎨</span>Appearance</button>' +
-            '<button class="md-topbar-dd-item" data-action="keys"><span>🔑</span>API Keys</button>' +
-            '<div class="md-topbar-dd-sep"></div>' +
-            '<button class="md-topbar-dd-item md-topbar-dd-logout" data-action="logout"><span>⏻</span>Log out</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-      // ── Hero ──
       '<div class="md-hero">' +
         '<h1>What do we build today?</h1>' +
         '<p>Your AI team is ready. Ask anything or pick a quick action.</p>' +
@@ -138,9 +102,10 @@
       '<div class="md-team" id="missionDeskTeam">' + buildTeamHtml() + '</div>' +
       '<div class="md-section-label">Quick Actions</div>' +
       '<div class="md-actions" id="missionDeskActions">' +
-        '<button class="md-action" data-action="mission-control"><span class="md-action-icon">🎯</span><span class="md-action-label">Mission Control</span></button>' +
+        '<button class="md-action" data-action="missions"><span class="md-action-icon">🎯</span><span class="md-action-label">Missions</span></button>' +
         '<button class="md-action" data-action="boardroom"><span class="md-action-icon">🧠</span><span class="md-action-label">Boardroom</span></button>' +
         '<button class="md-action" data-action="skills"><span class="md-action-icon">🔨</span><span class="md-action-label">Skill Forge</span></button>' +
+        '<button class="md-action" data-action="forge"><span class="md-action-icon">🔨</span><span class="md-action-label">Skill Forge</span></button>' +
         '<button class="md-action" data-action="explore"><span class="md-action-icon">🚀</span><span class="md-action-label">Explore</span></button>' +
         '<button class="md-action" data-action="marketplace"><span class="md-action-icon">🏪</span><span class="md-action-label">Marketplace</span></button>' +
         '<button class="md-action" data-action="deploy"><span class="md-action-icon">🚀</span><span class="md-action-label">Get Started</span></button>' +
@@ -293,12 +258,7 @@
   /* ── Panel system ───────────────────────────────────────────────── */
 
   function openPanel(name) {
-    if (name === 'mission-control') {
-      var mcOverlay = document.getElementById('missionControlOverlay');
-      if (mcOverlay) { mcOverlay.classList.add('open'); return; }
-      var mcBtn = document.getElementById('mcBtn') || document.querySelector('[aria-label="Mission Control"]');
-      if (mcBtn) mcBtn.click();
-    } else if (name === 'missions') {
+    if (name === 'missions') {
       if (typeof openMissionsPanel === 'function') { openMissionsPanel(); return; }
       var missionsBtn = document.getElementById('missionsBtn');
       if (missionsBtn) missionsBtn.click();
@@ -345,6 +305,12 @@
   /* ── Agent tile click ───────────────────────────────────────────── */
 
   function handleAgentClick(agentId) {
+    // Prefer openDetailPanel directly (handles all agents including CEO)
+    if (typeof openDetailPanel === 'function') {
+      openDetailPanel(agentId);
+      return;
+    }
+    // Fallback: proxy click through exec-room tiles
     var existing = document.querySelector('[data-agent="' + agentId + '"]');
     if (existing && typeof existing.click === 'function') {
       existing.click();
@@ -463,12 +429,24 @@
 
     /* Agent tiles (team row) */
     document.querySelectorAll('#missionDeskTeam .md-agent').forEach(function (tile) {
-      tile.addEventListener('click', function () {
-        handleAgentClick(tile.getAttribute('data-agent-id'));
-      });
-      tile.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') handleAgentClick(tile.getAttribute('data-agent-id'));
-      });
+      if (tile.classList.contains('md-agent--add')) {
+        // Add Agent tile → open wizard
+        tile.addEventListener('click', function () {
+          if (typeof window.openAddAgentWizard === 'function') window.openAddAgentWizard();
+        });
+        tile.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            if (typeof window.openAddAgentWizard === 'function') window.openAddAgentWizard();
+          }
+        });
+      } else {
+        tile.addEventListener('click', function () {
+          handleAgentClick(tile.getAttribute('data-agent-id'));
+        });
+        tile.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') handleAgentClick(tile.getAttribute('data-agent-id'));
+        });
+      }
     });
 
     /* Agent icons (chat bar) */
@@ -484,73 +462,6 @@
     /* Panel close */
     panelClose && panelClose.addEventListener('click', closePanel);
     backdrop   && backdrop.addEventListener('click', closePanel);
-
-    /* ── Topbar: User dropdown + Add Agent + scroll ── */
-    (function() {
-      var userMenu = document.getElementById('mdUserMenu');
-      var dropdown = document.getElementById('mdUserDropdown');
-      var addAgentBtn = document.getElementById('mdAddAgent');
-      var topbar = document.getElementById('mdTopbar');
-      if (!userMenu || !dropdown) return;
-
-      // Toggle dropdown
-      userMenu.addEventListener('click', function(e) {
-        e.stopPropagation();
-        var isOpen = dropdown.classList.contains('md-topbar-dropdown--open');
-        dropdown.classList.toggle('md-topbar-dropdown--open', !isOpen);
-        userMenu.classList.toggle('md-topbar-user--open', !isOpen);
-      });
-
-      // Close on outside click
-      document.addEventListener('click', function() {
-        dropdown.classList.remove('md-topbar-dropdown--open');
-        userMenu.classList.remove('md-topbar-user--open');
-      });
-      dropdown.addEventListener('click', function(e) { e.stopPropagation(); });
-
-      // Dropdown actions
-      dropdown.querySelectorAll('.md-topbar-dd-item').forEach(function(item) {
-        item.addEventListener('click', function() {
-          var action = item.getAttribute('data-action');
-          dropdown.classList.remove('md-topbar-dropdown--open');
-          userMenu.classList.remove('md-topbar-user--open');
-          if (action === 'logout') {
-            if (!confirm('Log out of SpawnKit?')) return;
-            localStorage.removeItem('spawnkit-token');
-            localStorage.removeItem('spawnkit-instance-url');
-            localStorage.removeItem('spawnkit-demo-mode');
-            window.location.reload();
-          } else if (action === 'settings') {
-            if (typeof window.openSettingsPanel === 'function') window.openSettingsPanel();
-            else openPanel('settings');
-          } else if (action === 'theme') {
-            if (typeof window.openSettingsPanel === 'function') window.openSettingsPanel();
-          } else if (action === 'keys') {
-            if (typeof window.openSettingsPanel === 'function') window.openSettingsPanel();
-          }
-        });
-      });
-
-      // Add Agent circle (inline with fleet grid)
-      var addCircle = document.getElementById('mdAddAgentCircle');
-      if (addCircle) {
-        addCircle.addEventListener('click', function() {
-          if (window.SkillMarketplace) { window.SkillMarketplace.open(); return; }
-          var addBtn = document.getElementById('addAgentBtn');
-          if (addBtn) addBtn.click();
-        });
-      }
-
-      // Scroll shadow on topbar
-      if (topbar) {
-        var missionDesk = document.getElementById('missionDesk');
-        var scrollTarget = missionDesk ? missionDesk.parentElement : window;
-        (scrollTarget === window ? window : scrollTarget).addEventListener('scroll', function() {
-          var scrollY = scrollTarget === window ? window.scrollY : scrollTarget.scrollTop;
-          topbar.classList.toggle('md-topbar--scrolled', scrollY > 8);
-        }, { passive: true });
-      }
-    })();
 
     /* Public API */
     window.MissionDesk = {
