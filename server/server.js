@@ -35,7 +35,7 @@ function getLatestVersion() {
       const remoteHead = execSync('git -C ' + REPO_DIR + ' rev-parse origin/main 2>/dev/null || git -C ' + REPO_DIR + ' rev-parse origin/master 2>/dev/null', { encoding: 'utf8', timeout: 5000 }).trim();
       
       // Check version.json in repo
-      const repoVersionFile = path.join(REPO_DIR, 'office-executive', 'version.json');
+      const repoVersionFile = path.join(REPO_DIR, 'server', 'version.json');
       let repoVersion = local;
       try { repoVersion = JSON.parse(fs.readFileSync(repoVersionFile, 'utf8')); } catch(e) {}
       
