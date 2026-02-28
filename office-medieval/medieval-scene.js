@@ -2034,8 +2034,7 @@ class MedievalCastle3D {
                     // Update activity with real data
                     if (Date.now() - this.lastMetricsUpdate > 30000) { // Every 30s
                         this.addActivityLog(`Royal court status: ${totalSessions} sessions, ${(totalTokens/1000).toFixed(1)}k wisdom gathered`, 'Royal Herald');
-                    // Apply persisted positions after data loads
-                    this.applyPersistedPositions();
+                        this.applyPersistedPositions();
                         this.lastMetricsUpdate = Date.now();
                     }
                 }
