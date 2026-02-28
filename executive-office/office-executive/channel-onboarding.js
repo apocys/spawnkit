@@ -992,19 +992,15 @@ window.__skChannelOnboarding = true;
     var card = state.overlay.querySelector('.sk-cw-card');
     if (!card) return;
 
-    var content = card.querySelector('div');
-    if (content) {
-      content.innerHTML = renderAlreadyConnected(ch, details);
-    }
+    // Replace entire card content (clear spinner, detect content, everything)
+    card.innerHTML = renderAlreadyConnected(ch, details) +
+      '<div class="sk-cw-actions">' +
+        '<button class="sk-cw-btn sk-cw-btn-secondary" id="skCwReconnect">Reconnect</button>' +
+        '<button class="sk-cw-btn sk-cw-btn-primary" id="skCwDone" style="background:' + ch.gradient + ';">Done</button>' +
+      '</div>';
 
-    // Replace actions
-    var actions = card.querySelector('.sk-cw-actions');
-    if (!actions) {
-      actions = el('div', { className: 'sk-cw-actions' });
-      card.appendChild(actions);
-    }
-    actions.innerHTML = '<button class="sk-cw-btn sk-cw-btn-secondary" id="skCwReconnect">Reconnect</button>' +
-      '<button class="sk-cw-btn sk-cw-btn-primary" id="skCwDone" style="background:' + ch.gradient + ';">Done</button>';
+    // Re-bind click handlers since we replaced innerHTML
+    bindEvents(card);
   }
 
   // ── Verification: real API call ────────────────────────────────────────────
