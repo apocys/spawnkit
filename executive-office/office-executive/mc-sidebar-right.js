@@ -311,19 +311,34 @@
     Object.keys(channelMap).forEach(function(chId) {
       var ch = channelMap[chId];
       var isConn = !!connectedChannels[chId];
-      var row = makeConnectorItem(ch.icon, ch.name, isConn ? '✓ connected' : 'connect →', isConn ? 'Click to manage connection.' : 'Click to set up ' + ch.name + '.');
 
-      // Override click to open wizard
-      row.replaceWith(row.cloneNode(true));
-      var newRow = items.appendChild(row.cloneNode(true));
-      if (isConn) newRow.querySelector('span:last-child').style.color = '#34C759';
-      newRow.style.cursor = 'pointer';
-      newRow.addEventListener('mouseenter', function () { newRow.style.background = 'rgba(0,0,0,0.04)'; });
-      newRow.addEventListener('mouseleave', function () { newRow.style.background = ''; });
-      newRow.addEventListener('click', function (e) {
-        e.stopPropagation();
+      // Build row directly (don't use makeConnectorItem — its click expands text, we want to open wizard)
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;border-radius:6px;transition:background 0.15s;';
+
+      var iconEl = document.createElement('div');
+      iconEl.style.cssText = 'font-size:16px;flex-shrink:0;';
+      iconEl.textContent = ch.icon;
+
+      var nameEl = document.createElement('span');
+      nameEl.style.cssText = 'font-size:13px;color:#1C1C1E;flex:1;';
+      nameEl.textContent = ch.name;
+
+      var statusEl = document.createElement('span');
+      statusEl.style.cssText = 'font-size:11px;margin-left:auto;color:' + (isConn ? '#34C759' : '#AEAEB2') + ';';
+      statusEl.textContent = isConn ? '✓ connected' : 'connect →';
+
+      row.appendChild(iconEl);
+      row.appendChild(nameEl);
+      row.appendChild(statusEl);
+
+      row.addEventListener('mouseenter', function () { row.style.background = 'rgba(0,0,0,0.04)'; });
+      row.addEventListener('mouseleave', function () { row.style.background = ''; });
+      row.addEventListener('click', function () {
         if (window.ChannelOnboarding) window.ChannelOnboarding.open(chId);
       });
+
+      items.appendChild(row);
     });
 
     // Fleet relay (non-channel, keep static)
