@@ -4408,7 +4408,7 @@
            CEO Communications Hub (was Mailbox) — Open / Close / Tabs
            ═══════════════════════════════════════════════ */
 
-        function openMailbox(tab) {
+        window.openMailbox = function(tab) {
             if (typeof tab === 'object') tab = undefined; // Handle event object
             closeTodoPanel();
             closeDetailPanel();
@@ -6952,8 +6952,6 @@
     </script>
 
     <!-- Fleet client disabled: relay endpoints not yet deployed. Re-enable when fleet.spawnkit.ai/api/fleet/* is live -->
-    <!-- <script src="./src/fleet-client.js"></script> -->
-    <!-- <script src="./src/fleet-bootstrap.js"></script> -->
 
     <!-- ═══ Add Agent Wizard Logic ═══ -->
     <script>
@@ -9189,5 +9187,11 @@
         })();
     })();
     </script>
+
+    <!-- Mission Desk (Kira fix 2026-02-28) -->
+    <link rel="stylesheet" href="mission-desk.css">
+    <script src="mission-desk.js"></script>
+    <script src="channel-onboarding.js"></script>
+    <script src="feature-toolbar.js"></script>
 </body>
 </html>
