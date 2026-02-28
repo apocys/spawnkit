@@ -3,8 +3,8 @@
 # Safety features: branch protection, backup, health check, rollback, logging
 set -euo pipefail
 
-REPO="/home/apocyz_runner/fleetkit-v2"
-DEPLOYED="/home/apocyz_runner/executive-office"
+REPO="/home/apocyz_runner/spawnkit"
+DEPLOYED="/home/apocyz_runner/spawnkit-server"
 DEPLOY_LOG="$HOME/deploy-history.log"
 MAX_BACKUPS=3
 HEALTH_TIMEOUT=30
