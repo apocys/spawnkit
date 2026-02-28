@@ -7,7 +7,17 @@
             else if (typeof openMissionControl === 'function') openMissionControl();
         }},
         { key: '2', icon: '💬', label: 'Chat', action: function() {
-            if (window.ThemeChat) ThemeChat.show();
+            var chatEl = document.getElementById('medievalChat');
+            if (chatEl) {
+                if (chatEl.style.display === 'none' || !chatEl.style.display) {
+                    chatEl.style.display = 'flex';
+                    chatEl.style.flexDirection = 'column';
+                    if (window.ThemeChat) ThemeChat.show();
+                } else {
+                    chatEl.style.display = 'none';
+                    if (window.ThemeChat) ThemeChat.hide();
+                }
+            }
         }},
         { key: '3', icon: '📜', label: 'Skills', action: function() {
             if (typeof window.openBuildingPanel === 'function') window.openBuildingPanel('🏪 Market');

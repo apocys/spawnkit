@@ -1379,11 +1379,16 @@ class MedievalCastle3D {
             chatBtn.onclick = () => {
                 overlay.classList.remove('visible');
                 setTimeout(() => { overlay.style.display = 'none'; }, 300);
+                const chatEl = document.getElementById('medievalChat');
+                if (chatEl) {
+                    chatEl.style.display = 'flex';
+                    chatEl.style.flexDirection = 'column';
+                }
                 if (window.ThemeChat) {
                     ThemeChat.show();
                     setTimeout(() => {
                         ThemeChat.send('Regarding ' + agentId + ': ');
-                    }, 300);
+                    }, 500);
                 }
             };
         }

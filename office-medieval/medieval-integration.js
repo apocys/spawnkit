@@ -210,14 +210,29 @@
       if (!chatContainer) {
         chatContainer = document.createElement('div');
         chatContainer.id = 'medievalChat';
-        chatContainer.style.cssText = 'position:fixed;right:0;bottom:0;width:380px;height:500px;z-index:100;display:none;';
+        chatContainer.style.cssText = 'position:fixed;right:8px;bottom:72px;width:380px;height:480px;z-index:200;display:none;border-radius:16px;overflow:hidden;border:2px solid rgba(180,150,100,0.4);box-shadow:0 8px 32px rgba(0,0,0,0.4);background:rgba(20,20,30,0.95);backdrop-filter:blur(12px);';
+        // Chat header with close button
+        var chatHeader = document.createElement('div');
+        chatHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(30,25,20,0.8);border-bottom:1px solid rgba(180,150,100,0.3);';
+        chatHeader.innerHTML = '<span style="font-family:Crimson Text,serif;font-size:14px;font-weight:600;color:#C9A959;">💬 Royal Messenger</span>';
+        var closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = 'background:rgba(180,60,60,0.6);color:#fff;border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:background 0.15s;';
+        closeBtn.addEventListener('mouseenter', function() { closeBtn.style.background = 'rgba(220,60,60,0.9)'; });
+        closeBtn.addEventListener('mouseleave', function() { closeBtn.style.background = 'rgba(180,60,60,0.6)'; });
+        closeBtn.addEventListener('click', function() {
+          chatContainer.style.display = 'none';
+          window.ThemeChat.hide();
+        });
+        chatHeader.appendChild(closeBtn);
+        chatContainer.appendChild(chatHeader);
         document.body.appendChild(chatContainer);
       }
       window.ThemeChat.init(chatContainer, {
         theme:          'medieval',
         placeholder:    'Your command, Your Majesty...',
         userLabel:      'Your Majesty',
-        assistantLabel: '🤖 ApoMac',
+        assistantLabel: '🤖 Sycopa',
       });
 
       var origSelect = app.selectAgent.bind(app);
@@ -236,7 +251,8 @@
       toggleBtn.style.cssText = 'display:none;'; // Hidden — hotbar key 2 handles chat
       toggleBtn.addEventListener('click', function() {
         if (chatContainer.style.display === 'none') {
-          chatContainer.style.display = 'block';
+          chatContainer.style.display = 'flex';
+          chatContainer.style.flexDirection = 'column';
           window.ThemeChat.show();
         } else {
           chatContainer.style.display = 'none';
