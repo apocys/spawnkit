@@ -1373,7 +1373,7 @@ class MedievalCastle3D {
         overlay.style.display = 'flex';
         setTimeout(() => overlay.classList.add('visible'), 50);
 
-        // Wire chat button to open chat with this agent's context
+        // Wire chat button to open chat with agent-specific context
         const chatBtn = document.getElementById('agentChatBtn');
         if (chatBtn) {
             chatBtn.onclick = () => {
@@ -1384,11 +1384,19 @@ class MedievalCastle3D {
                     chatEl.style.display = 'flex';
                     chatEl.style.flexDirection = 'column';
                 }
+                // Update chat header to show which agent we're talking to
+                const chatTitle = chatEl?.querySelector('[style*="Royal Messenger"]') || 
+                                  chatEl?.querySelector('span');
+                if (chatTitle) chatTitle.textContent = '💬 Speaking to ' + agentId;
+                // Track active persona for message prefixing
+                window._chatPersona = agentId;
                 if (window.ThemeChat) {
                     ThemeChat.show();
+                    // Focus the input — user types, message gets prefixed on send
                     setTimeout(() => {
-                        ThemeChat.send('Regarding ' + agentId + ': ');
-                    }, 500);
+                        const input = chatEl?.querySelector('.sk-chat-input');
+                        if (input) { input.placeholder = 'Speak to ' + agentId + '...'; input.focus(); }
+                    }, 300);
                 }
             };
         }
@@ -1499,7 +1507,13 @@ class MedievalCastle3D {
                 </div>
             `;
             thoughtsHtml += '</div>';
+            
+            // Add real transcript section (loaded async)
+            thoughtsHtml += '<div id="agent-transcript-feed" style="margin-top:16px;"><h4 style="font-family:var(--font-serif);color:var(--castle-navy);font-size:13px;margin-bottom:8px;">📜 Recent Royal Decrees</h4><div style="text-align:center;color:var(--castle-brown);font-size:12px;opacity:0.5;">Loading scrolls...</div></div>';
             content.innerHTML = thoughtsHtml;
+
+            // Fetch real transcript
+            this.loadTranscriptForAgent(agentId);
 
         } else if (tab === 'metrics') {
             content.innerHTML = `
@@ -1598,6 +1612,40 @@ class MedievalCastle3D {
             }
         } catch (e) {
             console.warn('Failed to load agent sessions:', e);
+        }
+    }
+
+    async loadTranscriptForAgent(agentId) {
+        const feed = document.getElementById('agent-transcript-feed');
+        if (!feed) return;
+        try {
+            const resp = await ThemeAuth.fetch(API_URL + '/api/oc/chat/transcript?last=10');
+            if (!resp.ok) { feed.innerHTML = ''; return; }
+            const data = await resp.json();
+            const msgs = data.messages || [];
+            if (!msgs.length) {
+                feed.innerHTML = '<h4 style="font-family:var(--font-serif);color:var(--castle-navy);font-size:13px;margin-bottom:8px;">📜 Recent Royal Decrees</h4><div style="text-align:center;color:var(--castle-brown);font-size:12px;padding:12px;">No recent scrolls found</div>';
+                return;
+            }
+            let html = '<h4 style="font-family:var(--font-serif);color:var(--castle-navy);font-size:13px;margin-bottom:8px;">📜 Recent Royal Decrees</h4><div class="thoughts-feed" style="max-height:180px;">';
+            msgs.forEach(m => {
+                const isUser = m.role === 'user';
+                const icon = isUser ? '👑' : '🤖';
+                const label = isUser ? 'Your Majesty' : 'Sycopa';
+                const time = m.ts ? new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+                const text = m.text.length > 200 ? m.text.substring(0, 200) + '...' : m.text;
+                html += `<div class="thought-entry">
+                    <div class="thought-emoji">${icon}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:11px;color:var(--castle-brown);opacity:0.6;margin-bottom:2px;">${label} · ${time}</div>
+                        <div class="thought-text" style="font-size:12px;">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+            feed.innerHTML = html;
+        } catch(e) {
+            feed.innerHTML = '';
         }
     }
 

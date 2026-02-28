@@ -884,24 +884,81 @@
                         });
                     }
 
-                    // Close modal + show feedback
-                    summonBtn.textContent = '✨ Knight Summoned!';
-                    summonBtn.style.background = '#10b981';
-                    setTimeout(function() {
-                        var overlay = document.getElementById('summonOverlay');
-                        overlay.classList.remove('visible');
-                        setTimeout(function() {
-                            overlay.style.display = 'none';
-                            summonBtn.textContent = '⚔️ Summon Knight';
-                            summonBtn.style.background = 'linear-gradient(135deg,#FFD700,#B8860B)';
-                            document.getElementById('summonTask').value = '';
-                        }, 300);
-                    }, 1200);
+                    // Show progress state
+                    summonBtn.textContent = '🔮 Summoning...';
+                    summonBtn.style.background = '#6366f1';
+                    summonBtn.disabled = true;
 
                     // Activity log
                     if (window.castleApp && window.castleApp.addActivityLog) {
-                        window.castleApp.addActivityLog('⚔️ A new knight has been summoned for: ' + task.substring(0, 50) + '...', 'system');
+                        window.castleApp.addActivityLog('🔮 Summoning a knight for: ' + task.substring(0, 50) + '...', 'system');
                     }
+
+                    // Poll for new sub-agent sessions (check every 3s, timeout 30s)
+                    var pollCount = 0;
+                    var maxPolls = 10;
+                    var beforeSessions = [];
+                    
+                    // Snapshot current sessions
+                    if (window.ThemeAuth) {
+                        window.ThemeAuth.fetch(window.ThemeAuth.getApiUrl() + '/api/oc/sessions').then(function(r) {
+                            return r.json();
+                        }).then(function(data) {
+                            var sessions = Array.isArray(data) ? data : (data.sessions || []);
+                            beforeSessions = sessions.filter(function(s) { return s.kind === 'subagent'; }).map(function(s) { return s.key; });
+                        }).catch(function() {});
+                    }
+
+                    var spawnPoll = setInterval(function() {
+                        pollCount++;
+                        if (pollCount > maxPolls) {
+                            clearInterval(spawnPoll);
+                            summonBtn.textContent = '⚔️ Knight dispatched!';
+                            summonBtn.style.background = '#10b981';
+                            setTimeout(function() {
+                                var overlay = document.getElementById('summonOverlay');
+                                overlay.classList.remove('visible');
+                                setTimeout(function() {
+                                    overlay.style.display = 'none';
+                                    summonBtn.textContent = '⚔️ Summon Knight';
+                                    summonBtn.style.background = 'linear-gradient(135deg,#FFD700,#B8860B)';
+                                    summonBtn.disabled = false;
+                                    document.getElementById('summonTask').value = '';
+                                }, 300);
+                            }, 1500);
+                            return;
+                        }
+
+                        if (window.ThemeAuth) {
+                            window.ThemeAuth.fetch(window.ThemeAuth.getApiUrl() + '/api/oc/sessions').then(function(r) {
+                                return r.json();
+                            }).then(function(data) {
+                                var sessions = Array.isArray(data) ? data : (data.sessions || []);
+                                var subs = sessions.filter(function(s) { return s.kind === 'subagent'; });
+                                var newOnes = subs.filter(function(s) { return beforeSessions.indexOf(s.key) === -1; });
+                                if (newOnes.length > 0) {
+                                    clearInterval(spawnPoll);
+                                    var knightName = newOnes[0].label || 'New Knight';
+                                    summonBtn.textContent = '✨ ' + knightName + ' has arrived!';
+                                    summonBtn.style.background = '#10b981';
+                                    if (window.castleApp && window.castleApp.addActivityLog) {
+                                        window.castleApp.addActivityLog('⚔️ ' + knightName + ' has answered the summons!', 'system');
+                                    }
+                                    setTimeout(function() {
+                                        var overlay = document.getElementById('summonOverlay');
+                                        overlay.classList.remove('visible');
+                                        setTimeout(function() {
+                                            overlay.style.display = 'none';
+                                            summonBtn.textContent = '⚔️ Summon Knight';
+                                            summonBtn.style.background = 'linear-gradient(135deg,#FFD700,#B8860B)';
+                                            summonBtn.disabled = false;
+                                            document.getElementById('summonTask').value = '';
+                                        }, 300);
+                                    }, 2000);
+                                }
+                            }).catch(function() {});
+                        }
+                    }, 3000);
                 });
             }
 

@@ -590,6 +590,54 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET /api/oc/chat/transcript?last=N — Sanitized transcript (text-only, no tool calls)
+  if (req.url.startsWith('/api/oc/chat/transcript') && req.method === 'GET') {
+    res.setHeader('Content-Type', 'application/json');
+    const url = new URL(req.url, 'http://localhost');
+    const last = Math.min(parseInt(url.searchParams.get('last') || '15'), 50);
+    try {
+      const sessData = readJSON(SESSIONS_FILE);
+      const mainSess = sessData?.['agent:main:main'];
+      const transcriptPath = mainSess?.sessionFile;
+      if (!transcriptPath || !fs.existsSync(transcriptPath)) {
+        res.writeHead(200);
+        res.end(JSON.stringify({ messages: [] }));
+        return;
+      }
+      const lines = fs.readFileSync(transcriptPath, 'utf8').trim().split('\n');
+      const messages = [];
+      for (let i = lines.length - 1; i >= 0 && messages.length < last * 3; i--) {
+        try {
+          const entry = JSON.parse(lines[i]);
+          if (entry.type !== 'message') continue;
+          const msg = entry.message;
+          if (!msg || msg.role === 'system') continue;
+          // Extract text content only — skip tool calls/results
+          let text = '';
+          if (typeof msg.content === 'string') {
+            text = msg.content;
+          } else if (Array.isArray(msg.content)) {
+            text = msg.content
+              .filter(p => p.type === 'text' && typeof p.text === 'string')
+              .map(p => p.text)
+              .join(' ');
+          }
+          if (!text.trim()) continue;
+          if (msg.role === 'toolResult') continue;
+          // Truncate long messages
+          if (text.length > 500) text = text.substring(0, 500) + '...';
+          messages.unshift({ role: msg.role, text, ts: entry.timestamp });
+        } catch(e) {}
+      }
+      res.writeHead(200);
+      res.end(JSON.stringify({ messages: messages.slice(-last) }));
+    } catch(e) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   if (req.url.startsWith('/api/oc/')) {
     res.setHeader('Content-Type', 'application/json');
     const route = req.url.replace(/\?.*/, '');

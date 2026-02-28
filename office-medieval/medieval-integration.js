@@ -235,6 +235,18 @@
         assistantLabel: '🤖 Sycopa',
       });
 
+      // Wrap sendMessage to prefix with active persona context
+      var origSend = window.ThemeChat._sendMessage;
+      if (origSend) {
+        window.ThemeChat._sendMessage = function(text) {
+          var persona = window._chatPersona;
+          if (persona && persona !== 'ApoMac' && persona !== 'ceo') {
+            text = '[Speaking to ' + persona + '] ' + text;
+          }
+          origSend(text);
+        };
+      }
+
       var origSelect = app.selectAgent.bind(app);
       app.selectAgent = function(agentId) {
         origSelect(agentId);
