@@ -77,18 +77,30 @@ function initSky(app) {
         const elapsed = now / 1000;
         twinkleTime += delta;
 
-        // 70% day / 30% night remapping (synced with medieval-scene.js)
-        const DAY_FRACTION = 0.70;
-        const rawCycle = (elapsed % 3600) / 3600;
-        let mappedCycle;
-        if (rawCycle < DAY_FRACTION) {
-            mappedCycle = (rawCycle / DAY_FRACTION) * 0.5;
+        // Real local time (synced with medieval-scene.js)
+        // Read from scene state if available, otherwise compute from local clock
+        const sceneState = app._dayNightState;
+        let sunAngle, sunHeight, isNight;
+        if (sceneState) {
+            sunAngle = sceneState.sunAngle;
+            sunHeight = sceneState.sunHeight;
+            isNight = sceneState.isNight;
         } else {
-            mappedCycle = 0.5 + ((rawCycle - DAY_FRACTION) / (1 - DAY_FRACTION)) * 0.5;
+            const now = new Date();
+            const hours = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+            const SUNRISE = 6.5, SUNSET = 20.5;
+            let mappedCycle;
+            if (hours >= SUNRISE && hours <= SUNSET) {
+                mappedCycle = ((hours - SUNRISE) / (SUNSET - SUNRISE)) * 0.5;
+            } else {
+                const nightLen = 24 - (SUNSET - SUNRISE);
+                const nightElapsed = hours > SUNSET ? hours - SUNSET : hours + (24 - SUNSET);
+                mappedCycle = 0.5 + (nightElapsed / nightLen) * 0.5;
+            }
+            sunAngle = mappedCycle * Math.PI * 2 - Math.PI / 2;
+            sunHeight = Math.sin(sunAngle);
+            isNight = sunHeight < -0.1;
         }
-        const sunAngle = mappedCycle * Math.PI * 2 - Math.PI / 2;
-        const sunHeight = Math.sin(sunAngle);
-        const isNight = sunHeight < -0.1;
 
         // Clouds: drift + dim at night
         clouds.forEach(c => {

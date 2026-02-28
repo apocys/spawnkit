@@ -968,22 +968,33 @@ class MedievalCastle3D {
 
     // ── Day/Night Cycle (60s = full day) ─────────────────
     updateDayNight(elapsed) {
-        const CYCLE_SECONDS = 3600;
-        const DAY_FRACTION = 0.70; // 70% daylight, 30% night
-        const rawCycle = (elapsed % CYCLE_SECONDS) / CYCLE_SECONDS;
+        // Real local time: sunrise 06:30, sunset 20:30 (user's timezone)
+        const now = new Date();
+        const hours = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
 
-        // Remap: stretch daytime, compress nighttime
-        let mappedCycle;
-        if (rawCycle < DAY_FRACTION) {
-            mappedCycle = (rawCycle / DAY_FRACTION) * 0.5;
+        const SUNRISE = 6.5;   // 06:30
+        const SUNSET  = 20.5;  // 20:30
+        const DAWN_LEN = 1.0;  // 1h dawn transition
+        const DUSK_LEN = 1.0;  // 1h dusk transition
+
+        // Map real time to sun angle: noon = peak (PI/2), midnight = trough (-PI/2)
+        let sunAngle, mappedCycle;
+        if (hours >= SUNRISE && hours <= SUNSET) {
+            // Daytime: map sunrise..sunset to 0..0.5 cycle
+            mappedCycle = ((hours - SUNRISE) / (SUNSET - SUNRISE)) * 0.5;
         } else {
-            mappedCycle = 0.5 + ((rawCycle - DAY_FRACTION) / (1 - DAY_FRACTION)) * 0.5;
+            // Nighttime: map sunset..sunrise(+24h) to 0.5..1.0 cycle
+            const nightLen = 24 - (SUNSET - SUNRISE);
+            const nightElapsed = hours > SUNSET ? hours - SUNSET : hours + (24 - SUNSET);
+            mappedCycle = 0.5 + (nightElapsed / nightLen) * 0.5;
         }
+        sunAngle = mappedCycle * Math.PI * 2 - Math.PI / 2;
 
-        const sunAngle = mappedCycle * Math.PI * 2 - Math.PI / 2;
         const sunHeight = Math.sin(sunAngle);
         const isNight = sunHeight < -0.1;
-        const isDusk = sunHeight >= -0.1 && sunHeight < 0.15;
+        // Dusk/dawn: smooth transition zones
+        const isDusk = (hours >= SUNSET - DUSK_LEN && hours <= SUNSET + 0.5) ||
+                       (hours >= SUNRISE - 0.5 && hours <= SUNRISE + DAWN_LEN);
 
         // Store for other modules to read
         this._dayNightState = { sunAngle, sunHeight, isNight, isDusk, mappedCycle, rawCycle };
