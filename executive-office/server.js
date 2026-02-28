@@ -417,6 +417,21 @@ const server = http.createServer(async (req, res) => {
         return { ok: true, details: { phoneNumber: config.phoneNumber, mode: 'device-linking', note: 'Complete linking in Signal app' } };
       }
 
+      case 'github': {
+        if (!config.token) return { ok: false, error: 'Personal Access Token required' };
+        if (!/^(ghp_|github_pat_)[A-Za-z0-9_]{20,}$/.test(config.token)) {
+          return { ok: false, error: 'Invalid format. GitHub tokens start with ghp_ or github_pat_' };
+        }
+        const ghResult = await apiGet('https://api.github.com/user', {
+          'Authorization': `Bearer ${config.token}`,
+          'User-Agent': 'SpawnKit/1.0'
+        });
+        if (ghResult.ok && ghResult.data?.login) {
+          return { ok: true, details: { username: ghResult.data.login, name: ghResult.data.name || ghResult.data.login, repos: ghResult.data.public_repos } };
+        }
+        return { ok: false, error: ghResult.data?.message || 'Invalid GitHub token' };
+      }
+
       case 'imessage': {
         // iMessage: check if we're on macOS and Messages.app is available
         try {

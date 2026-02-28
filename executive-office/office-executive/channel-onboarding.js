@@ -118,8 +118,14 @@ window.__skChannelOnboarding = true;
       gradient: 'linear-gradient(135deg, #24292e 0%, #40464d 100%)',
       tagline: 'Code, issues, and pull requests',
       benefits: ['Issue tracking', 'PR notifications', 'CI/CD integration'],
-      authType: 'oauth',
-      phase: 2
+      authType: 'token',
+      tokenLabel: 'Personal Access Token',
+      tokenPlaceholder: 'ghp_xxxxxxxxxxxxxxxxxxxx',
+      tokenHelp: 'From GitHub → Settings → Developer Settings → Personal Access Tokens',
+      tokenGuideUrl: 'https://github.com/settings/tokens',
+      validateFormat: function(v) { return /^(ghp_|github_pat_)[A-Za-z0-9_]{20,}$/.test(v); },
+      configKey: 'token',
+      phase: 1
     }
   };
 
