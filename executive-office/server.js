@@ -567,6 +567,9 @@ const server = http.createServer(async (req, res) => {
 
   // Static files
   let filePath = req.url.split('?')[0];
+  // Strip /office-executive/ prefix if present (Caddy proxies full path)
+  if (filePath.startsWith('/office-executive/')) filePath = filePath.slice('/office-executive'.length);
+  else if (filePath === '/office-executive') filePath = '/index.html';
   if (filePath === '/' || filePath === '') filePath = '/index.html';
   // Directory URLs: append index.html (e.g. /office-medieval/ → /office-medieval/index.html)
   if (filePath.endsWith('/')) filePath += 'index.html';
