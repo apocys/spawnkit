@@ -292,6 +292,12 @@
         .mood-bar { height: 6px; border-radius: 3px; background: rgba(0,0,0,0.1); overflow: hidden; margin-top: 4px; }
         .mood-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
         .summon-model-btn.active { background: var(--castle-gold) !important; border-color: var(--castle-navy) !important; font-weight: 600; }
+        .theme-card { background:rgba(255,255,255,0.1);border:2px solid rgba(201,169,89,0.2);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s;text-align:center; }
+        .theme-card:hover { border-color:var(--castle-gold);background:rgba(201,169,89,0.1); }
+        .theme-card-icon { font-size:32px;margin-bottom:8px; }
+        .theme-card-name { font-family:var(--font-medieval);font-size:14px;color:var(--castle-gold);margin-bottom:4px; }
+        .theme-card-desc { font-size:12px;color:var(--castle-brown);opacity:0.7; }
+        .theme-card-badge { display:inline-block;margin-top:6px;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600; }
         #medievalChat { display: flex; flex-direction: column; }
         #medievalChat .sk-chat { flex: 1; min-height: 0; display: flex; flex-direction: column; }
         #medievalChat .sk-chat-messages { flex: 1; min-height: 0; overflow-y: auto; }
@@ -1074,6 +1080,44 @@
     <script src="medieval-panels.js"></script>
     <script src="medieval-hotbar.js"></script>
     <script src="medieval-audio.js"></script>
+    <script src="channel-onboarding.js"></script>
+
+    <!-- ═══ Theme Switcher Modal ═══ -->
+    <div class="agent-detail-overlay" id="themeSwitcherOverlay">
+        <div class="agent-detail-panel" style="max-width:520px;">
+            <div class="agent-detail-header">
+                <div class="agent-detail-avatar" style="background:linear-gradient(135deg,#1a1a2e,#16213e);">🎨</div>
+                <div class="agent-detail-info">
+                    <h3 style="font-family:var(--font-medieval);">Choose Your Realm</h3>
+                    <p>Switch to another SpawnKit theme</p>
+                </div>
+                <button class="agent-detail-close" onclick="document.getElementById('themeSwitcherOverlay').style.display='none';document.getElementById('themeSwitcherOverlay').classList.remove('visible');">✕</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;" id="themeGrid">
+                <div class="theme-card" onclick="window.location.href='/office-medieval/'" style="border:2px solid var(--castle-gold);">
+                    <div class="theme-card-icon">🏰</div>
+                    <div class="theme-card-name">Medieval Castle</div>
+                    <div class="theme-card-desc">Current realm</div>
+                    <div class="theme-card-badge" style="background:var(--castle-gold);color:var(--castle-navy);">Active</div>
+                </div>
+                <div class="theme-card" onclick="window.location.href='/office-executive/'">
+                    <div class="theme-card-icon">🏢</div>
+                    <div class="theme-card-name">Executive Office</div>
+                    <div class="theme-card-desc">Modern corporate HQ</div>
+                </div>
+                <div class="theme-card" onclick="window.location.href='/office-simcity-nature/'">
+                    <div class="theme-card-icon">🌳</div>
+                    <div class="theme-card-name">SimCity Village</div>
+                    <div class="theme-card-desc">Pixel city life</div>
+                </div>
+                <div class="theme-card" style="opacity:0.5;cursor:not-allowed;">
+                    <div class="theme-card-icon">🕹️</div>
+                    <div class="theme-card-name">GameBoy</div>
+                    <div class="theme-card-desc">Coming soon</div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Building Contextual Panel -->
     <div id="building-panel" class="building-panel">
