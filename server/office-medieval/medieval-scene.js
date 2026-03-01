@@ -1659,29 +1659,67 @@ class MedievalCastle3D {
     }
 
     async loadAgentThoughts(agentId) {
+        const feed = document.getElementById('agentThoughtsFeed');
+        if (!feed || this.currentDetailTab !== 'thoughts') return;
+        
+        // Get personality and lifecycle data
+        const lifecycle = window.MedievalLifecycle;
+        const agentState = lifecycle ? lifecycle.getAgentState(agentId) : null;
+        const personality = lifecycle ? lifecycle.getPersonality(agentId) : null;
+        const charData = this.characterModels.get(agentId);
+        
+        // Build personality card
+        let personalityHtml = '';
+        if (personality || agentState) {
+            const mood = agentState ? agentState.mood : 0.5;
+            const energy = agentState ? agentState.energy : 0.5;
+            const emoji = agentState ? (agentState.currentEmoji || '💤') : '💤';
+            const thought = agentState ? (agentState.currentThought || '') : '';
+            const title = personality ? personality.title : 'Knight';
+            const moodLabel = mood > 0.7 ? '😊 High spirits' : mood > 0.4 ? '😐 Neutral' : '😤 Troubled';
+            const energyLabel = energy > 0.7 ? '⚡ Energized' : energy > 0.4 ? '🔋 Steady' : '😴 Fatigued';
+            const moodEmojis = personality && personality.moodEmojis ? Object.values(personality.moodEmojis).flat().slice(0, 8).join(' ') : '💤 ⚔️ 📜 🍺';
+            
+            personalityHtml = '<div style="padding:12px;">';
+            personalityHtml += '<div style="text-align:center;font-size:32px;margin-bottom:8px;">' + emoji + '</div>';
+            personalityHtml += '<div style="text-align:center;font-size:14px;font-weight:600;color:#C9A959;margin-bottom:4px;">' + title + '</div>';
+            if (thought) personalityHtml += '<div style="text-align:center;font-style:italic;font-size:12px;color:rgba(168,162,153,.8);margin-bottom:12px;">"' + thought + '"</div>';
+            personalityHtml += '<div style="display:flex;gap:8px;margin-bottom:8px;">';
+            personalityHtml += '<div style="flex:1;background:rgba(255,255,255,.05);border-radius:8px;padding:8px;text-align:center;font-size:11px;">' + moodLabel + '</div>';
+            personalityHtml += '<div style="flex:1;background:rgba(255,255,255,.05);border-radius:8px;padding:8px;text-align:center;font-size:11px;">' + energyLabel + '</div>';
+            personalityHtml += '</div>';
+            personalityHtml += '<div style="text-align:center;font-size:16px;letter-spacing:4px;padding:8px 0;opacity:.6;">' + moodEmojis + '</div>';
+            personalityHtml += '</div>';
+        } else {
+            // Unknown agent — show basic emoticon from mesh
+            const emoticon = charData && charData.group ? (charData.group.userData.emoticon || '💤 Idle') : '💤';
+            personalityHtml = '<div style="text-align:center;padding:30px;font-size:28px;">' + emoticon.split(' ')[0] + '</div>';
+            personalityHtml += '<div style="text-align:center;font-size:12px;opacity:.5;">No personality data for this knight</div>';
+        }
+        
+        // Try to load chat messages too
         try {
             const resp = await ThemeAuth.fetch(API_URL + '/api/oc/chat');
             if (resp.ok) {
                 const messages = await resp.json();
-                const feed = document.getElementById('agentThoughtsFeed');
-                if (!feed || this.currentDetailTab !== 'thoughts') return;
+                const recent = (Array.isArray(messages) ? messages : []).slice(-10).reverse();
                 
-                const recent = (Array.isArray(messages) ? messages : []).slice(-20).reverse();
-                if (recent.length === 0) {
-                    feed.innerHTML = '<div style="text-align:center;color:var(--castle-brown);padding:40px;">\ud83d\udca4 The knight\'s mind is still...<br><small>No recent thoughts recorded</small></div>';
-                    return;
+                if (recent.length > 0) {
+                    const thoughtsHtml = recent.map(function(m) {
+                        var time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
+                        var role = m.role === 'assistant' ? '\ud83d\udcad' : '\ud83d\udc51';
+                        var text = (m.content || m.text || '').substring(0, 200);
+                        return '<div class="thought-entry"><span class="thought-emoji">' + role + '</span><span class="thought-time">' + time + '</span><span class="thought-text">' + text + '</span></div>';
+                    }).join('');
+                    feed.innerHTML = personalityHtml + '<div style="border-top:1px solid rgba(201,169,89,.2);margin-top:8px;padding-top:8px;"><div style="font-size:11px;opacity:.5;text-transform:uppercase;letter-spacing:1px;padding:4px 12px;">Recent Thoughts</div>' + thoughtsHtml + '</div>';
+                } else {
+                    feed.innerHTML = personalityHtml;
                 }
-                feed.innerHTML = recent.map(function(m) {
-                    var time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
-                    var role = m.role === 'assistant' ? '\ud83d\udcad' : '\ud83d\udc51';
-                    var text = (m.content || m.text || '').substring(0, 200);
-                    return '<div class="thought-entry"><span class="thought-emoji">' + role + '</span><span class="thought-time">' + time + '</span><span class="thought-text">' + text + '</span></div>';
-                }).join('');
+            } else {
+                feed.innerHTML = personalityHtml;
             }
         } catch(e) {
-            console.warn('Failed to load thoughts:', e);
-            var feed = document.getElementById('agentThoughtsFeed');
-            if (feed) feed.innerHTML = '<div style="text-align:center;color:var(--castle-brown);padding:20px;">\u26a0 Could not commune with this knight.</div>';
+            feed.innerHTML = personalityHtml;
         }
     }
 

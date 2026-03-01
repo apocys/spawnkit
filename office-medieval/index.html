@@ -952,6 +952,10 @@
                                     var knightName = newOnes[0].label || 'New Knight';
                                     summonBtn.textContent = '✨ ' + knightName + ' has arrived!';
                                     summonBtn.style.background = '#10b981';
+                                    // Add 3D character to scene immediately
+                                    if (window.castleApp && window.castleApp.addDynamicCharacter) {
+                                        window.castleApp.addDynamicCharacter(knightName, newOnes[0].key);
+                                    }
                                     if (window.castleApp && window.castleApp.addActivityLog) {
                                         window.castleApp.addActivityLog('⚔️ ' + knightName + ' has answered the summons!', 'system');
                                     }
