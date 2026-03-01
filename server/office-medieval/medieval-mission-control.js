@@ -679,7 +679,11 @@
             setTimeout(() => { el.style.animation = ''; }, 1200);
         });
         
-        addMedievalNotification('📜 New message from the realm', 'info');
+        // Show actual message content in notification
+        var lastMsg = Array.isArray(chat) ? chat[chat.length - 1] : null;
+        var msgBody = lastMsg ? (lastMsg.content || lastMsg.text || lastMsg.message || '').substring(0, 60) : '';
+        var notifText = msgBody ? '📜 ' + msgBody : '📜 New message from the realm';
+        addMedievalNotification(notifText, 'info');
     }
     
     function updateMedievalMissionControl(sessions, memory) {

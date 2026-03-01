@@ -968,11 +968,20 @@ class MedievalCastle3D {
 
     // ── Day/Night Cycle (60s = full day) ─────────────────
     updateDayNight(elapsed) {
-        const cycle = (elapsed % 3600) / 3600; // 0-1 over 1 hour
+        // Sync cycle to real local time (6am=dawn, 8pm=dusk, 1hr in-game loop offset by current hour)
+        const now = new Date();
+        const realFraction = (now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600) / 24;
+        // Use real-time fraction + small offset from elapsed for smooth motion
+        const cycle = (realFraction + (elapsed % 120) / (120 * 24 * 10)) % 1;
         const sunAngle = cycle * Math.PI * 2 - Math.PI / 2; // -π/2 to 3π/2
         const sunHeight = Math.sin(sunAngle);
         const isNight = sunHeight < -0.1;
         const isDusk = sunHeight >= -0.1 && sunHeight < 0.15;
+
+        // Write state for other modules (weather badge, sky)
+        this._dayNightState = { sunAngle, sunHeight, isNight, isDusk, cycle };
+        window.castleApp = window.castleApp || {};
+        window.castleApp._dayNightState = this._dayNightState;
 
         // Move sun position
         if (this.sunLight) {

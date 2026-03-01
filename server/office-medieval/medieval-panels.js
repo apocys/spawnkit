@@ -103,7 +103,12 @@
 
     // ── Render: Mission Hall ────────────────────────────────────────────
     function renderMissionHall(container) {
-        container.innerHTML = '<div class="bp-section-title">Current Missions</div>';
+        // Mission Control button
+        container.innerHTML = '<button class="bp-btn" id="bp-open-mc" style="width:100%;margin-bottom:12px;">⚔️ Open Mission Control</button><div class="bp-section-title">Active Quests</div>';
+        document.getElementById('bp-open-mc').addEventListener('click', function() {
+            closeBuildingPanel();
+            setTimeout(function() { if (window.openMissionControl) window.openMissionControl(); }, 200);
+        });
         var active = document.createElement('div');
         active.id = 'bp-active-missions';
         active.innerHTML = '<div class="bp-empty">Loading missions…</div>';
@@ -146,13 +151,20 @@
                 return false;
             });
             
-            var running = missions.filter(function (s) { return s.status === 'active' || s.status === 'running'; });
-            var done    = missions.filter(function (s) { return s.status !== 'active' && s.status !== 'running'; });
+            // Only show sub-agents and spawned sessions (not main or channel sessions)
+            var running = missions.filter(function (s) {
+                var kind = (s.kind || '').toLowerCase();
+                return (kind === 'subagent' || kind === 'spawn') && (s.status === 'active' || s.status === 'running');
+            });
+            var done = missions.filter(function (s) {
+                var kind = (s.kind || '').toLowerCase();
+                return (kind === 'subagent' || kind === 'spawn') && s.status !== 'active' && s.status !== 'running';
+            });
 
-            active.innerHTML = running.length ? '' : '<div class="bp-empty">No active missions.</div>';
+            active.innerHTML = running.length ? '' : '<div class="bp-empty">No active quests.</div>';
             running.forEach(function (s) { active.appendChild(missionCard(s)); });
 
-            hist.innerHTML = done.length ? '' : '<div class="bp-empty">No completed missions yet.</div>';
+            hist.innerHTML = done.length ? '' : '<div class="bp-empty">No completed quests yet.</div>';
             done.slice(0, 12).forEach(function (s) { hist.appendChild(missionCard(s)); });
         }).catch(function () {
             active.innerHTML = '<div class="bp-empty">Could not load missions.</div>';
@@ -201,15 +213,34 @@
         // Load brainstorm history from localStorage + API
         loadBrainstormHistory();
 
-        document.getElementById('bp-brainstorm-send').addEventListener('click', function () {
+        document.getElementById('bp-brainstorm-send').addEventListener('click', async function () {
             var input = document.getElementById('bp-brainstorm-input');
             var q = input.value.trim();
             if (!q) return;
+            var btn = document.getElementById('bp-brainstorm-send');
+            btn.disabled = true;
+            btn.textContent = '⏳ Consulting the oracle...';
             // Save to localStorage
             saveBrainstorm(q);
-            // Refresh display
-            loadBrainstormHistory();
             input.value = '';
+            // Send to agent via /api/oc/chat
+            try {
+                var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch)
+                    ? ThemeAuth.fetch.bind(ThemeAuth) : window.fetch.bind(window);
+                var resp = await fetcher('/api/oc/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: '/brainstorm ' + q })
+                });
+                var data = await resp.json();
+                // Save result
+                saveBrainstorm(q + ' → ' + (data.reply || data.text || data.response || 'Sent to agent').substring(0, 100));
+            } catch(e) {
+                saveBrainstorm(q + ' → [Queued — agent will respond shortly]');
+            }
+            loadBrainstormHistory();
+            btn.disabled = false;
+            btn.textContent = '🍺 Start Brainstorm';
         });
     }
 
