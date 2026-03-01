@@ -1305,26 +1305,61 @@ class MedievalCastle3D {
 
     setupAgents() {
         const defs = [
-            { id: 'ApoMac',   role: 'CEO / King',     char: 'a', color: '#c9a959' },
-            { id: 'Forge',    role: 'Builder',         char: 'b', color: '#f97316' },
-            { id: 'Atlas',    role: 'Navigator',       char: 'c', color: '#3b82f6' },
-            { id: 'Hunter',   role: 'Scout',           char: 'd', color: '#10b981' },
-            { id: 'Echo',     role: 'Bard',            char: 'e', color: '#8b5cf6' },
-            { id: 'Sentinel', role: 'Guard',           char: 'f', color: '#ef4444' },
-            { id: 'Mystic',   role: 'Wizard',          char: 'g', color: '#7c3aed' },
-            { id: 'Smith',    role: 'Blacksmith',      char: 'h', color: '#ea580c' },
+            { id: 'Sycopa',   role: 'CEO / Lord',      char: 'a', color: '#c9a959' },
+            { id: 'Forge',    role: 'Builder',          char: 'b', color: '#f97316' },
+            { id: 'Atlas',    role: 'Navigator',        char: 'c', color: '#3b82f6' },
+            { id: 'Hunter',   role: 'Scout',            char: 'd', color: '#10b981' },
+            { id: 'Echo',     role: 'Bard',             char: 'e', color: '#8b5cf6' },
+            { id: 'Sentinel', role: 'Guard',            char: 'f', color: '#ef4444' },
         ];
 
         defs.forEach(d => {
-            const status = Math.random() > 0.6 ? 'active' : Math.random() > 0.4 ? 'busy' : 'idle';
-            const metrics = {
-                tasks: 1 + Math.floor(Math.random() * 15),
-                completed: Math.floor(Math.random() * 10),
-                success: Math.floor(50 + Math.random() * 50) + '%',
-                uptime: (90 + Math.random() * 10).toFixed(1) + 'h'
-            };
-            this.agents.set(d.id, { ...d, status, metrics });
+            // Start all idle — real status loaded asynchronously
+            this.agents.set(d.id, { ...d, status: 'idle', metrics: { tasks: 0, completed: 0, success: '—', uptime: '—' } });
         });
+
+        // Fetch real session data to set accurate status
+        this.syncAgentStatus();
+    }
+
+    async syncAgentStatus() {
+        try {
+            const fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : fetch.bind(window);
+            const resp = await fetcher('/api/oc/sessions');
+            if (!resp.ok) return;
+            const sessions = await resp.json();
+            const arr = Array.isArray(sessions) ? sessions : (sessions.sessions || []);
+            
+            // Count active sessions and sub-agents
+            const activeSessions = arr.filter(s => s.status === 'active' || s.status === 'running');
+            const subagents = arr.filter(s => s.kind === 'subagent' || s.label?.includes('sub'));
+            
+            // Update Sycopa (main agent) — always active if the page is loaded
+            const sycopa = this.agents.get('Sycopa');
+            if (sycopa) {
+                sycopa.status = 'active';
+                sycopa.metrics = {
+                    tasks: activeSessions.length,
+                    completed: arr.filter(s => s.status === 'completed' || s.status === 'done').length,
+                    success: arr.length > 0 ? Math.round(arr.filter(s => s.status !== 'error').length / arr.length * 100) + '%' : '—',
+                    uptime: activeSessions.length > 0 ? activeSessions.length + ' sessions' : '—'
+                };
+            }
+            
+            // Other agents: set status based on matching sub-agent sessions
+            this.agents.forEach((agent, id) => {
+                if (id === 'Sycopa') return;
+                const match = arr.find(s => s.label && s.label.toLowerCase().includes(id.toLowerCase()));
+                if (match) {
+                    agent.status = match.status === 'active' || match.status === 'running' ? 'active' : 'idle';
+                }
+            });
+            
+            // Update sidebar
+            this.refreshSidebar();
+        } catch(e) {
+            console.warn('[Medieval] Failed to sync agent status:', e);
+        }
     }
 
     selectAgent(agentId) {
@@ -1346,7 +1381,7 @@ class MedievalCastle3D {
         this.addActivityLog(`Selected ${agentId}`, 'system');
 
         // Handle special agent actions
-        if (agentId === 'ApoMac' || agentId === 'agent:main:main' || agentId === 'ceo') {
+        if (agentId === 'agent:main:main' || agentId === 'ceo') {
             // CEO clicked -> open Mission Control after a brief delay
             setTimeout(() => {
                 if (typeof openMissionControl === 'function') {
@@ -1467,7 +1502,8 @@ class MedievalCastle3D {
 
     getAgentDescription(agentId) {
         const descriptions = {
-            'ApoMac': 'Supreme ruler of the digital realm, orchestrating grand strategies and managing the royal court with wisdom and efficiency.',
+            'Sycopa': 'Supreme lord of the digital realm, orchestrating grand strategies and managing the royal court with wisdom and precision. The eye that never sleeps.',
+            'ApoMac': 'Allied commander operating from distant lands, coordinating strategy and delivering critical intelligence via raven.',
             'Forge': 'Master craftsman responsible for building and maintaining the kingdom\'s digital infrastructure and siege engines.',
             'Atlas': 'Royal cartographer and scribe, maintaining the kingdom\'s knowledge base and coordinating between different territories.',
             'Hunter': 'Elite scout specializing in reconnaissance missions, market analysis, and pursuing new opportunities for the realm.',

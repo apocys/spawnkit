@@ -125,14 +125,35 @@
 
         fetcher('/api/oc/sessions').then(function (r) { return r.json(); }).then(function (data) {
             var sessions = Array.isArray(data) ? data : (data.sessions || []);
-            var running = sessions.filter(function (s) { return s.status === 'active' || s.status === 'running'; });
-            var done    = sessions.filter(function (s) { return s.status !== 'active' && s.status !== 'running'; });
+            
+            // Filter: only show mission-relevant sessions (sub-agents, spawned tasks)
+            // Exclude: channel sessions (telegram, whatsapp, discord), heartbeats, crons
+            var channelPatterns = ['telegram', 'whatsapp', 'discord', 'signal', 'slack', 'imessage', 'irc', 'heartbeat', 'cron', 'digest'];
+            var missions = sessions.filter(function(s) {
+                var key = (s.key || s.id || '').toLowerCase();
+                var label = (s.label || '').toLowerCase();
+                var kind = (s.kind || '').toLowerCase();
+                // Include: sub-agents, spawned sessions, anything with a task/label
+                if (kind === 'subagent' || kind === 'spawn') return true;
+                // Exclude channel/system sessions
+                for (var i = 0; i < channelPatterns.length; i++) {
+                    if (key.includes(channelPatterns[i]) || label.includes(channelPatterns[i])) return false;
+                }
+                // Include main session
+                if (key.includes('main')) return true;
+                // Include if it has a task description
+                if (s.task) return true;
+                return false;
+            });
+            
+            var running = missions.filter(function (s) { return s.status === 'active' || s.status === 'running'; });
+            var done    = missions.filter(function (s) { return s.status !== 'active' && s.status !== 'running'; });
 
             active.innerHTML = running.length ? '' : '<div class="bp-empty">No active missions.</div>';
             running.forEach(function (s) { active.appendChild(missionCard(s)); });
 
-            hist.innerHTML = done.length ? '' : '<div class="bp-empty">No history yet.</div>';
-            done.slice(0, 8).forEach(function (s) { hist.appendChild(missionCard(s)); });
+            hist.innerHTML = done.length ? '' : '<div class="bp-empty">No completed missions yet.</div>';
+            done.slice(0, 12).forEach(function (s) { hist.appendChild(missionCard(s)); });
         }).catch(function () {
             active.innerHTML = '<div class="bp-empty">Could not load missions.</div>';
         });
@@ -174,20 +195,89 @@
             '<button class="bp-btn" id="bp-brainstorm-send">🍺 Start Brainstorm</button>',
             '</div>',
             '<div class="bp-section-title">Recent Brainstorms</div>',
-            '<div id="bp-brainstorm-list"><div class="bp-empty">The tavern is quiet… Start a brainstorm from the hotbar.</div></div>',
+            '<div id="bp-brainstorm-list"><div class="bp-empty">Loading past brainstorms…</div></div>',
         ].join('');
+
+        // Load brainstorm history from localStorage + API
+        loadBrainstormHistory();
 
         document.getElementById('bp-brainstorm-send').addEventListener('click', function () {
             var input = document.getElementById('bp-brainstorm-input');
             var q = input.value.trim();
             if (!q) return;
-            var list = document.getElementById('bp-brainstorm-list');
+            // Save to localStorage
+            saveBrainstorm(q);
+            // Refresh display
+            loadBrainstormHistory();
+            input.value = '';
+        });
+    }
+
+    function saveBrainstorm(question) {
+        var history = [];
+        try { history = JSON.parse(localStorage.getItem('sk_brainstorms') || '[]'); } catch(e) {}
+        history.unshift({ q: question, ts: new Date().toISOString(), source: 'tavern' });
+        if (history.length > 50) history = history.slice(0, 50);
+        localStorage.setItem('sk_brainstorms', JSON.stringify(history));
+    }
+
+    function loadBrainstormHistory() {
+        var list = document.getElementById('bp-brainstorm-list');
+        if (!list) return;
+
+        // Load local brainstorms
+        var local = [];
+        try { local = JSON.parse(localStorage.getItem('sk_brainstorms') || '[]'); } catch(e) {}
+
+        // Also fetch recent chat to find /brainstorm and /mr messages
+        var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : window.fetch.bind(window);
+        fetcher('/api/oc/chat').then(function(r) { return r.json(); }).then(function(msgs) {
+            var arr = Array.isArray(msgs) ? msgs : [];
+            // Find brainstorm-related messages
+            var brainstorms = arr.filter(function(m) {
+                var text = (m.content || m.text || '').toLowerCase();
+                return text.startsWith('/brainstorm') || text.startsWith('/mr ') || text.includes('🧠 **brainstorm');
+            }).reverse().slice(0, 10);
+
+            // Merge: API brainstorms + local, deduplicated by timestamp proximity
+            var merged = local.slice();
+            brainstorms.forEach(function(m) {
+                var text = m.content || m.text || '';
+                var ts = m.timestamp || '';
+                var isQuestion = text.startsWith('/');
+                merged.push({
+                    q: isQuestion ? text.replace(/^\/(brainstorm|mr)\s*/i, '') : text.substring(0, 200),
+                    ts: ts,
+                    source: isQuestion ? 'telegram' : 'response',
+                    role: m.role
+                });
+            });
+
+            // Sort by timestamp, newest first
+            merged.sort(function(a, b) { return (b.ts || '').localeCompare(a.ts || ''); });
+
+            renderBrainstormList(list, merged.slice(0, 20));
+        }).catch(function() {
+            // Fallback to local only
+            renderBrainstormList(list, local);
+        });
+    }
+
+    function renderBrainstormList(list, items) {
+        if (!items.length) {
+            list.innerHTML = '<div class="bp-empty">The tavern is quiet… No brainstorms recorded yet.</div>';
+            return;
+        }
+        list.innerHTML = '';
+        items.forEach(function(item) {
             var card = document.createElement('div');
             card.className = 'bp-card';
-            card.innerHTML = '<div style="font-size:12px;color:rgba(201,169,89,0.8)">🍺 ' + esc(q) + '</div>';
-            if (list.querySelector('.bp-empty')) list.innerHTML = '';
-            list.prepend(card);
-            input.value = '';
+            var icon = item.source === 'telegram' ? '📨' : (item.role === 'assistant' ? '🧠' : '🍺');
+            var time = item.ts ? new Date(item.ts).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+            var text = (item.q || '').substring(0, 300);
+            card.innerHTML = '<div style="font-size:12px;color:rgba(201,169,89,0.8)">' + icon + ' ' + esc(text) + '</div>' +
+                (time ? '<div style="font-size:10px;color:rgba(168,162,153,0.4);margin-top:4px">' + esc(time) + (item.source === 'telegram' ? ' • via Telegram' : '') + '</div>' : '');
+            list.appendChild(card);
         });
     }
 
@@ -359,7 +449,7 @@
 
     // ── Render: Settings ────────────────────────────────────────────────
     function renderSettings(container) {
-        // Channel status
+        // Channel status — show real OpenClaw channel + wizard status
         var channelDefs = [
             ['✈️', 'Telegram', 'telegram'],
             ['📱', 'WhatsApp', 'whatsapp'],
@@ -369,14 +459,32 @@
             ['💼', 'Slack', 'slack'],
         ];
         var rows = channelDefs.map(function(c) {
-            var connected = window.ChannelOnboarding ? window.ChannelOnboarding.isChannelConnected(c[2]) : false;
+            var wizardConnected = window.ChannelOnboarding ? window.ChannelOnboarding.isChannelConnected(c[2]) : false;
+            // Check if OpenClaw has this channel active (from runtime metadata)
+            var ocActive = false;
+            if (window._ocChannelInfo) ocActive = !!(window._ocChannelInfo[c[2]]);
+            var connected = wizardConnected || ocActive;
             return '<div class="bp-conn-row" style="cursor:pointer;" onclick="' +
                 (window.ChannelOnboarding ? 'window.ChannelOnboarding.openQuickConnect(\"' + c[2] + '\")' : '') +
                 '">' +
                 '<span>' + c[0] + ' ' + c[1] + '</span>' +
-                '<span>' + (connected ? '✅ Connected' : '<button class="bp-btn" style="padding:3px 8px;font-size:11px;">Connect</button>') + '</span>' +
+                '<span>' + (connected ? '✅ Active' : '<span style="color:rgba(168,162,153,0.4);font-size:11px">Not configured</span>') + '</span>' +
                 '</div>';
         }).join('');
+        // Fetch real channel info from OC
+        (async function() {
+            try {
+                var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : window.fetch.bind(window);
+                var resp = await fetcher('/api/oc/health');
+                if (resp.ok) {
+                    var data = await resp.json();
+                    var channels = data.channels || data.activeChannels || {};
+                    window._ocChannelInfo = channels;
+                    // Re-render if we got data
+                    if (Object.keys(channels).length > 0) renderSettings(container);
+                }
+            } catch(e) {}
+        })();
 
         container.innerHTML =
             '<div class="bp-section-title">⛪ Chapel — Royal Communications</div>' +
