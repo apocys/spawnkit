@@ -784,6 +784,237 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ─── AI Provider Setup API ────────────────────────────────
+  
+  // GET /api/wizard/providers — list available provider presets
+  if (req.url === '/api/wizard/providers' && req.method === 'GET') {
+    const providers = [
+      {
+        id: 'anthropic', name: 'Anthropic', icon: '🟣', description: 'Claude models (Opus, Sonnet, Haiku)',
+        authType: 'api_key', keyPlaceholder: 'sk-ant-...',
+        keyUrl: 'https://console.anthropic.com/settings/keys',
+        models: [
+          { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5', recommended: true },
+          { id: 'claude-opus-4-5', name: 'Claude Opus 4.5' },
+          { id: 'claude-haiku-3-5', name: 'Claude Haiku 3.5' }
+        ],
+        config: { baseUrl: 'https://api.anthropic.com/v1', api: 'anthropic' }
+      },
+      {
+        id: 'openai', name: 'OpenAI', icon: '🟢', description: 'GPT models (GPT-5, GPT-4o)',
+        authType: 'api_key', keyPlaceholder: 'sk-...',
+        keyUrl: 'https://platform.openai.com/api-keys',
+        models: [
+          { id: 'gpt-5.1-codex', name: 'GPT-5.1 Codex', recommended: true },
+          { id: 'gpt-4o', name: 'GPT-4o' },
+          { id: 'gpt-4o-mini', name: 'GPT-4o Mini' }
+        ],
+        config: { baseUrl: 'https://api.openai.com/v1', api: 'openai-completions' }
+      },
+      {
+        id: 'cliproxy', name: 'CLIProxyAPI', icon: '🔵', description: 'Claude via CLI Proxy — uses your Max/Pro subscription, no API costs',
+        authType: 'oauth', oauthUrl: '/api/wizard/providers/cliproxy/auth',
+        models: [
+          { id: 'claude-opus-4-6', name: 'Claude Opus 4.6 (Max)', recommended: true },
+          { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6 (Max)' },
+          { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5 (Max)' }
+        ],
+        config: { baseUrl: 'http://127.0.0.1:8317/v1', api: 'openai-completions' }
+      },
+      {
+        id: 'ollama', name: 'Ollama (Local)', icon: '🦙', description: 'Run models locally — free, private, no API key needed',
+        authType: 'none',
+        models: [
+          { id: 'llama3.3', name: 'Llama 3.3 70B', recommended: true },
+          { id: 'qwen2.5', name: 'Qwen 2.5 72B' },
+          { id: 'glm-4.7-flash', name: 'GLM 4.7 Flash' }
+        ],
+        config: { baseUrl: 'http://localhost:11434/v1', api: 'openai-completions' }
+      }
+    ];
+    res.setHeader('Content-Type', 'application/json');
+    res.writeHead(200);
+    res.end(JSON.stringify({ ok: true, providers }));
+    return;
+  }
+
+  // POST /api/wizard/providers/setup — configure a provider in OpenClaw
+  if (req.url === '/api/wizard/providers/setup' && req.method === 'POST') {
+    try {
+      const body = await readBody(req);
+      if (!body || !body.providerId || !body.modelId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'providerId and modelId required' }));
+        return;
+      }
+      
+      const { spawnSync } = require('child_process');
+      const results = [];
+      
+      // Provider presets
+      const presets = {
+        anthropic: {
+          config: { api: 'anthropic' },
+          baseUrl: 'https://api.anthropic.com/v1',
+          authProfile: 'anthropic:default'
+        },
+        openai: {
+          config: { api: 'openai-completions' },
+          baseUrl: 'https://api.openai.com/v1',
+          authProfile: 'openai:default'
+        },
+        cliproxy: {
+          config: { api: 'openai-completions' },
+          baseUrl: 'http://127.0.0.1:8317/v1',
+          authProfile: 'openai:cliproxy'
+        },
+        ollama: {
+          config: { api: 'openai-completions' },
+          baseUrl: 'http://localhost:11434/v1',
+          authProfile: 'openai:ollama'
+        }
+      };
+      
+      const preset = presets[body.providerId];
+      if (!preset) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unknown provider: ' + body.providerId }));
+        return;
+      }
+      
+      // Build provider config
+      const providerConfig = {
+        baseUrl: body.baseUrl || preset.baseUrl,
+        api: preset.config.api,
+        models: [{
+          id: body.modelId,
+          name: body.modelName || body.modelId,
+          reasoning: false,
+          input: ['text', 'image'],
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+          contextWindow: 200000,
+          maxTokens: 8192
+        }]
+      };
+      
+      // Add API key if provided (not for ollama/cliproxy-oauth)
+      if (body.apiKey) {
+        providerConfig.apiKey = body.apiKey;
+      }
+      
+      // Set provider config via openclaw CLI
+      const setProvider = spawnSync('openclaw', [
+        'config', 'set',
+        'models.providers.' + body.providerId,
+        JSON.stringify(providerConfig)
+      ], { timeout: 10000, encoding: 'utf8' });
+      
+      if (setProvider.error || setProvider.status !== 0) {
+        results.push({ step: 'provider', status: 'failed', error: (setProvider.stderr || '').slice(0, 200) });
+      } else {
+        results.push({ step: 'provider', status: 'ok' });
+      }
+      
+      // Set as default model
+      const modelPath = body.providerId + '/' + body.modelId;
+      const setModel = spawnSync('openclaw', [
+        'config', 'set',
+        'agents.defaults.model.primary',
+        JSON.stringify(modelPath)
+      ], { timeout: 10000, encoding: 'utf8' });
+      
+      if (setModel.error || setModel.status !== 0) {
+        results.push({ step: 'default-model', status: 'failed', error: (setModel.stderr || '').slice(0, 200) });
+      } else {
+        results.push({ step: 'default-model', status: 'ok' });
+      }
+      
+      // Set auth profile if API key provided
+      if (body.apiKey && body.providerId !== 'ollama') {
+        const authMode = body.providerId === 'anthropic' ? 'anthropic' : 'openai';
+        const setAuth = spawnSync('openclaw', [
+          'config', 'set',
+          'auth.profiles.' + preset.authProfile,
+          JSON.stringify({ provider: authMode, mode: 'api_key' })
+        ], { timeout: 10000, encoding: 'utf8' });
+        results.push({ step: 'auth', status: (setAuth.error || setAuth.status !== 0) ? 'failed' : 'ok' });
+      }
+      
+      // Set model alias
+      const setAlias = spawnSync('openclaw', [
+        'config', 'set',
+        'agents.defaults.models.' + modelPath,
+        JSON.stringify({ alias: body.providerId })
+      ], { timeout: 10000, encoding: 'utf8' });
+      results.push({ step: 'alias', status: (setAlias.error || setAlias.status !== 0) ? 'failed' : 'ok' });
+      
+      const allOk = results.every(function(r) { return r.status === 'ok'; });
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(allOk ? 200 : 207);
+      res.end(JSON.stringify({
+        ok: allOk,
+        model: modelPath,
+        results,
+        message: allOk ? 'Provider configured. Restart gateway to apply.' : 'Some steps failed — check results.',
+        needsRestart: true
+      }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // POST /api/wizard/providers/test — test a provider connection
+  if (req.url === '/api/wizard/providers/test' && req.method === 'POST') {
+    try {
+      const body = await readBody(req);
+      if (!body || !body.baseUrl) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'baseUrl required' }));
+        return;
+      }
+      
+      const testUrl = body.baseUrl.replace(/\/+$/, '') + '/models';
+      const headers = {};
+      if (body.apiKey) headers['Authorization'] = 'Bearer ' + body.apiKey;
+      if (body.apiKey && body.provider === 'anthropic') {
+        headers['x-api-key'] = body.apiKey;
+        headers['anthropic-version'] = '2023-06-01';
+      }
+      
+      const proto = testUrl.startsWith('https') ? require('https') : require('http');
+      const testResult = await new Promise(function(resolve) {
+        const r = proto.get(testUrl, { headers, timeout: 5000 }, function(resp) {
+          let data = '';
+          resp.on('data', function(c) { data += c; });
+          resp.on('end', function() {
+            if (resp.statusCode >= 200 && resp.statusCode < 300) {
+              try {
+                const parsed = JSON.parse(data);
+                const models = parsed.data || parsed.models || [];
+                resolve({ ok: true, models: models.slice(0, 10).map(function(m) { return { id: m.id, name: m.id }; }) });
+              } catch(e) { resolve({ ok: true, models: [] }); }
+            } else {
+              resolve({ ok: false, status: resp.statusCode, error: data.slice(0, 200) });
+            }
+          });
+        });
+        r.on('error', function(e) { resolve({ ok: false, error: e.message }); });
+        r.on('timeout', function() { r.destroy(); resolve({ ok: false, error: 'Connection timeout' }); });
+      });
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200);
+      res.end(JSON.stringify(testResult));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   // ─── Setup Wizard API ─────────────────────────────────────
   const BLUEPRINTS_DIR = require('path').join(__dirname, 'blueprints');
 

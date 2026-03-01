@@ -86,6 +86,7 @@
         { title: 'Choose Blueprint', render: renderStep0 },
         { title: 'About You', render: renderStep1 },
         { title: 'Name Your Agent', render: renderStep2 },
+        { title: 'Choose AI Provider', render: renderStepProvider },
         { title: 'Deploying', render: renderStep3 },
         { title: 'Ready', render: renderStep4 }
     ];
@@ -269,6 +270,142 @@
         });
     }
 
+
+    // ── Step: Choose AI Provider ─────
+    async function renderStepProvider(body) {
+        var med = state.theme === 'medieval';
+        body.innerHTML += '<div class="sw-title">' + (med ? '🧠 Choose the Oracle' : '🧠 Choose Your AI Provider') + '</div>';
+        body.innerHTML += '<div class="sw-subtitle" style="margin-bottom:16px">' + (med ? 'Which ancient intelligence shall guide your champion?' : 'Select the AI model that powers your agent') + '</div>';
+        body.innerHTML += '<div id="sw-prov-list"><div style="text-align:center;opacity:.5;padding:20px">Loading providers…</div></div>';
+        
+        try {
+            var resp = await skFetch(API + '/api/wizard/providers');
+            var data = await resp.json();
+            var list = document.getElementById('sw-prov-list');
+            if (!list) return;
+            
+            var provs = data.providers || [];
+            list.innerHTML = '';
+            provs.forEach(function(p) {
+                var card = document.createElement('div');
+                card.className = 'sw-blueprint-card' + (med ? ' medieval' : '') + (state.provider === p.id ? ' selected' : '');
+                var recModel = p.models.find(function(m) { return m.recommended; }) || p.models[0];
+                card.innerHTML = '<div style="display:flex;gap:12px;align-items:center">' +
+                    '<span style="font-size:28px">' + p.icon + '</span>' +
+                    '<div style="flex:1"><div style="font-size:15px;font-weight:600">' + esc(p.name) + '</div>' +
+                    '<div style="font-size:12px;opacity:.6">' + esc(p.description) + '</div></div></div>';
+                card.addEventListener('click', function() {
+                    state.provider = p.id;
+                    state.providerData = p;
+                    state.selectedModel = recModel;
+                    list.querySelectorAll('.sw-blueprint-card').forEach(function(c) { c.classList.remove('selected'); });
+                    card.classList.add('selected');
+                    renderProviderConfig(p);
+                });
+                list.appendChild(card);
+            });
+        } catch(e) {
+            document.getElementById('sw-prov-list').innerHTML = '<div style="color:#ff453a">Failed to load providers</div>';
+        }
+        
+        body.innerHTML += '<div id="sw-prov-config"></div>';
+        body.innerHTML += '<div class="sw-actions"><button class="sw-btn sw-btn-secondary" id="sw-back-prov">← Back</button><button class="sw-btn sw-btn-primary" id="sw-next-prov" style="opacity:.5">' + (med ? '⚔️ Continue' : 'Next →') + '</button></div>';
+        
+        document.getElementById('sw-back-prov').addEventListener('click', prevStep);
+        document.getElementById('sw-next-prov').addEventListener('click', function() {
+            if (!state.provider) { alert(med ? 'Choose an oracle!' : 'Select a provider'); return; }
+            var p = state.providerData;
+            if (p.authType === 'api_key') {
+                var keyInput = document.getElementById('sw-api-key');
+                if (!keyInput || !keyInput.value.trim()) { alert(med ? 'The oracle requires a key!' : 'Enter your API key'); return; }
+                state.apiKey = keyInput.value.trim();
+            }
+            nextStep();
+        });
+        
+        // Re-render config if already selected
+        if (state.provider && state.providerData) renderProviderConfig(state.providerData);
+    }
+    
+    function renderProviderConfig(p) {
+        var med = state.theme === 'medieval';
+        var cfg = document.getElementById('sw-prov-config');
+        if (!cfg) return;
+        
+        var html = '<div style="margin-top:16px;padding:16px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03)">';
+        
+        // Model selector
+        html += '<div class="sw-field"><label class="sw-label">' + (med ? 'Choose thy model' : 'Model') + '</label>';
+        html += '<select class="sw-input" id="sw-model-select" style="cursor:pointer">';
+        p.models.forEach(function(m) {
+            var sel = (state.selectedModel && state.selectedModel.id === m.id) ? ' selected' : '';
+            html += '<option value="' + esc(m.id) + '"' + sel + '>' + esc(m.name) + (m.recommended ? ' ★' : '') + '</option>';
+        });
+        html += '</select></div>';
+        
+        // Auth input
+        if (p.authType === 'api_key') {
+            html += '<div class="sw-field"><label class="sw-label">API Key</label>';
+            html += '<input class="sw-input" id="sw-api-key" type="password" value="' + esc(state.apiKey || '') + '" placeholder="' + esc(p.keyPlaceholder || 'Enter API key') + '">';
+            if (p.keyUrl) {
+                html += '<div style="margin-top:6px;font-size:11px;opacity:.5"><a href="' + esc(p.keyUrl) + '" target="_blank" style="color:inherit;text-decoration:underline">Get your API key →</a></div>';
+            }
+            html += '</div>';
+            
+            // Test button
+            html += '<button class="sw-btn sw-btn-secondary" id="sw-test-key" style="font-size:12px;padding:6px 14px">' + (med ? '🧪 Test the Oracle' : '🧪 Test Connection') + '</button>';
+            html += '<span id="sw-test-result" style="margin-left:8px;font-size:12px"></span>';
+        } else if (p.authType === 'oauth') {
+            html += '<div style="padding:12px 0;font-size:13px;opacity:.7">' + (med ? '🔐 This oracle authenticates via your existing subscription. Ensure CLIProxyAPI is running.' : '🔐 Uses your Claude Max/Pro subscription via CLIProxyAPI. No API key needed.') + '</div>';
+            html += '<div class="sw-field"><label class="sw-label">Proxy URL</label>';
+            html += '<input class="sw-input" id="sw-proxy-url" value="' + esc(p.config.baseUrl || 'http://127.0.0.1:8317/v1') + '"></div>';
+        } else if (p.authType === 'none') {
+            html += '<div style="padding:12px 0;font-size:13px;opacity:.7">' + (med ? '🦙 This oracle runs locally. Ensure Ollama is installed and running.' : '🦙 Runs locally on your machine. Install Ollama first at ollama.com.') + '</div>';
+            html += '<div class="sw-field"><label class="sw-label">Ollama URL</label>';
+            html += '<input class="sw-input" id="sw-ollama-url" value="' + esc(p.config.baseUrl || 'http://localhost:11434/v1') + '"></div>';
+        }
+        
+        html += '</div>';
+        cfg.innerHTML = html;
+        
+        // Enable Next button
+        var nextBtn = document.getElementById('sw-next-prov');
+        if (nextBtn) nextBtn.style.opacity = '1';
+        
+        // Wire model select
+        var modelSel = document.getElementById('sw-model-select');
+        if (modelSel) {
+            modelSel.addEventListener('change', function() {
+                state.selectedModel = p.models.find(function(m) { return m.id === modelSel.value; }) || p.models[0];
+            });
+        }
+        
+        // Wire test button
+        var testBtn = document.getElementById('sw-test-key');
+        if (testBtn) {
+            testBtn.addEventListener('click', async function() {
+                var result = document.getElementById('sw-test-result');
+                var keyInput = document.getElementById('sw-api-key');
+                if (!keyInput || !keyInput.value.trim()) { if (result) result.textContent = '❌ Enter a key first'; return; }
+                if (result) result.textContent = '⏳ Testing...';
+                testBtn.disabled = true;
+                try {
+                    var resp = await skFetch(API + '/api/wizard/providers/test', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ baseUrl: p.config.baseUrl, apiKey: keyInput.value.trim(), provider: p.id })
+                    });
+                    var data = await resp.json();
+                    if (result) result.textContent = data.ok ? '✅ Connected!' : '❌ ' + (data.error || 'Failed');
+                    if (result) result.style.color = data.ok ? '#34c759' : '#ff453a';
+                } catch(e) {
+                    if (result) { result.textContent = '❌ ' + e.message; result.style.color = '#ff453a'; }
+                }
+                testBtn.disabled = false;
+            });
+        }
+    }
+
     // ── Step 3: Deploying ────────────────
     async function renderStep3(body) {
         var med = state.theme === 'medieval';
@@ -281,6 +418,29 @@
         try {
             var statusEl = document.getElementById('sw-deploy-status');
             if (statusEl) statusEl.textContent = med ? 'Inscribing ancient knowledge...' : 'Generating configuration files...';
+            
+            // Configure AI provider first
+            if (state.provider && state.selectedModel) {
+                if (statusEl) statusEl.textContent = med ? 'Binding the oracle...' : 'Configuring AI provider...';
+                try {
+                    var provBody = {
+                        providerId: state.provider,
+                        modelId: state.selectedModel.id,
+                        modelName: state.selectedModel.name
+                    };
+                    if (state.apiKey) provBody.apiKey = state.apiKey;
+                    var proxyUrl = document.getElementById('sw-proxy-url');
+                    var ollamaUrl = document.getElementById('sw-ollama-url');
+                    if (proxyUrl) provBody.baseUrl = proxyUrl.value.trim();
+                    if (ollamaUrl) provBody.baseUrl = ollamaUrl.value.trim();
+                    await skFetch(API + '/api/wizard/providers/setup', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(provBody)
+                    });
+                } catch(pe) { console.warn('Provider setup warning:', pe); }
+                if (statusEl) statusEl.textContent = med ? 'Inscribing ancient knowledge...' : 'Generating configuration files...';
+            }
             
             var resp = await skFetch(API + '/api/wizard/apply', {
                 method: 'POST',
@@ -321,6 +481,7 @@
             '<div class="sw-feature"><span class="sw-feature-check">✅</span> ' + (med ? 'Ancient wisdom bestowed (memory)' : 'Starter memory with best practices') + '</div>' +
             '<div class="sw-feature"><span class="sw-feature-check">✅</span> ' + (med ? 'Morning heralds & review sentinels registered' : 'Morning briefings & code reviews auto-registered') + '</div>' +
             '<div class="sw-feature"><span class="sw-feature-check">✅</span> Telegram inline buttons enabled</div>' +
+            (state.provider ? '<div class="sw-feature"><span class="sw-feature-check">✅</span> AI Provider: ' + esc((state.providerData || {}).name || state.provider) + ' (' + esc((state.selectedModel || {}).name || '') + ')</div>' : '') +
             '</div>' +
             '</div>' +
             '<div class="sw-actions" style="justify-content:center"><button class="sw-btn sw-btn-primary" id="sw-finish" style="padding:12px 32px;font-size:15px">' + (med ? '⚔️ Enter the Realm' : '🚀 Get Started') + '</button></div>';
