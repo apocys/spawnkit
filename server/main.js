@@ -3433,7 +3433,7 @@
             html += '<div style="margin-bottom:16px">';
             html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
             html += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#8E8E93;font-weight:600">Connected Offices</div>';
-            html += '<button id="btnGenerateInvite" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid var(--exec-blue,#0a84ff);color:var(--exec-blue,#0a84ff);background:transparent;cursor:pointer;font-weight:500;transition:all 0.2s">+ Invite</button>';
+            html += '<div style="display:flex;gap:6px"><button id="btnGenerateInvite" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid var(--exec-blue,#0a84ff);color:var(--exec-blue,#0a84ff);background:transparent;cursor:pointer;font-weight:500;transition:all 0.2s">+ Invite</button><button id="btnJoinFleet" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid #34C759;color:#34C759;background:transparent;cursor:pointer;font-weight:500;transition:all 0.2s">D83DDD17 Join</button></div>';
             html += '</div>';
 
             // Invite code display (hidden by default)
@@ -3444,6 +3444,23 @@
             html += '<button id="btnCopyInvite" style="padding:6px 12px;border-radius:6px;background:var(--exec-blue,#0a84ff);color:#fff;border:none;cursor:pointer;font-size:11px;font-weight:500">Copy</button>';
             html += '</div>';
             html += '<div style="font-size:10px;color:#8E8E93;margin-top:6px">Share this code with another SpawnKit instance. Expires in 24h, single use.</div>';
+            html += '</div>';
+
+            // Join form (hidden by default)
+            html += '<div id="joinFleetBox" style="display:none;margin-bottom:12px;padding:12px;border-radius:10px;background:#34C75910;border:1px solid #34C75930">';
+            html += '<div style="font-size:11px;color:#34C759;font-weight:600;margin-bottom:8px">uD83DuDD17 Join Another Fleet</div>';
+            html += '<div style="margin-bottom:6px"><input id="joinCodeInput" placeholder="Paste invite code or pairing URL" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #3a3a3c;background:var(--bg-secondary,#1c1c1e);color:var(--text-primary,#fff)"></div>';
+            html += '<div style="display:flex;gap:6px;margin-bottom:6px">';
+            html += '<input id="joinNameInput" placeholder="Your office name" value="' + (window.location.hostname || 'My Office') + '" style="flex:1;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #3a3a3c;background:var(--bg-secondary,#1c1c1e);color:var(--text-primary,#fff)">';
+            html += '<input id="joinIdInput" placeholder="Office ID (lowercase)" style="flex:1;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #3a3a3c;background:var(--bg-secondary,#1c1c1e);color:var(--text-primary,#fff)">';
+            html += '</div>';
+            html += '<div style="display:flex;gap:6px;align-items:center">';
+            html += '<input id="joinEmojiInput" placeholder="uD83CuDFE2" value="uD83CuDFE2" style="width:48px;text-align:center;font-size:16px;padding:4px;border-radius:6px;border:1px solid #3a3a3c;background:var(--bg-secondary,#1c1c1e)">';
+            html += '<button id="btnSubmitJoin" style="flex:1;padding:6px 12px;border-radius:6px;background:#34C759;color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:500">Join Fleet</button>';
+            html += '</div>';
+            html += '<div id="joinResultBox" style="display:none;margin-top:8px;padding:8px;border-radius:6px;font-size:11px"></div>';
+            html += '<div style="font-size:10px;color:#8E8E93;margin-top:6px">Paste an invite code from another SpawnKit instance to connect.</div>';
+            html += '</div>';
             html += '</div>';
 
             // Fetch peers from fleet relay
@@ -3591,6 +3608,88 @@
                     btn.disabled = false;
                 });
             });
+
+            // ── Wire up Join button ──
+            var btnJoin = document.getElementById('btnJoinFleet');
+            if (btnJoin) {
+                btnJoin.addEventListener('click', function() {
+                    var box = document.getElementById('joinFleetBox');
+                    if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+                });
+            }
+
+            // ── Wire up Join submit ──
+            var btnSubmitJoin = document.getElementById('btnSubmitJoin');
+            if (btnSubmitJoin) {
+                btnSubmitJoin.addEventListener('click', async function() {
+                    var codeRaw = (document.getElementById('joinCodeInput').value || '').trim();
+                    var name = (document.getElementById('joinNameInput').value || '').trim();
+                    var id = (document.getElementById('joinIdInput').value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+                    var emoji = (document.getElementById('joinEmojiInput').value || '🏢').trim();
+                    var resultBox = document.getElementById('joinResultBox');
+
+                    if (!codeRaw) { alert('Please paste an invite code or pairing URL.'); return; }
+                    if (!name) { alert('Please enter your office name.'); return; }
+                    if (!id) { alert('Please enter an office ID (lowercase, no spaces).'); return; }
+
+                    // Parse code: could be raw hex or a URL like https://fleet.spawnkit.ai/pair?code=abc
+                    var code = codeRaw;
+                    var targetRelay = apiUrl; // default: local relay
+                    try {
+                        if (codeRaw.includes('://') || codeRaw.includes('?code=')) {
+                            var u = new URL(codeRaw.includes('://') ? codeRaw : 'https://' + codeRaw);
+                            code = u.searchParams.get('code') || codeRaw;
+                            // If it's a remote URL, use its origin as relay
+                            if (u.hostname !== window.location.hostname && u.hostname !== 'localhost') {
+                                targetRelay = u.origin;
+                            }
+                        }
+                    } catch(e) { /* not a URL, treat as raw code */ }
+
+                    btnSubmitJoin.disabled = true;
+                    btnSubmitJoin.textContent = 'Joining…';
+
+                    try {
+                        var resp = await skFetch(targetRelay + '/api/fleet/pair', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ code: code, officeId: id, officeName: name, officeEmoji: emoji })
+                        });
+                        var data = await resp.json();
+                        if (data.ok) {
+                            // Save token for future use
+                            var tokens = {};
+                            try { tokens = JSON.parse(localStorage.getItem('fleet_peer_tokens') || '{}'); } catch(e) {}
+                            tokens[id] = { token: data.token, relay: targetRelay, relayWs: data.relayUrl || null, pairedAt: new Date().toISOString() };
+                            localStorage.setItem('fleet_peer_tokens', JSON.stringify(tokens));
+
+                            if (resultBox) {
+                                resultBox.style.display = 'block';
+                                resultBox.style.background = '#34C75915';
+                                resultBox.style.color = '#34C759';
+                                resultBox.innerHTML = '✅ <strong>Connected!</strong> ' + esc(data.message || 'You are now peered.') + '<br><span style="font-size:10px;color:#8E8E93">Token saved to browser. Your office ID: <code>' + esc(id) + '</code></span>';
+                            }
+                            setTimeout(renderRemote, 1500);
+                        } else {
+                            if (resultBox) {
+                                resultBox.style.display = 'block';
+                                resultBox.style.background = '#ff453a15';
+                                resultBox.style.color = '#ff453a';
+                                resultBox.textContent = '❌ ' + (data.error || 'Pairing failed');
+                            }
+                        }
+                    } catch(e) {
+                        if (resultBox) {
+                            resultBox.style.display = 'block';
+                            resultBox.style.background = '#ff453a15';
+                            resultBox.style.color = '#ff453a';
+                            resultBox.textContent = '❌ Connection error: ' + e.message;
+                        }
+                    }
+                    btnSubmitJoin.disabled = false;
+                    btnSubmitJoin.textContent = 'Join Fleet';
+                });
+            }
         }
         // Helper: escape HTML (if not already defined)
         function esc(s) {
