@@ -1172,6 +1172,8 @@ class MedievalCastle3D {
         const _panKeys = new Set();
         document.addEventListener('keydown', (e) => {
             if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                const tag = document.activeElement && document.activeElement.tagName;
+                if (tag === 'INPUT' || tag === 'TEXTAREA') return; // don't pan while typing
                 e.preventDefault();
                 _panKeys.add(e.key);
             }
