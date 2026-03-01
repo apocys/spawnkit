@@ -1500,6 +1500,7 @@ class MedievalCastle3D {
                 </div>
             `;
             this.loadAgentThoughts(agentId);
+        }
     }
 
     getAgentDescription(agentId) {
