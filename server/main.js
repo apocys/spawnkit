@@ -3609,6 +3609,15 @@
                 });
             });
 
+            // ── Wire up Setup Wizard button ──
+            var btnWizard = document.getElementById('btnSetupWizard');
+            if (btnWizard) {
+                btnWizard.addEventListener('click', function() {
+                    if (window.SetupWizard) window.SetupWizard.open('executive');
+                    else alert('Setup wizard not loaded');
+                });
+            }
+
             // ── Wire up Join button ──
             var btnJoin = document.getElementById('btnJoinFleet');
             if (btnJoin) {

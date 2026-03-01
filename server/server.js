@@ -784,6 +784,147 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ─── Setup Wizard API ─────────────────────────────────────
+  const BLUEPRINTS_DIR = require('path').join(__dirname, 'blueprints');
+
+  // GET /api/wizard/blueprints — list available blueprints
+  if (req.url === '/api/wizard/blueprints' && req.method === 'GET') {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const dirs = fs.readdirSync(BLUEPRINTS_DIR).filter(d => 
+        fs.statSync(path.join(BLUEPRINTS_DIR, d)).isDirectory()
+      );
+      const blueprints = dirs.map(d => {
+        try {
+          const yaml = fs.readFileSync(path.join(BLUEPRINTS_DIR, d, 'config.yaml'), 'utf8');
+          const name = (yaml.match(/^name:\s*(.+)$/m) || [])[1] || d;
+          const desc = (yaml.match(/^description:\s*"?(.+?)"?\s*$/m) || [])[1] || '';
+          const icon = (yaml.match(/^icon:\s*(.+)$/m) || [])[1] || '📦';
+          const version = (yaml.match(/^version:\s*(.+)$/m) || [])[1] || '1.0.0';
+          const featuresRaw = yaml.match(/features:\n((?:\s+-\s+.+\n?)+)/);
+          const features = featuresRaw ? featuresRaw[1].split('\n').filter(l => l.trim().startsWith('-')).map(l => l.replace(/^\s*-\s*/, '').trim()) : [];
+          return { id: d, name: name.trim(), description: desc.trim(), icon: icon.trim(), version, features };
+        } catch(e) { return { id: d, name: d, description: '', icon: '📦', version: '1.0.0', features: [] }; }
+      });
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, blueprints }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // GET /api/wizard/blueprint/:id — get blueprint details + variables
+  const bpMatch = req.url.match(/^\/api\/wizard\/blueprint\/([a-zA-Z0-9_-]+)$/);
+  if (bpMatch && req.method === 'GET') {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const bpDir = path.join(BLUEPRINTS_DIR, bpMatch[1]);
+      if (!fs.existsSync(bpDir)) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'Blueprint not found'})); return; }
+      const yaml = fs.readFileSync(path.join(bpDir, 'config.yaml'), 'utf8');
+      
+      // Parse variables from config.yaml
+      const varsSection = yaml.match(/variables:\n((?:\s+\w+:.+\n?)+)/);
+      const variables = {};
+      if (varsSection) {
+        varsSection[1].split('\n').filter(l => l.trim()).forEach(line => {
+          const m = line.match(/^\s+(\w+):\s*\{(.+)\}/);
+          if (m) {
+            const key = m[1];
+            const props = {};
+            m[2].split(',').forEach(p => {
+              const kv = p.match(/(\w+):\s*"?([^",}]+)"?/);
+              if (kv) props[kv[1].trim()] = kv[2].trim();
+            });
+            variables[key] = props;
+          }
+        });
+      }
+
+      // List templates
+      const files = fs.readdirSync(bpDir);
+      const templates = files.filter(f => f.endsWith('.template')).map(f => f.replace('.template', ''));
+      const skills = fs.existsSync(path.join(bpDir, 'skills')) ? fs.readdirSync(path.join(bpDir, 'skills')) : [];
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, id: bpMatch[1], variables, templates, skills, files }));
+    } catch(e) {
+      res.writeHead(500, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // POST /api/wizard/apply — apply a blueprint with variables
+  if (req.url === '/api/wizard/apply' && req.method === 'POST') {
+    try {
+      const body = await readBody(req);
+      if (!body || !body.blueprintId) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'blueprintId required'})); return; }
+      
+      const fs = require('fs');
+      const path = require('path');
+      const { execSync } = require('child_process');
+      const bpDir = path.join(BLUEPRINTS_DIR, body.blueprintId);
+      if (!fs.existsSync(bpDir)) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'Blueprint not found'})); return; }
+      
+      const vars = body.variables || {};
+      const workspace = vars.WORKSPACE || process.env.OPENCLAW_WORKSPACE || (process.env.HOME + '/clawd');
+      vars.WORKSPACE = workspace;
+      
+      // Write vars file for bootstrap.sh
+      fs.writeFileSync(path.join(bpDir, '.vars.json'), JSON.stringify(vars, null, 2));
+      
+      // Run bootstrap.sh
+      const output = execSync(`bash "${path.join(bpDir, 'bootstrap.sh')}" "${workspace}" 2>&1`, {
+        timeout: 30000,
+        encoding: 'utf8',
+        env: { ...process.env, HOME: process.env.HOME }
+      });
+      
+      // Clean up vars file
+      try { fs.unlinkSync(path.join(bpDir, '.vars.json')); } catch(e) {}
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200);
+      res.end(JSON.stringify({ 
+        ok: true, 
+        workspace,
+        output: output.split('\n').filter(l => l.trim()).slice(-15),
+        message: `Blueprint '${body.blueprintId}' applied to ${workspace}`
+      }));
+    } catch(e) {
+      res.writeHead(500, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ error: e.message, output: e.stdout || '' }));
+    }
+    return;
+  }
+
+  // GET /api/wizard/status — check if workspace is already configured
+  if (req.url === '/api/wizard/status' && req.method === 'GET') {
+    try {
+      const fs = require('fs');
+      const workspace = process.env.OPENCLAW_WORKSPACE || (process.env.HOME + '/clawd');
+      const files = ['SOUL.md', 'AGENTS.md', 'USER.md', 'MEMORY.md', 'IDENTITY.md', 'HEARTBEAT.md'];
+      const existing = files.filter(f => fs.existsSync(require('path').join(workspace, f)));
+      const configured = existing.length >= 3;
+      const skillsDir = require('path').join(workspace, 'skills');
+      const skills = fs.existsSync(skillsDir) ? fs.readdirSync(skillsDir).filter(d => fs.statSync(require('path').join(skillsDir, d)).isDirectory()) : [];
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, configured, workspace, existingFiles: existing, skills, total: files.length, found: existing.length }));
+    } catch(e) {
+      res.writeHead(500, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   if (req.url.startsWith('/api/oc/')) {
     res.setHeader('Content-Type', 'application/json');
     const route = req.url.replace(/\?.*/, '');

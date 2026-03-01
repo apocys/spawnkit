@@ -502,6 +502,7 @@
             '</div>' +
             '<div class="bp-section-title">🗺️ Realm</div>' +
             '<button class="bp-btn" style="width:100%;margin-bottom:8px;" id="bp-open-allied">🏰 Allied Kingdoms (Rookery)</button>' +
+            '<button class="bp-btn" style="width:100%;margin-bottom:8px;border-color:rgba(201,169,89,.4);color:rgba(201,169,89,.9);" id="bp-open-wizard">📜 Forge Agent Blueprint</button>' +
             '<button class="bp-btn" style="width:100%;margin-bottom:8px;" id="bp-open-theme-switcher">🎨 Switch Theme / Realm</button>' +
             '<div style="font-size:11px;color:rgba(168,162,153,0.5);text-align:center;">Medieval Castle · v4.1</div>';
 
@@ -509,6 +510,13 @@
         if (wizBtn) {
             wizBtn.addEventListener('click', function() {
                 if (window.ChannelOnboarding) window.ChannelOnboarding.open();
+            });
+        }
+        var wizardBtn = document.getElementById('bp-open-wizard');
+        if (wizardBtn) {
+            wizardBtn.addEventListener('click', function() {
+                closeBuildingPanel();
+                setTimeout(function() { if (window.SetupWizard) window.SetupWizard.open('medieval'); }, 200);
             });
         }
         var alliedBtn = document.getElementById('bp-open-allied');
