@@ -7,7 +7,17 @@
             else if (typeof openMissionControl === 'function') openMissionControl();
         }},
         { key: '2', icon: '💬', label: 'Chat', action: function() {
-            if (window.ThemeChat) ThemeChat.show();
+            var chatEl = document.getElementById('medievalChat');
+            if (chatEl) {
+                if (chatEl.style.display === 'none' || !chatEl.style.display) {
+                    chatEl.style.display = 'flex';
+                    chatEl.style.flexDirection = 'column';
+                    if (window.ThemeChat) ThemeChat.show();
+                } else {
+                    chatEl.style.display = 'none';
+                    if (window.ThemeChat) ThemeChat.hide();
+                }
+            }
         }},
         { key: '3', icon: '📜', label: 'Skills', action: function() {
             if (typeof window.openBuildingPanel === 'function') window.openBuildingPanel('🏪 Market');
@@ -25,6 +35,20 @@
         { key: '5', icon: '⚙️', label: 'Settings', action: function() {
             if (typeof window.openBuildingPanel === 'function') window.openBuildingPanel('🏠 Chapel');
             else if (window.ThemeCustomize) ThemeCustomize.show();
+        }},
+        { key: '6', icon: '⚔️', label: 'Summon', action: function() {
+            var overlay = document.getElementById('summonOverlay');
+            if (!overlay) return;
+            overlay.style.display = 'flex';
+            setTimeout(function() { overlay.classList.add('visible'); }, 50);
+        }},
+        { key: '7', icon: '🏗️', label: 'Edit', action: function() {
+            if (window.castleApp && window.castleApp.toggleEditMode) {
+                window.castleApp.toggleEditMode();
+            }
+        }},
+        { key: '8', icon: '🏰', label: 'Allies', action: function() {
+            if (typeof window.openBuildingPanel === 'function') window.openBuildingPanel('🏰 Rookery');
         }},
     ];
     items.forEach(function(item) {

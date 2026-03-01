@@ -10,6 +10,7 @@
         '🔨 Forge Workshop':{ icon: '🔨', title: 'Skill Forge',      render: renderForge },
         '🏪 Market':       { icon: '🏪', title: 'Skill Marketplace', render: renderMarket },
         '🏠 Chapel':       { icon: '🏠', title: 'Settings',         render: renderSettings },
+        '🏰 Rookery':      { icon: '🐦‍⬛', title: 'Allied Kingdoms',  render: function(c) { if (window.renderAlliedKingdoms) window.renderAlliedKingdoms(c); else c.innerHTML = '<div class="bp-empty">Rookery module not loaded.</div>'; } },
     };
 
     // ── Inject CSS ───────────────────────────────────────────────────────

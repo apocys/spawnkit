@@ -272,6 +272,130 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ─── Remote proxy endpoint ───────────────────────────────
+  // ─── Fleet Relay Proxy (peers/invite/pair/disconnect) ─────
+  const FLEET_RELAY_URL = 'http://localhost:18790';
+  const FLEET_RELAY_TOKEN = process.env.FLEET_RELAY_TOKEN || 'sk-fleet-2ad53564b03d9facbe3389bb5c461179ffc73af12e50ae00';
+
+  // GET /api/fleet/peers — public, no auth needed
+  if (req.url === '/api/fleet/peers' && req.method === 'GET') {
+    try {
+      const fr = await proxyFetch(FLEET_RELAY_URL + '/api/fleet/peers', '');
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(fr.ok ? 200 : 502);
+      res.end(JSON.stringify(fr.ok ? fr.data : { error: 'Fleet relay unreachable' }));
+    } catch(e) {
+      res.writeHead(502, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // GET /api/remote/offices — maps to fleet relay peers (backward compat)
+  if (req.url.startsWith('/api/remote/offices') && req.method === 'GET') {
+    try {
+      const fr = await proxyFetch(FLEET_RELAY_URL + '/api/fleet/stats', '');
+      if (fr.ok && fr.data) {
+        const officesObj = fr.data.offices || {};
+        const officesArr = Object.entries(officesObj).map(([id, o]) => ({
+          id, name: o.name, emoji: o.emoji, status: o.status,
+          lastSeen: o.lastSeen, agents: o.state && o.state.agents ? o.state.agents : []
+        }));
+        const recentMessages = fr.data.recentMessages || [];
+        res.setHeader('Content-Type', 'application/json');
+        res.writeHead(200);
+        res.end(JSON.stringify({ ok: true, offices: officesArr, recentMessages }));
+      } else {
+        res.writeHead(502, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ error: 'Fleet relay unreachable' }));
+      }
+    } catch(e) {
+      res.writeHead(502, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // POST /api/fleet/invite — generate invite (requires SK auth)
+  if (req.url === '/api/fleet/invite' && req.method === 'POST') {
+    const body = await readBody(req);
+    try {
+      const resp = await new Promise((resolve, reject) => {
+        const postData = JSON.stringify(body || {});
+        const opts = {
+          hostname: 'localhost', port: 18790, path: '/api/fleet/invite', method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData), 'Authorization': 'Bearer ' + FLEET_RELAY_TOKEN }
+        };
+        const r = require('http').request(opts, (res2) => {
+          let d = ''; res2.on('data', c => d += c);
+          res2.on('end', () => { try { resolve({ status: res2.statusCode, data: JSON.parse(d) }); } catch(e) { reject(e); } });
+        });
+        r.on('error', reject);
+        r.write(postData); r.end();
+      });
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(resp.status);
+      res.end(JSON.stringify(resp.data));
+    } catch(e) {
+      res.writeHead(502, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // POST /api/fleet/pair — pair with invite code (no auth needed)
+  if (req.url === '/api/fleet/pair' && req.method === 'POST') {
+    const body = await readBody(req);
+    try {
+      const resp = await new Promise((resolve, reject) => {
+        const postData = JSON.stringify(body || {});
+        const opts = {
+          hostname: 'localhost', port: 18790, path: '/api/fleet/pair', method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) }
+        };
+        const r = require('http').request(opts, (res2) => {
+          let d = ''; res2.on('data', c => d += c);
+          res2.on('end', () => { try { resolve({ status: res2.statusCode, data: JSON.parse(d) }); } catch(e) { reject(e); } });
+        });
+        r.on('error', reject);
+        r.write(postData); r.end();
+      });
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(resp.status);
+      res.end(JSON.stringify(resp.data));
+    } catch(e) {
+      res.writeHead(502, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // DELETE /api/fleet/peer/:id — disconnect a peer
+  const peerDisconnectMatch = req.url.match(/^\/api\/fleet\/peer\/([a-zA-Z0-9_-]+)$/);
+  if (peerDisconnectMatch && req.method === 'DELETE') {
+    const peerId = peerDisconnectMatch[1];
+    try {
+      const resp = await new Promise((resolve, reject) => {
+        const opts = {
+          hostname: 'localhost', port: 18790, path: '/api/fleet/peer/' + peerId, method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + FLEET_RELAY_TOKEN }
+        };
+        const r = require('http').request(opts, (res2) => {
+          let d = ''; res2.on('data', c => d += c);
+          res2.on('end', () => { try { resolve({ status: res2.statusCode, data: JSON.parse(d) }); } catch(e) { reject(e); } });
+        });
+        r.on('error', reject);
+        r.end();
+      });
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(resp.status);
+      res.end(JSON.stringify(resp.data));
+    } catch(e) {
+      res.writeHead(502, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   if (req.url.startsWith('/api/remote/') && req.method === 'POST') {
     const body = await readBody(req);
     if (!body || !body.url || !body.endpoint) {

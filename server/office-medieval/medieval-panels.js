@@ -10,6 +10,7 @@
         '🔨 Forge Workshop':{ icon: '🔨', title: 'Skill Forge',      render: renderForge },
         '🏪 Market':       { icon: '🏪', title: 'Skill Marketplace', render: renderMarket },
         '🏠 Chapel':       { icon: '🏠', title: 'Settings',         render: renderSettings },
+        '🏰 Rookery':      { icon: '🐦‍⬛', title: 'Allied Kingdoms',  render: function(c) { if (window.renderAlliedKingdoms) window.renderAlliedKingdoms(c); else c.innerHTML = '<div class="bp-empty">Rookery module not loaded.</div>'; } },
     };
 
     // ── Inject CSS ───────────────────────────────────────────────────────
@@ -60,6 +61,9 @@
         cfg.render(content);
 
         document.getElementById('building-panel').classList.add('panel-open');
+
+        // Play contextual building sound
+        if (window.MedievalBuildingSounds) window.MedievalBuildingSounds.play(buildingName);
 
         // Golden glow on building group
         var app = window.castleApp;
@@ -265,8 +269,60 @@
         if (window.SkillForge && typeof window.SkillForge.open === 'function') {
             window.SkillForge.open();
             container.innerHTML = '<div class="bp-empty">Skill Forge opened.</div>';
-        } else {
-            container.innerHTML = '<div class="bp-empty">⚒️ Skill Forge coming soon…</div>';
+            return;
+        }
+
+        // Medieval skill forge UI
+        container.innerHTML =
+            '<div class="bp-section-title">⚒️ The Forge — Craft a Skill</div>' +
+            '<p style="font-size:12px;color:rgba(168,162,153,0.7);margin-bottom:12px;">Forge a custom skill for your knights. Skills are reusable instruction sets.</p>' +
+            '<div style="margin-bottom:12px;">' +
+            '<label style="font-size:12px;color:rgba(201,169,89,0.8);display:block;margin-bottom:4px;">Skill Name</label>' +
+            '<input class="bp-input" id="forge-skill-name" placeholder="e.g. daily-standup" style="margin-bottom:8px;">' +
+            '<label style="font-size:12px;color:rgba(201,169,89,0.8);display:block;margin-bottom:4px;">Description</label>' +
+            '<input class="bp-input" id="forge-skill-desc" placeholder="What does this skill do?" style="margin-bottom:8px;">' +
+            '<label style="font-size:12px;color:rgba(201,169,89,0.8);display:block;margin-bottom:4px;">Instructions</label>' +
+            '<textarea class="bp-input" id="forge-skill-instructions" rows="4" placeholder="Step-by-step instructions for the agent..."></textarea>' +
+            '</div>' +
+            '<button class="bp-btn" id="forge-skill-btn" style="width:100%;margin-bottom:16px;">🔨 Forge Skill</button>' +
+            '<div class="bp-section-title">📜 Skill Templates</div>' +
+            '<div class="bp-skill-grid">' +
+            ['Daily Standup','Code Review','Bug Hunter','Market Scout','Memory Keeper','Report Writer'].map(function(name) {
+                return '<div class="bp-card" style="text-align:center;cursor:pointer;" onclick="document.getElementById(\x27forge-skill-name\x27).value=\x27' + name.toLowerCase().replace(/ /g,'-') + '\x27;document.getElementById(\x27forge-skill-desc\x27).value=\x27' + name + ' automation\x27">' +
+                    '<div style="font-size:20px">⚙️</div>' +
+                    '<div style="font-size:11px;color:#f4e4bc;margin-top:4px">' + name + '</div>' +
+                    '</div>';
+            }).join('') +
+            '</div>';
+
+        var btn = document.getElementById('forge-skill-btn');
+        if (btn) {
+            btn.addEventListener('click', function() {
+                var name = document.getElementById('forge-skill-name').value.trim();
+                var desc = document.getElementById('forge-skill-desc').value.trim();
+                var instructions = document.getElementById('forge-skill-instructions').value.trim();
+                if (!name || !instructions) {
+                    btn.textContent = '⚠️ Name + instructions required';
+                    setTimeout(function() { btn.textContent = '🔨 Forge Skill'; }, 2000);
+                    return;
+                }
+                // Send to chat as a skill creation request
+                var msg = 'Please create a skill named "' + name + '". Description: ' + desc + '. Instructions: ' + instructions;
+                if (window.ThemeChat && window.ThemeChat._sendMessage) {
+                    window.ThemeChat._sendMessage(msg);
+                    var chatEl = document.getElementById('medievalChat');
+                    if (chatEl) { chatEl.style.display = 'flex'; chatEl.style.flexDirection = 'column'; }
+                }
+                btn.textContent = '✨ Skill dispatched to forge!';
+                btn.style.background = 'rgba(16,185,129,0.3)';
+                setTimeout(function() {
+                    btn.textContent = '🔨 Forge Skill';
+                    btn.style.background = '';
+                    document.getElementById('forge-skill-name').value = '';
+                    document.getElementById('forge-skill-desc').value = '';
+                    document.getElementById('forge-skill-instructions').value = '';
+                }, 2000);
+            });
         }
     }
 
@@ -298,16 +354,52 @@
 
     // ── Render: Settings ────────────────────────────────────────────────
     function renderSettings(container) {
-        if (window.ThemeCustomize && typeof window.ThemeCustomize.open === 'function') window.ThemeCustomize.open();
-        var conns = [['✉️','Telegram','telegram'],['📱','WhatsApp','whatsapp'],['🎮','Discord','discord'],['🔌','API','api']];
-        var rows = conns.map(function (c) {
-            var on = window.OC_CONNECTIONS && window.OC_CONNECTIONS[c[2]];
-            return '<div class="bp-conn-row"><span>' + c[0] + ' ' + c[1] + '</span><span>' + (on ? '✅' : '❌') + '</span></div>';
+        // Channel status
+        var channelDefs = [
+            ['✈️', 'Telegram', 'telegram'],
+            ['📱', 'WhatsApp', 'whatsapp'],
+            ['🎮', 'Discord', 'discord'],
+            ['🔔', 'Signal', 'signal'],
+            ['🍎', 'iMessage', 'imessage'],
+            ['💼', 'Slack', 'slack'],
+        ];
+        var rows = channelDefs.map(function(c) {
+            var connected = window.ChannelOnboarding ? window.ChannelOnboarding.isChannelConnected(c[2]) : false;
+            return '<div class="bp-conn-row" style="cursor:pointer;" onclick="' +
+                (window.ChannelOnboarding ? 'window.ChannelOnboarding.openQuickConnect(\"' + c[2] + '\")' : '') +
+                '">' +
+                '<span>' + c[0] + ' ' + c[1] + '</span>' +
+                '<span>' + (connected ? '✅ Connected' : '<button class="bp-btn" style="padding:3px 8px;font-size:11px;">Connect</button>') + '</span>' +
+                '</div>';
         }).join('');
-        container.innerHTML = '<div class="bp-section-title">Connections</div><div style="margin-bottom:16px">' + rows + '</div>'
-            + '<div class="bp-section-title">Theme</div><div class="bp-card" style="cursor:default">'
-            + '<div style="font-size:12px;color:rgba(168,162,153,0.7)">Theme: Medieval Castle</div>'
-            + '<div style="font-size:12px;color:rgba(168,162,153,0.7);margin-top:4px">Version: v4.0</div></div>';
+
+        container.innerHTML =
+            '<div class="bp-section-title">⛪ Chapel — Royal Communications</div>' +
+            '<p style="font-size:12px;color:rgba(168,162,153,0.7);margin-bottom:12px;">Connect your channels to receive messages from the realm.</p>' +
+            '<div style="margin-bottom:12px;">' + rows + '</div>' +
+            '<div style="display:flex;gap:8px;margin-bottom:16px;">' +
+            '<button class="bp-btn" style="flex:1;" id="bp-open-channel-wizard">⚙️ Channel Wizard</button>' +
+            '</div>' +
+            '<div class="bp-section-title">🗺️ Realm</div>' +
+            '<button class="bp-btn" style="width:100%;margin-bottom:8px;" id="bp-open-theme-switcher">🎨 Switch Theme / Realm</button>' +
+            '<div style="font-size:11px;color:rgba(168,162,153,0.5);text-align:center;">Medieval Castle · v4.1</div>';
+
+        var wizBtn = document.getElementById('bp-open-channel-wizard');
+        if (wizBtn) {
+            wizBtn.addEventListener('click', function() {
+                if (window.ChannelOnboarding) window.ChannelOnboarding.open();
+            });
+        }
+        var themeBtn = document.getElementById('bp-open-theme-switcher');
+        if (themeBtn) {
+            themeBtn.addEventListener('click', function() {
+                var overlay = document.getElementById('themeSwitcherOverlay');
+                if (overlay) {
+                    overlay.style.display = 'flex';
+                    setTimeout(function() { overlay.classList.add('visible'); }, 50);
+                }
+            });
+        }
     }
 
     // ── Utility ─────────────────────────────────────────────────────────

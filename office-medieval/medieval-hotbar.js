@@ -47,6 +47,9 @@
                 window.castleApp.toggleEditMode();
             }
         }},
+        { key: '8', icon: '🏰', label: 'Allies', action: function() {
+            if (typeof window.openBuildingPanel === 'function') window.openBuildingPanel('🏰 Rookery');
+        }},
     ];
     items.forEach(function(item) {
         var slot = document.createElement('div');
