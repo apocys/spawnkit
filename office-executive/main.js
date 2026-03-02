@@ -2257,7 +2257,8 @@
                     bodyHtml = '<div class="typing-dots"><span>●</span><span>●</span><span>●</span></div>';
                 } else {
                     var preview = m.text.length > 300 ? m.text.substring(0, 300) + '…' : m.text;
-                    bodyHtml = '<div>' + esc(preview) + '</div>';
+                    // Use markdown renderer for better formatting (tables, headers, etc.)
+                    bodyHtml = '<div class="chat-message-content">' + (typeof renderMarkdown === 'function' ? renderMarkdown(preview) : esc(preview)) + '</div>';
                 }
                 div.innerHTML = bodyHtml +
                     (m.time ? '<div class="chat-tab-msg-time">' + esc(m.time) + '</div>' : '');

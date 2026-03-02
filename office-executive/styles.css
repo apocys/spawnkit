@@ -4207,3 +4207,7 @@ body:not([data-theme="dark"]) .skm-overlay,
 body:not([data-theme="dark"]) .dw-overlay {
     color: #fff;
 }
+.chat-table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12px; }
+.chat-table td { border: 1px solid var(--border-light); padding: 4px 8px; text-align: left; }
+.chat-table tr:first-child td { background: var(--bg-tertiary); font-weight: 600; }
+.chat-message-content { word-wrap: break-word; }
