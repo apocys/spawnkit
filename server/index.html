@@ -1021,5 +1021,23 @@
     </div>
     <script src="channel-onboarding.js"></script>
     <script src="setup-wizard.js"></script>
+
+    <!-- Creator Profile Overlay -->
+    <div id="creatorProfileOverlay" class="cron-overlay">
+      <div class="cron-backdrop" onclick="if(typeof closeCreatorProfile==='function')closeCreatorProfile()"></div>
+      <div class="cron-panel">
+        <div class="cron-header">
+          <span>👤 Creator Profile</span>
+          <button class="cron-close" onclick="if(typeof closeCreatorProfile==='function')closeCreatorProfile()">✕</button>
+        </div>
+        <div class="cron-body" id="creatorProfileContent">
+          <div style="padding:32px;text-align:center;color:#8E8E93;">
+            <div style="font-size:48px;margin-bottom:16px;">👤</div>
+            <div style="font-size:17px;font-weight:600;color:#F2F2F7;margin-bottom:8px;">Creator Profile</div>
+            <div style="font-size:13px;line-height:1.5;">Build your agent creator identity.<br>Share agents, earn reputation, get discovered.<br><br><span style="color:#636366;font-size:12px;">Coming soon — SpawnKit v2</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
 </body>
 </html>
