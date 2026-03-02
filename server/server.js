@@ -98,6 +98,24 @@ const MIME = {
 
 function readJSON(fp) { try { return JSON.parse(fs.readFileSync(fp, 'utf8')); } catch(e) { return null; } }
 
+function getAgents() {
+  // Read agent config from workspace or provide defaults
+  const agentsFile = path.join(WORKSPACE, 'agents.json');
+  try {
+    const data = readJSON(agentsFile);
+    if (data && data.agents) return data;
+  } catch(e) {}
+  
+  // Default agents based on SpawnKit configuration
+  return { agents: [
+    { id: 'sycopa', name: 'Sycopa', role: 'Chief of Staff', status: 'active', emoji: '🧠', description: 'Strategic planning and coordination' },
+    { id: 'atlas', name: 'Atlas', role: 'Navigator', status: 'active', emoji: '🗺️', description: 'Research and analysis' },
+    { id: 'forge', name: 'Forge', role: 'Builder', status: 'active', emoji: '🔨', description: 'Code and infrastructure' },
+    { id: 'hunter', name: 'Hunter', role: 'Scout', status: 'active', emoji: '🎯', description: 'Market intelligence and opportunities' },
+    { id: 'echo', name: 'Echo', role: 'Communicator', status: 'active', emoji: '📡', description: 'Channels and messaging' },
+    { id: 'sentinel', name: 'Sentinel', role: 'Guardian', status: 'active', emoji: '🛡️', description: 'Security and quality assurance' }
+  ]};
+}
 function getSessions() {
   const data = readJSON(SESSIONS_FILE);
   if (!data) return [];
@@ -1220,7 +1238,7 @@ const server = http.createServer(async (req, res) => {
       case '/api/oc/crons': data = getCrons(); break;
       case '/api/oc/chat': data = getChat(); break;
       case '/api/oc/chat/history': data = getChat(); break;
-      case '/api/oc/agents': data = { agents: [] }; break;
+      case '/api/oc/agents': data = getAgents(); break;
       case '/api/oc/health': data = { ok: true, uptime: process.uptime() }; break;
       default: res.writeHead(404); res.end(JSON.stringify({error:'not found'})); return;
     }
