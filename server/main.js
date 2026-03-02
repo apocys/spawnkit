@@ -4159,6 +4159,12 @@
     }
 
     window.openCreatorProfile = openCreatorProfile;
+    window.closeCreatorProfile = closeCreatorProfile;
+    function closeCreatorProfile() {
+        var overlay = document.getElementById('creatorProfileOverlay');
+        if (overlay) overlay.classList.remove('open');
+        document.body.style.overflow = '';
+    }
     function openCreatorProfile() {
         var overlay = document.getElementById('creatorProfileOverlay');
         if (!overlay) return;
