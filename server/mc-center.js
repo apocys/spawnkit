@@ -215,6 +215,13 @@
         '<div class="mc-msg-content">' + mdToHtml(content) + '</div>' +
         '</div>';
     }
+    if (!html) {
+      elBody.innerHTML = '<div class="mc-empty" style="padding:48px 24px;">' +
+        '<div style="font-size:24px;margin-bottom:8px;">💬</div>' +
+        'Start a conversation.<br>' +
+        '<span style="font-size:12px;color:var(--mc-text-dim);">Type a message below or use /mission for a guided flow.</span></div>';
+      return;
+    }
     elBody.innerHTML = html;
     scrollToBottom(elBody);
   }
