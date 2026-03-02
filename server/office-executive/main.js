@@ -448,9 +448,7 @@
 
         window.openMailbox = function openMailbox(tab) {
             if (typeof tab === 'object') tab = undefined; // Handle event object
-            closeTodoPanel();
-            closeDetailPanel();
-            closeChatPanel(); // Close old chat panel if open
+            closeAllPanels();
             mailboxOverlay.classList.add('open');
             
             // Switch to specified tab or default to Messages when opened via mailbox button
@@ -894,6 +892,7 @@
                 });
             }
 
+            closeAllPanels();
             detailOverlay.classList.add('open');
             detailClose.focus();
             document.body.style.overflow = 'hidden';
@@ -1306,8 +1305,7 @@
 
         window.openMeetingPanel = openMeetingPanel;
         async function openMeetingPanel() {
-            closeTodoPanel(); // Close TODO panel if open
-            closeMailbox();   // Close mailbox if open
+            closeAllPanels();
 
             var activeSubagents = [];
             if (API) {
@@ -2375,6 +2373,7 @@
             
             if (!overlay || !body) return;
             
+            closeAllPanels();
             overlay.classList.add('open');
             document.body.style.overflow = 'hidden';
             
@@ -3494,7 +3493,7 @@
 
             // Fallback: no API
             html += '</div>';
-            html += '<div style="padding:16px;text-align:center;color:#8E8E93;font-size:13px;">📡 Fetching fleet status…</div>';
+            html += '<div style="padding:16px;text-align:center;color:#8E8E93;font-size:13px;">📡 Could not reach fleet relay.<br><span style="font-size:11px;">Check that the relay is running on port 18790.</span></div>';
             body.innerHTML = html;
         }
 
@@ -3607,6 +3606,13 @@
             _origCloseAll();
             closeMissionsPanel();
             closeSettingsPanel();
+            if (typeof closeChatHistory === 'function') closeChatHistory();
+            if (typeof closeMarketplace === 'function') closeMarketplace();
+            if (typeof closeSkills === 'function') closeSkills();
+            if (typeof closeCreatorProfile === 'function') closeCreatorProfile();
+            var orchOl = document.getElementById("orchestrationOverlay"); if (orchOl) orchOl.classList.remove("open");
+            var addOl = document.getElementById("addAgentOverlay"); if (addOl) addOl.classList.remove("open");
+            document.body.style.overflow = '';
         };
 
         /* ═══════════════════════════════════════════════
@@ -3901,11 +3907,7 @@
     function openMarketplace() {
         var overlay = document.getElementById('marketplaceOverlay');
         if (!overlay) return;
-        // Close other overlays first
-        ['skillsOverlay', 'creatorProfileOverlay'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.classList.remove('open');
-        });
+        closeAllPanels();
         overlay.classList.add('open');
         document.body.style.overflow = 'hidden';
         renderMarketplace();
@@ -4009,10 +4011,7 @@
     function openSkills() {
         var overlay = document.getElementById('skillsOverlay');
         if (!overlay) return;
-        ['marketplaceOverlay', 'creatorProfileOverlay'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.classList.remove('open');
-        });
+        closeAllPanels();
         overlay.classList.add('open');
         document.body.style.overflow = 'hidden';
         skActiveCat = 'All';
