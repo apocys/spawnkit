@@ -448,9 +448,7 @@
 
         window.openMailbox = function openMailbox(tab) {
             if (typeof tab === 'object') tab = undefined; // Handle event object
-            closeTodoPanel();
-            closeDetailPanel();
-            closeChatPanel(); // Close old chat panel if open
+            closeAllPanels();
             mailboxOverlay.classList.add('open');
             
             // Switch to specified tab or default to Messages when opened via mailbox button
@@ -894,6 +892,7 @@
                 });
             }
 
+            closeAllPanels();
             detailOverlay.classList.add('open');
             detailClose.focus();
             document.body.style.overflow = 'hidden';
@@ -1306,8 +1305,7 @@
 
         window.openMeetingPanel = openMeetingPanel;
         async function openMeetingPanel() {
-            closeTodoPanel(); // Close TODO panel if open
-            closeMailbox();   // Close mailbox if open
+            closeAllPanels();
 
             var activeSubagents = [];
             if (API) {
@@ -2375,6 +2373,7 @@
             
             if (!overlay || !body) return;
             
+            closeAllPanels();
             overlay.classList.add('open');
             document.body.style.overflow = 'hidden';
             
@@ -2804,7 +2803,7 @@
         }
 
         async function renderMemory() {
-            var mem = liveMemoryData || (window.SpawnKit && window.SpawnKit.data && window.SpawnKit.data.memory) || null;
+            var mem = liveMemoryData;
             // Resolve if liveMemoryData is a Promise
             if (mem && typeof mem.then === 'function') {
                 try { mem = await mem; } catch(e) { mem = null; }
@@ -2935,6 +2934,7 @@
             closeMemoryPanel();
             closeRemotePanel();
         }
+        window.closeAllPanels = closeAllPanels;
 
         /* ═══════════════════════════════════════════════
            Announce readiness to parent
@@ -3426,280 +3426,78 @@
             var body = document.getElementById('remoteBody');
             if (!body) return;
 
-            var apiUrl = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
-            var html = '';
+            var html = '<div style="margin-bottom:16px">';
+            html += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#8E8E93;font-weight:600;margin-bottom:12px">Fleet Network</div>';
 
-            // ── Peering Controls Section ──
-            html += '<div style="margin-bottom:16px">';
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
-            html += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#8E8E93;font-weight:600">Connected Offices</div>';
-            html += '<div style="display:flex;gap:6px"><button id="btnGenerateInvite" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid var(--exec-blue,#0a84ff);color:var(--exec-blue,#0a84ff);background:transparent;cursor:pointer;font-weight:500;transition:all 0.2s">+ Invite</button><button id="btnJoinFleet" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid #34C759;color:#34C759;background:transparent;cursor:pointer;font-weight:500;transition:all 0.2s">D83DDD17 Join</button></div>';
-            html += '</div>';
-
-            // Invite code display (hidden by default)
-            html += '<div id="inviteCodeBox" style="display:none;margin-bottom:12px;padding:12px;border-radius:10px;background:var(--exec-blue,#0a84ff)10;border:1px solid var(--exec-blue,#0a84ff)30">';
-            html += '<div style="font-size:11px;color:var(--exec-blue,#0a84ff);font-weight:600;margin-bottom:6px">📨 Invite Code Generated</div>';
-            html += '<div style="display:flex;gap:8px;align-items:center">';
-            html += '<input id="inviteCodeInput" readonly style="flex:1;font-family:monospace;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #3a3a3c;background:var(--bg-secondary,#1c1c1e);color:var(--text-primary,#fff)">';
-            html += '<button id="btnCopyInvite" style="padding:6px 12px;border-radius:6px;background:var(--exec-blue,#0a84ff);color:#fff;border:none;cursor:pointer;font-size:11px;font-weight:500">Copy</button>';
-            html += '</div>';
-            html += '<div style="font-size:10px;color:#8E8E93;margin-top:6px">Share this code with another SpawnKit instance. Expires in 24h, single use.</div>';
+            // This IS Sycopa HQ — show as home office with green status
+            html += '<div class="remote-office-card" style="border:1.5px solid #34C75940;background:var(--bg-tertiary);">';
+            html += '<div class="remote-office-header">';
+            html += '<span class="remote-office-emoji">🎭</span>';
+            html += '<div>';
+            html += '<div class="remote-office-name">Sycopa HQ <span style="font-size:10px;font-weight:500;background:#34C75920;color:#34C759;border-radius:4px;padding:1px 6px;margin-left:6px;">This Office</span></div>';
+            html += '<div class="remote-office-status online" style="color:#34C759;">● Online — Sycopa (CEO)</div>';
+            html += '</div></div>';
+            html += '<div style="font-size:12px;color:#8E8E93;padding:6px 0 0">fleet.spawnkit.ai • Hetzner node</div>';
             html += '</div>';
 
-            // Join form (hidden by default)
-            html += '<div id="joinFleetBox" style="display:none;margin-bottom:12px;padding:12px;border-radius:10px;background:#34C75910;border:1px solid #34C75930">';
-            html += '<div style="font-size:11px;color:#34C759;font-weight:600;margin-bottom:8px">uD83DuDD17 Join Another Fleet</div>';
-            html += '<div style="margin-bottom:6px"><input id="joinCodeInput" placeholder="Paste invite code or pairing URL" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #3a3a3c;background:var(--bg-secondary,#1c1c1e);color:var(--text-primary,#fff)"></div>';
-            html += '<div style="display:flex;gap:6px;margin-bottom:6px">';
-            html += '<input id="joinNameInput" placeholder="Your office name" value="' + (window.location.hostname || 'My Office') + '" style="flex:1;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #3a3a3c;background:var(--bg-secondary,#1c1c1e);color:var(--text-primary,#fff)">';
-            html += '<input id="joinIdInput" placeholder="Office ID (lowercase)" style="flex:1;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #3a3a3c;background:var(--bg-secondary,#1c1c1e);color:var(--text-primary,#fff)">';
-            html += '</div>';
-            html += '<div style="display:flex;gap:6px;align-items:center">';
-            html += '<input id="joinEmojiInput" placeholder="uD83CuDFE2" value="uD83CuDFE2" style="width:48px;text-align:center;font-size:16px;padding:4px;border-radius:6px;border:1px solid #3a3a3c;background:var(--bg-secondary,#1c1c1e)">';
-            html += '<button id="btnSubmitJoin" style="flex:1;padding:6px 12px;border-radius:6px;background:#34C759;color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:500">Join Fleet</button>';
-            html += '</div>';
-            html += '<div id="joinResultBox" style="display:none;margin-top:8px;padding:8px;border-radius:6px;font-size:11px"></div>';
-            html += '<div style="font-size:10px;color:#8E8E93;margin-top:6px">Paste an invite code from another SpawnKit instance to connect.</div>';
-            html += '</div>';
-            html += '</div>';
-
-            // Fetch peers from fleet relay
+            // Fetch remote offices from API
             try {
-                var resp = await skFetch(apiUrl + '/api/fleet/peers');
+                var apiUrl = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+                var resp = await skFetch(apiUrl + '/api/remote/offices');
                 if (resp.ok) {
                     var data = await resp.json();
-                    var peers = data.peers || [];
-
-                    peers.forEach(function(peer) {
-                        var isHome = peer.officeId === 'sycopa';
-                        var statusColor = peer.online ? '#34C759' : (peer.status === 'stale' ? '#FF9F0A' : '#8E8E93');
-                        var statusText = peer.online ? '● Online' : (peer.status === 'stale' ? '◐ Stale' : '○ Offline');
-                        var borderColor = isHome ? '#34C75940' : (peer.online ? '#0a84ff30' : '#3a3a3c');
-
-                        html += '<div class="remote-office-card" style="margin-bottom:8px;border:1.5px solid ' + borderColor + ';' + (isHome ? 'background:var(--bg-tertiary)' : '') + '">';
-                        html += '<div class="remote-office-header" style="display:flex;justify-content:space-between;align-items:flex-start">';
-                        html += '<div style="display:flex;gap:10px;align-items:center">';
-                        html += '<span class="remote-office-emoji">' + esc(peer.emoji || '🏢') + '</span>';
-                        html += '<div>';
-                        html += '<div class="remote-office-name">' + esc(peer.name || peer.officeId);
-                        if (isHome) html += ' <span style="font-size:10px;font-weight:500;background:#34C75920;color:#34C759;border-radius:4px;padding:1px 6px;margin-left:6px;">This Office</span>';
-                        html += '</div>';
-                        html += '<div class="remote-office-status" style="color:' + statusColor + ';font-size:12px">' + statusText;
-                        if (peer.agents > 0) html += ' • ' + peer.agents + ' agent(s)';
-                        html += '</div>';
-                        html += '</div></div>';
-
-                        // Disconnect button (not for home office)
-                        if (!isHome) {
-                            html += '<button class="btn-disconnect-peer" data-peer-id="' + esc(peer.officeId) + '" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid #ff453a40;color:#ff453a;background:transparent;cursor:pointer;font-weight:500;transition:all 0.2s" onmouseover="this.style.background=\'#ff453a15\'" onmouseout="this.style.background=\'transparent\'">⏻ Disconnect</button>';
-                        }
-
-                        html += '</div>'; // end header
-                        if (peer.lastSeen && !isHome) {
-                            var ago = Math.round((Date.now() - peer.lastSeen) / 60000);
-                            var agoText = ago < 1 ? 'just now' : (ago < 60 ? ago + 'm ago' : Math.round(ago / 60) + 'h ago');
-                            html += '<div style="font-size:11px;color:var(--text-tertiary);padding:4px 0 0">Last seen: ' + agoText;
-                            if (peer.pairedBy) html += ' • Invited by ' + esc(peer.pairedBy);
+                    var remoteOffices = data.offices || [];
+                    if (remoteOffices.length > 0) {
+                        remoteOffices.forEach(function(office) {
+                            var statusClass = (office.status === 'online') ? 'online' : 'offline';
+                            var statusText = (office.status === 'online') ? '● Online' : '○ Offline';
+                            var statusColor = (office.status === 'online') ? '#34C759' : '#8E8E93';
+                            html += '<div class="remote-office-card" style="margin-top:8px;">';
+                            html += '<div class="remote-office-header">';
+                            html += '<span class="remote-office-emoji">' + esc(office.emoji || '🏢') + '</span>';
+                            html += '<div><div class="remote-office-name">' + esc(office.name || office.id || 'Remote Office') + '</div>';
+                            html += '<div class="remote-office-status ' + statusClass + '" style="color:' + statusColor + ';">' + statusText + '</div></div>';
                             html += '</div>';
-                        }
-                        if (isHome) {
-                            html += '<div style="font-size:12px;color:#8E8E93;padding:6px 0 0">fleet.spawnkit.ai • Hetzner node</div>';
-                        }
-                        html += '</div>'; // end card
-                    });
-
-                    if (peers.length === 0) {
-                        html += '<div style="padding:20px;text-align:center;color:#8E8E93;font-size:13px">No offices connected yet.<br><span style="font-size:11px">Generate an invite to connect another SpawnKit instance.</span></div>';
+                            if (office.agents && office.agents.length > 0) {
+                                html += '<div style="font-size:12px;color:#8E8E93;margin-top:6px;">' + office.agents.length + ' agent(s)</div>';
+                            }
+                            if (office.lastSeen) {
+                                html += '<div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">Last seen: ' + new Date(office.lastSeen).toLocaleTimeString() + '</div>';
+                            }
+                            html += '</div>';
+                        });
                     }
-                }
-            } catch(e) {
-                console.warn('[Fleet] peers fetch failed:', e);
-                html += '<div style="padding:12px;text-align:center;color:#ff453a;font-size:12px">⚠ Fleet relay unreachable</div>';
-            }
-            html += '</div>';
 
-            // ── Inter-Office Messages Section ──
-            html += '<div style="margin-bottom:16px">';
-            html += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#8E8E93;font-weight:600;margin-bottom:12px">Inter-Office Messages</div>';
-            try {
-                var apiUrl2 = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
-                var msgResp = await skFetch(apiUrl2 + '/api/remote/offices');
-                if (msgResp.ok) {
-                    var msgData = await msgResp.json();
-                    var recentMessages = msgData.recentMessages || [];
+                    // Show recent inter-office messages
+                    var recentMessages = data.recentMessages || [];
+                    html += '</div>';
+                    html += '<div style="margin-bottom:16px">';
+                    html += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#8E8E93;font-weight:600;margin-bottom:12px">Inter-Office Messages</div>';
                     if (recentMessages.length === 0) {
-                        html += '<div style="padding:20px;text-align:center;color:#8E8E93;font-size:13px">📭 No inter-office messages yet</div>';
+                        html += '<div style="padding:20px;text-align:center;color:#8E8E93;font-size:13px">📭 No inter-office messages yet<br><span style="font-size:11px;margin-top:4px;display:block;">Relay messages via Mission Control</span></div>';
                     } else {
                         recentMessages.slice(0, 10).forEach(function(msg) {
                             html += '<div class="remote-message">';
                             html += '<div class="remote-message-from">' + esc(msg.from || 'Unknown') + ' → ' + esc(msg.to || 'HQ') + '</div>';
-                            html += '<div class="remote-message-text">' + esc((msg.body || msg.message || msg.text || '').substring(0, 200)) + '</div>';
+                            html += '<div class="remote-message-text">' + esc((msg.message || msg.text || '').substring(0, 200)) + '</div>';
                             if (msg.timestamp) {
                                 html += '<div class="remote-message-time">' + new Date(msg.timestamp).toLocaleTimeString() + '</div>';
                             }
                             html += '</div>';
                         });
                     }
+                    html += '</div>';
+                    body.innerHTML = html;
+                    return;
                 }
-            } catch(e) { /* messages section failed, no big deal */ }
+            } catch(e) { console.warn('[Remote] fetch failed:', e); }
+
+            // Fallback: no API
             html += '</div>';
-
+            html += '<div style="padding:16px;text-align:center;color:#8E8E93;font-size:13px;">📡 Could not reach fleet relay.<br><span style="font-size:11px;">Check that the relay is running on port 18790.</span></div>';
             body.innerHTML = html;
-
-            // ── Wire up invite button ──
-            var btnInvite = document.getElementById('btnGenerateInvite');
-            if (btnInvite) {
-                btnInvite.addEventListener('click', async function() {
-                    btnInvite.disabled = true;
-                    btnInvite.textContent = 'Generating…';
-                    try {
-                        var resp = await skFetch(apiUrl + '/api/fleet/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expiresInHours: 24 }) });
-                        var data = await resp.json();
-                        if (data.ok && data.code) {
-                            var box = document.getElementById('inviteCodeBox');
-                            var input = document.getElementById('inviteCodeInput');
-                            if (box && input) {
-                                input.value = data.code;
-                                box.style.display = 'block';
-                            }
-                        } else {
-                            alert('Failed to generate invite: ' + (data.error || 'Unknown error'));
-                        }
-                    } catch(e) {
-                        alert('Fleet relay error: ' + e.message);
-                    }
-                    btnInvite.disabled = false;
-                    btnInvite.textContent = '+ Invite';
-                });
-            }
-
-            // ── Wire up copy button ──
-            var btnCopy = document.getElementById('btnCopyInvite');
-            if (btnCopy) {
-                btnCopy.addEventListener('click', function() {
-                    var input = document.getElementById('inviteCodeInput');
-                    if (input && input.value) {
-                        navigator.clipboard.writeText(input.value).then(function() {
-                            btnCopy.textContent = '✓ Copied';
-                            setTimeout(function() { btnCopy.textContent = 'Copy'; }, 2000);
-                        });
-                    }
-                });
-            }
-
-            // ── Wire up disconnect buttons ──
-            body.querySelectorAll('.btn-disconnect-peer').forEach(function(btn) {
-                btn.addEventListener('click', async function() {
-                    var peerId = btn.getAttribute('data-peer-id');
-                    if (!confirm('Disconnect ' + peerId + '? This will revoke their access token and kick active connections.')) return;
-                    btn.disabled = true;
-                    btn.textContent = 'Disconnecting…';
-                    try {
-                        var resp = await skFetch(apiUrl + '/api/fleet/peer/' + peerId, { method: 'DELETE' });
-                        var data = await resp.json();
-                        if (data.ok) {
-                            renderRemote(); // refresh
-                        } else {
-                            alert('Failed: ' + (data.error || 'Unknown error'));
-                        }
-                    } catch(e) {
-                        alert('Error: ' + e.message);
-                    }
-                    btn.disabled = false;
-                });
-            });
-
-            // ── Wire up Setup Wizard button ──
-            var btnWizard = document.getElementById('btnSetupWizard');
-            if (btnWizard) {
-                btnWizard.addEventListener('click', function() {
-                    if (window.SetupWizard) window.SetupWizard.open('executive');
-                    else alert('Setup wizard not loaded');
-                });
-            }
-
-            // ── Wire up Join button ──
-            var btnJoin = document.getElementById('btnJoinFleet');
-            if (btnJoin) {
-                btnJoin.addEventListener('click', function() {
-                    var box = document.getElementById('joinFleetBox');
-                    if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
-                });
-            }
-
-            // ── Wire up Join submit ──
-            var btnSubmitJoin = document.getElementById('btnSubmitJoin');
-            if (btnSubmitJoin) {
-                btnSubmitJoin.addEventListener('click', async function() {
-                    var codeRaw = (document.getElementById('joinCodeInput').value || '').trim();
-                    var name = (document.getElementById('joinNameInput').value || '').trim();
-                    var id = (document.getElementById('joinIdInput').value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
-                    var emoji = (document.getElementById('joinEmojiInput').value || '🏢').trim();
-                    var resultBox = document.getElementById('joinResultBox');
-
-                    if (!codeRaw) { alert('Please paste an invite code or pairing URL.'); return; }
-                    if (!name) { alert('Please enter your office name.'); return; }
-                    if (!id) { alert('Please enter an office ID (lowercase, no spaces).'); return; }
-
-                    // Parse code: could be raw hex or a URL like https://fleet.spawnkit.ai/pair?code=abc
-                    var code = codeRaw;
-                    var targetRelay = apiUrl; // default: local relay
-                    try {
-                        if (codeRaw.includes('://') || codeRaw.includes('?code=')) {
-                            var u = new URL(codeRaw.includes('://') ? codeRaw : 'https://' + codeRaw);
-                            code = u.searchParams.get('code') || codeRaw;
-                            // If it's a remote URL, use its origin as relay
-                            if (u.hostname !== window.location.hostname && u.hostname !== 'localhost') {
-                                targetRelay = u.origin;
-                            }
-                        }
-                    } catch(e) { /* not a URL, treat as raw code */ }
-
-                    btnSubmitJoin.disabled = true;
-                    btnSubmitJoin.textContent = 'Joining…';
-
-                    try {
-                        var resp = await skFetch(targetRelay + '/api/fleet/pair', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ code: code, officeId: id, officeName: name, officeEmoji: emoji })
-                        });
-                        var data = await resp.json();
-                        if (data.ok) {
-                            // Save token for future use
-                            var tokens = {};
-                            try { tokens = JSON.parse(localStorage.getItem('fleet_peer_tokens') || '{}'); } catch(e) {}
-                            tokens[id] = { token: data.token, relay: targetRelay, relayWs: data.relayUrl || null, pairedAt: new Date().toISOString() };
-                            localStorage.setItem('fleet_peer_tokens', JSON.stringify(tokens));
-
-                            if (resultBox) {
-                                resultBox.style.display = 'block';
-                                resultBox.style.background = '#34C75915';
-                                resultBox.style.color = '#34C759';
-                                resultBox.innerHTML = '✅ <strong>Connected!</strong> ' + esc(data.message || 'You are now peered.') + '<br><span style="font-size:10px;color:#8E8E93">Token saved to browser. Your office ID: <code>' + esc(id) + '</code></span>';
-                            }
-                            setTimeout(renderRemote, 1500);
-                        } else {
-                            if (resultBox) {
-                                resultBox.style.display = 'block';
-                                resultBox.style.background = '#ff453a15';
-                                resultBox.style.color = '#ff453a';
-                                resultBox.textContent = '❌ ' + (data.error || 'Pairing failed');
-                            }
-                        }
-                    } catch(e) {
-                        if (resultBox) {
-                            resultBox.style.display = 'block';
-                            resultBox.style.background = '#ff453a15';
-                            resultBox.style.color = '#ff453a';
-                            resultBox.textContent = '❌ Connection error: ' + e.message;
-                        }
-                    }
-                    btnSubmitJoin.disabled = false;
-                    btnSubmitJoin.textContent = 'Join Fleet';
-                });
-            }
         }
+
         // Helper: escape HTML (if not already defined)
         function esc(s) {
             if (typeof s !== 'string') return '';
@@ -3805,10 +3603,17 @@
 
         /* Update closeAllPanels to include new panels */
         var _origCloseAll = closeAllPanels;
-        closeAllPanels = function() {
+        closeAllPanels = window.closeAllPanels = function() {
             _origCloseAll();
             closeMissionsPanel();
             closeSettingsPanel();
+            if (typeof closeChatHistory === 'function') closeChatHistory();
+            if (typeof closeMarketplace === 'function') closeMarketplace();
+            if (typeof closeSkills === 'function') closeSkills();
+            if (typeof closeCreatorProfile === 'function') closeCreatorProfile();
+            var orchOl = document.getElementById("orchestrationOverlay"); if (orchOl) orchOl.classList.remove("open");
+            var addOl = document.getElementById("addAgentOverlay"); if (addOl) addOl.classList.remove("open");
+            document.body.style.overflow = '';
         };
 
         /* ═══════════════════════════════════════════════
@@ -4103,11 +3908,7 @@
     function openMarketplace() {
         var overlay = document.getElementById('marketplaceOverlay');
         if (!overlay) return;
-        // Close other overlays first
-        ['skillsOverlay', 'creatorProfileOverlay'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.classList.remove('open');
-        });
+        if (typeof window.closeAllPanels === 'function') window.closeAllPanels();
         overlay.classList.add('open');
         document.body.style.overflow = 'hidden';
         renderMarketplace();
@@ -4211,10 +4012,7 @@
     function openSkills() {
         var overlay = document.getElementById('skillsOverlay');
         if (!overlay) return;
-        ['marketplaceOverlay', 'creatorProfileOverlay'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.classList.remove('open');
-        });
+        if (typeof window.closeAllPanels === 'function') window.closeAllPanels();
         overlay.classList.add('open');
         document.body.style.overflow = 'hidden';
         skActiveCat = 'All';
@@ -4348,6 +4146,7 @@
     function openCreatorProfile() {
         var overlay = document.getElementById('creatorProfileOverlay');
         if (!overlay) return;
+        if (typeof window.closeAllPanels === 'function') window.closeAllPanels();
         ['marketplaceOverlay', 'skillsOverlay'].forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.classList.remove('open');
