@@ -83,7 +83,7 @@
             --color-sentinel: #30D158;
 
             /* ── Typography ─────────────────────────────────── */
-            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
 
             /* ── Animation ──────────────────────────────────── */
             --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
