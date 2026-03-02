@@ -308,7 +308,48 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // GET /api/remote/offices — maps to fleet relay peers (backward compat)
+  // GET /api/fleet/status — proxy to fleet relay stats (used by MC Remote tab)
+  if (req.url === '/api/fleet/status' && req.method === 'GET') {
+    try {
+      const fr = await proxyFetch(FLEET_RELAY_URL + '/api/fleet/stats', FLEET_RELAY_TOKEN);
+      if (fr.ok && fr.data) {
+        // Normalize data for mc-center.js: { instances: [...] }
+        const offices = fr.data.offices || {};
+        const instances = Object.entries(offices).map(([id, o]) => ({
+          id, name: o.name || id, status: o.status || 'unknown',
+          lastSeen: o.lastSeen, agents: o.state && o.state.agents ? o.state.agents : [],
+          inbox: []
+        }));
+        res.setHeader('Content-Type', 'application/json');
+        res.writeHead(200);
+        res.end(JSON.stringify({ instances, raw: fr.data }));
+      } else {
+        res.writeHead(502, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ error: 'Fleet relay unreachable' }));
+      }
+    } catch(e) {
+      res.writeHead(502, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // GET /api/fleet/mailbox — proxy to fleet relay mailbox (relay messages)
+  if (req.url.startsWith('/api/fleet/mailbox') && req.method === 'GET') {
+    try {
+      const qs = req.url.includes('?') ? req.url.split('?')[1] : '';
+      const fr = await proxyFetch(FLEET_RELAY_URL + '/api/fleet/mailbox' + (qs ? '?' + qs : ''), FLEET_RELAY_TOKEN);
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(fr.ok ? 200 : 502);
+      res.end(JSON.stringify(fr.ok ? fr.data : { error: 'Fleet relay unreachable' }));
+    } catch(e) {
+      res.writeHead(502, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+    // GET /api/remote/offices — maps to fleet relay peers (backward compat)
   if (req.url.startsWith('/api/remote/offices') && req.method === 'GET') {
     try {
       const fr = await proxyFetch(FLEET_RELAY_URL + '/api/fleet/stats', '');

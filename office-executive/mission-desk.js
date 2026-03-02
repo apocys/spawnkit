@@ -83,7 +83,25 @@
     var sendSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
       '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
 
+    // Page header with platform name + user icon
+    var userDisplay = localStorage.getItem('spawnkit-user-name') || 'User';
+    var userAvatar = localStorage.getItem('spawnkit-user-avatar') || '';
+    var avatarHtml = userAvatar
+      ? '<img src="' + escapeHtml(userAvatar) + '" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />'
+      : '<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#007AFF,#5856D6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:600;">' + escapeHtml(userDisplay.charAt(0).toUpperCase()) + '</div>';
+
+    var header = '<div class="md-page-header" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 8px;max-width:640px;margin:0 auto;width:100%;">' +
+      '<div style="display:flex;align-items:center;gap:10px;">' +
+        '<div style="font-size:20px;font-weight:700;color:var(--text-primary,#1c1c1e);letter-spacing:-0.3px;">SpawnKit</div>' +
+        '<div style="font-size:11px;color:var(--text-tertiary,#8E8E93);background:var(--bg-secondary,rgba(0,0,0,0.04));padding:2px 8px;border-radius:6px;font-weight:500;">Beta</div>' +
+      '</div>' +
+      '<div class="md-user-menu" id="mdUserMenu" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px;border-radius:10px;transition:background 0.15s;" tabindex="0" role="button" aria-label="User menu">' +
+        avatarHtml +
+      '</div>' +
+    '</div>';
+
     var landing = '<div id="missionDesk" class="md-landing">' +
+      header +
       '<div class="md-hero">' +
         '<h1>What do we build today?</h1>' +
         '<p>Your AI team is ready. Ask anything or pick a quick action.</p>' +
@@ -110,19 +128,20 @@
         '<button class="md-action" data-action="marketplace"><span class="md-action-icon">🏪</span><span class="md-action-label">Marketplace</span></button>' +
         '<button class="md-action" data-action="profile"><span class="md-action-icon">👤</span><span class="md-action-label">Creator Profile</span></button>' +
       '</div>' +
-      ((window.__skDemoMode && !localStorage.getItem('spawnkit-token')) ? '<div class="md-cta-wrapper" style="margin:16px 0 0;text-align:center;">' : '') +
-        ((window.__skDemoMode && !localStorage.getItem('spawnkit-token')) ? '<button class="md-action md-cta-primary" data-action="deploy" style="width:100%;padding:14px;font-size:14px;font-weight:600;background:linear-gradient(135deg,var(--exec-blue,#007AFF),#5856D6);color:#fff;border:none;border-radius:12px;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(0,122,255,0.3);">' +
-          '<span class="md-action-icon" style="margin-right:8px;">🚀</span><span class="md-action-label">Get Started</span>' +
-        '</button>' +
-      '</div>' +
+      (window.__skDemoMode ? '<div class="md-cta-wrapper" style="margin:16px 0 0;text-align:center;"><button class="md-action md-cta-primary" data-action="deploy" style="width:100%;padding:14px;font-size:14px;font-weight:600;background:linear-gradient(135deg,var(--exec-blue,#007AFF),#5856D6);color:#fff;border:none;border-radius:12px;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(0,122,255,0.3);"><span class="md-action-icon" style="margin-right:8px;">🚀</span><span class="md-action-label">Get Started</span></button></div>' : '') +
+
+
+
+
+
       '<div class="md-section-label">Connect Anywhere</div>' +
       '<div class="md-channels" id="missionDeskChannels">' +
-        '<div class="md-channel" title="Telegram"><span class="md-channel-icon">✈️</span><span class="md-channel-name">Telegram</span><span class="md-channel-status md-channel-on">Connected</span></div>' +
-        '<div class="md-channel" title="WhatsApp"><span class="md-channel-icon">💬</span><span class="md-channel-name">WhatsApp</span><span class="md-channel-status md-channel-on">Connected</span></div>' +
-        '<div class="md-channel" title="Signal"><span class="md-channel-icon">🔒</span><span class="md-channel-name">Signal</span><span class="md-channel-status md-channel-off">Available</span></div>' +
-        '<div class="md-channel" title="Discord"><span class="md-channel-icon">🎮</span><span class="md-channel-name">Discord</span><span class="md-channel-status md-channel-off">Available</span></div>' +
-        '<div class="md-channel" title="iMessage"><span class="md-channel-icon">🍎</span><span class="md-channel-name">iMessage</span><span class="md-channel-status md-channel-off">Available</span></div>' +
-        '<div class="md-channel" title="Slack"><span class="md-channel-icon">📡</span><span class="md-channel-name">Slack</span><span class="md-channel-status md-channel-off">Available</span></div>' +
+        '<button class="md-channel" title="Telegram" data-connected="1"><span class="md-channel-icon">✈️</span><span class="md-channel-name">Telegram</span><span class="md-channel-status md-channel-on">Connected</span></button>' +
+        '<button class="md-channel" title="WhatsApp" data-connected="1"><span class="md-channel-icon">💬</span><span class="md-channel-name">WhatsApp</span><span class="md-channel-status md-channel-on">Connected</span></button>' +
+        '<button class="md-channel" title="Signal"><span class="md-channel-icon">🔒</span><span class="md-channel-name">Signal</span><span class="md-channel-status md-channel-off">Available</span></button>' +
+        '<button class="md-channel" title="Discord"><span class="md-channel-icon">🎮</span><span class="md-channel-name">Discord</span><span class="md-channel-status md-channel-off">Available</span></button>' +
+        '<button class="md-channel" title="iMessage"><span class="md-channel-icon">🍎</span><span class="md-channel-name">iMessage</span><span class="md-channel-status md-channel-off">Available</span></button>' +
+        '<button class="md-channel" title="Slack"><span class="md-channel-icon">📡</span><span class="md-channel-name">Slack</span><span class="md-channel-status md-channel-off">Available</span></button>' +
       '</div>' +
     '</div>';
 
@@ -314,12 +333,22 @@
   /* ── Agent tile click ───────────────────────────────────────────── */
 
   function handleAgentClick(agentId) {
-    // Prefer openDetailPanel directly (handles all agents including CEO)
+    // Dispatch agent chat selection → MC center picks it up
+    if (window.McSelectAgent) {
+      window.McSelectAgent(agentId);
+      // Switch to Mission Control view if on Mission Desk
+      if (typeof openMissionControl === 'function') {
+        openMissionControl();
+      } else if (typeof openDetailPanel === 'function') {
+        openDetailPanel('ceo'); // opens MC
+      }
+      return;
+    }
+    // Fallback: detail panel
     if (typeof openDetailPanel === 'function') {
       openDetailPanel(agentId);
       return;
     }
-    // Fallback: proxy click through exec-room tiles
     var existing = document.querySelector('[data-agent="' + agentId + '"]');
     if (existing && typeof existing.click === 'function') {
       existing.click();
@@ -467,6 +496,62 @@
     panelClose && panelClose.addEventListener('click', closePanel);
     backdrop   && backdrop.addEventListener('click', closePanel);
 
+    /* User menu dropdown */
+    var userMenuBtn = document.getElementById('mdUserMenu');
+    if (userMenuBtn) {
+      userMenuBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var existing = document.getElementById('mdUserDropdown');
+        if (existing) { existing.remove(); return; }
+        var dd = document.createElement('div');
+        dd.id = 'mdUserDropdown';
+        dd.style.cssText = 'position:absolute;top:52px;right:20px;background:var(--bg-primary,#fff);border:1px solid var(--border-subtle,rgba(0,0,0,0.1));border-radius:12px;padding:4px;min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,0.12);z-index:10010;';
+        var items = [
+          { icon: '🎨', label: 'Change Theme', action: 'theme' },
+          { icon: '⚙️', label: 'Settings', action: 'settings' },
+          { icon: '🚪', label: 'Logout', action: 'logout' }
+        ];
+        dd.innerHTML = items.map(function (it) {
+          return '<div class="md-dropdown-item" data-action="' + it.action + '" style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;border-radius:8px;cursor:pointer;transition:background 0.15s;color:var(--text-primary,#1c1c1e);"' +
+            ' onmouseover="this.style.background=\'var(--bg-secondary,rgba(0,0,0,0.04))\'" onmouseout="this.style.background=\'transparent\'">' +
+            '<span>' + it.icon + '</span><span>' + it.label + '</span></div>';
+        }).join('');
+        document.body.appendChild(dd);
+        dd.addEventListener('click', function (ev) {
+          var action = ev.target.closest('[data-action]');
+          if (!action) return;
+          dd.remove();
+          var act = action.dataset.action;
+          if (act === 'theme') {
+            // Open theme picker if available
+            var tp = document.getElementById('themePicker');
+            if (tp) { tp.classList.add('open'); }
+            else if (window.ThemePicker) { window.ThemePicker.open(); }
+            else { window.location.href = '/'; }
+          } else if (act === 'settings') {
+            var settingsBtn = document.getElementById('settingsBtn');
+            if (settingsBtn) settingsBtn.click();
+            else if (typeof openPanel === 'function') openPanel('profile');
+          } else if (act === 'logout') {
+            localStorage.removeItem('spawnkit-token');
+            localStorage.removeItem('spawnkit-instance-url');
+            localStorage.removeItem('spawnkit-connected-once');
+            localStorage.removeItem('spawnkit-user-name');
+            localStorage.removeItem('spawnkit-user-avatar');
+            window.location.reload();
+          }
+        });
+        // Close on outside click
+        setTimeout(function () {
+          document.addEventListener('click', function closeDD() {
+            var d = document.getElementById('mdUserDropdown');
+            if (d) d.remove();
+            document.removeEventListener('click', closeDD);
+          });
+        }, 10);
+      });
+    }
+
     /* Public API */
     window.MissionDesk = {
       activate:    activate,
@@ -492,6 +577,158 @@
 
 // ═══ Kira Fixes 2026-02-28 ═══
 
+
+// Channel Status Panel — Awwward-quality Channel Card
+window.openChannelStatusPanel = function(channelId, displayName) {
+  var existing = document.getElementById('channelStatusOverlay');
+  if (existing) existing.remove();
+
+  var themes = {
+    telegram:  { icon:'\u2708\uFE0F', grad:'linear-gradient(135deg, #0088cc 0%, #29b6f6 100%)', accent:'#0088cc', label:'Telegram Bot' },
+    whatsapp:  { icon:'\uD83D\uDCAC', grad:'linear-gradient(135deg, #128c7e 0%, #25d366 100%)', accent:'#25d366', label:'WhatsApp Bridge' },
+    signal:    { icon:'\uD83D\uDD12', grad:'linear-gradient(135deg, #2c6bed 0%, #6b9aff 100%)', accent:'#2c6bed', label:'Signal Bridge' },
+    discord:   { icon:'\uD83C\uDFAE', grad:'linear-gradient(135deg, #5865F2 0%, #7983F5 100%)', accent:'#5865F2', label:'Discord Bot' },
+    imessage:  { icon:'\uD83C\uDF4E', grad:'linear-gradient(135deg, #007AFF 0%, #5AC8FA 100%)', accent:'#007AFF', label:'iMessage Bridge' },
+    slack:     { icon:'\uD83D\uDCE1', grad:'linear-gradient(135deg, #4A154B 0%, #611f69 100%)', accent:'#611f69', label:'Slack App' }
+  };
+  var t = themes[channelId] || { icon:'\uD83D\uDCE1', grad:'linear-gradient(135deg, #667 0%, #999 100%)', accent:'#667', label:'Channel' };
+
+  var o = document.createElement('div');
+  o.id = 'channelStatusOverlay';
+  o.style.cssText = 'position:fixed;inset:0;z-index:10002;display:flex;align-items:center;justify-content:center;animation:chCardFadeIn .2s ease';
+  o.innerHTML =
+    '<style>' +
+      '@keyframes chCardFadeIn{from{opacity:0}to{opacity:1}}' +
+      '@keyframes chCardSlideUp{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}' +
+      '@keyframes chPulse{0%,100%{opacity:1}50%{opacity:.5}}' +
+      '.ch-card-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}' +
+      '.ch-card{position:relative;width:420px;max-width:92vw;max-height:85vh;border-radius:20px;overflow:hidden;background:var(--bg-primary,#fff);box-shadow:0 25px 80px rgba(0,0,0,.25),0 0 0 1px rgba(255,255,255,.1);animation:chCardSlideUp .3s cubic-bezier(.2,.9,.3,1)}' +
+      '.ch-hero{padding:28px 24px 22px;color:#fff;position:relative;overflow:hidden}' +
+      '.ch-hero::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 80% 20%,rgba(255,255,255,.15) 0%,transparent 60%)}' +
+      '.ch-hero-row{display:flex;align-items:center;gap:16px;position:relative;z-index:1}' +
+      '.ch-hero-icon{font-size:40px;width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.2);border-radius:16px;backdrop-filter:blur(10px)}' +
+      '.ch-hero-info h2{margin:0;font-size:22px;font-weight:700;letter-spacing:-.3px}' +
+      '.ch-hero-info p{margin:2px 0 0;font-size:13px;opacity:.85;font-weight:500}' +
+      '.ch-status-pill{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,.2);backdrop-filter:blur(10px);font-size:12px;font-weight:600;color:#fff;position:relative;z-index:1}' +
+      '.ch-status-dot{width:8px;height:8px;border-radius:50%;background:#4ade80;animation:chPulse 2s ease-in-out infinite;box-shadow:0 0 8px rgba(74,222,128,.6)}' +
+      '.ch-body{padding:20px 20px 24px}' +
+      '.ch-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}' +
+      '.ch-stat{background:var(--bg-secondary,rgba(0,0,0,.03));border-radius:14px;padding:14px 12px;text-align:center;border:1px solid var(--border-subtle,rgba(0,0,0,.05))}' +
+      '.ch-stat-val{font-size:20px;font-weight:700;color:var(--text-primary,#1D1D1F);letter-spacing:-.3px}' +
+      '.ch-stat-label{font-size:11px;font-weight:600;color:var(--text-tertiary,#8E8E93);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}' +
+      '.ch-activity{margin-bottom:16px}' +
+      '.ch-activity-title{font-size:12px;font-weight:600;color:var(--text-tertiary,#8E8E93);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}' +
+      '.ch-msg{display:flex;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg-secondary,rgba(0,0,0,.03));margin-bottom:6px;border:1px solid var(--border-subtle,rgba(0,0,0,.04))}' +
+      '.ch-msg-dot{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:#fff;font-weight:700}' +
+      '.ch-msg-body{flex:1;min-width:0}' +
+      '.ch-msg-text{font-size:13px;color:var(--text-primary,#1D1D1F);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.ch-msg-time{font-size:11px;color:var(--text-tertiary,#8E8E93);margin-top:1px}' +
+      '.ch-config{border-top:1px solid var(--border-subtle,rgba(0,0,0,.06));margin-top:4px;padding-top:12px}' +
+      '.ch-config-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:6px 0;font-size:13px;font-weight:600;color:var(--text-secondary,#636366);background:none;border:none;width:100%;text-align:left}' +
+      '.ch-config-toggle:hover{color:var(--text-primary,#1D1D1F)}' +
+      '.ch-config-body{display:none;padding:10px 0 0}' +
+      '.ch-config-body.open{display:block}' +
+      '.ch-config-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border-subtle,rgba(0,0,0,.03))}' +
+      '.ch-config-row:last-child{border:none}' +
+      '.ch-config-key{color:var(--text-tertiary,#8E8E93)}' +
+      '.ch-config-val{font-weight:500;color:var(--text-primary,#1D1D1F);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.ch-actions{display:flex;gap:8px;margin-top:16px}' +
+      '.ch-btn-primary{flex:1;padding:13px;font-size:14px;font-weight:600;color:#fff;border:none;border-radius:12px;cursor:pointer;transition:all .2s;box-shadow:0 4px 12px rgba(0,0,0,.15)}' +
+      '.ch-btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.2)}' +
+      '.ch-btn-ghost{flex:1;padding:13px;font-size:14px;font-weight:600;color:var(--text-primary,#1D1D1F);background:var(--bg-secondary,rgba(0,0,0,.04));border:1px solid var(--border-subtle,rgba(0,0,0,.08));border-radius:12px;cursor:pointer;transition:all .2s}' +
+      '.ch-btn-ghost:hover{background:var(--bg-tertiary,rgba(0,0,0,.08))}' +
+    '</style>' +
+    '<div class="ch-card-backdrop"></div>' +
+    '<div class="ch-card">' +
+      '<div class="ch-hero" style="background:' + t.grad + '">' +
+        '<div class="ch-hero-row">' +
+          '<div class="ch-hero-icon">' + t.icon + '</div>' +
+          '<div class="ch-hero-info">' +
+            '<h2>' + displayName + '</h2>' +
+            '<p>' + t.label + '</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="ch-status-pill"><span class="ch-status-dot"></span> Connected & Active</div>' +
+      '</div>' +
+      '<div class="ch-body" id="channelCardBody">' +
+        '<div class="ch-stats">' +
+          '<div class="ch-stat"><div class="ch-stat-val">\u2014</div><div class="ch-stat-label">Messages</div></div>' +
+          '<div class="ch-stat"><div class="ch-stat-val">\u2714</div><div class="ch-stat-label">Status</div></div>' +
+          '<div class="ch-stat"><div class="ch-stat-val">\u2014</div><div class="ch-stat-label">Policy</div></div>' +
+        '</div>' +
+        '<div class="ch-activity">' +
+          '<div class="ch-activity-title">Loading\u2026</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(o);
+  o.querySelector('.ch-card-backdrop').onclick = function() { o.remove(); };
+
+  // Fetch real config
+  fetch('/api/oc/config').then(function(r) { return r.json(); }).then(function(config) {
+    var ch = (config.channels || {})[channelId] || {};
+    var body = document.getElementById('channelCardBody');
+    if (!body) return;
+
+    var policyShort = ch.dmPolicy === 'open' ? 'Open' : ch.dmPolicy === 'allowlist' ? 'Private' : 'Default';
+
+    // Update stats
+    var stats = body.querySelectorAll('.ch-stat');
+    if (stats[0]) { stats[0].querySelector('.ch-stat-val').textContent = 'Live'; }
+    if (stats[1]) { stats[1].querySelector('.ch-stat-val').textContent = '\u2705'; stats[1].querySelector('.ch-stat-label').textContent = 'Healthy'; }
+    if (stats[2]) { stats[2].querySelector('.ch-stat-val').textContent = policyShort; stats[2].querySelector('.ch-stat-label').textContent = 'Access'; }
+
+    // Build config details
+    var configRows = '';
+    if (channelId === 'telegram') {
+      configRows += '<div class="ch-config-row"><span class="ch-config-key">Bot</span><span class="ch-config-val">@Apocys_bot</span></div>';
+      configRows += '<div class="ch-config-row"><span class="ch-config-key">Streaming</span><span class="ch-config-val">' + (ch.streaming || 'Off') + '</span></div>';
+    }
+    if (channelId === 'whatsapp') {
+      configRows += '<div class="ch-config-row"><span class="ch-config-key">Self-chat</span><span class="ch-config-val">' + (ch.selfChatMode ? 'Enabled' : 'Disabled') + '</span></div>';
+      configRows += '<div class="ch-config-row"><span class="ch-config-key">Max media</span><span class="ch-config-val">' + (ch.mediaMaxMb || '?') + ' MB</span></div>';
+    }
+    configRows += '<div class="ch-config-row"><span class="ch-config-key">DM Policy</span><span class="ch-config-val">' + (ch.dmPolicy || 'default') + '</span></div>';
+    configRows += '<div class="ch-config-row"><span class="ch-config-key">Group Policy</span><span class="ch-config-val">' + (ch.groupPolicy || 'default') + '</span></div>';
+    var allowed = (ch.allowFrom || []).join(', ') || '\u2014';
+    configRows += '<div class="ch-config-row"><span class="ch-config-key">Allow list</span><span class="ch-config-val" title="' + allowed + '">' + allowed + '</span></div>';
+
+    // Recent activity placeholder
+    var activityHtml = '<div class="ch-activity">' +
+      '<div class="ch-activity-title">Recent Activity</div>' +
+      '<div class="ch-msg"><div class="ch-msg-dot" style="background:' + t.accent + '">' + t.icon + '</div><div class="ch-msg-body"><div class="ch-msg-text">Channel active \u2014 receiving messages</div><div class="ch-msg-time">Just now</div></div></div>' +
+    '</div>';
+
+    // Config accordion
+    var configHtml = '<div class="ch-config">' +
+      '<button class="ch-config-toggle" id="chConfigToggle">\u2699\uFE0F Configuration <span id="chConfigArrow">\u203A</span></button>' +
+      '<div class="ch-config-body" id="chConfigBody">' + configRows + '</div>' +
+    '</div>';
+
+    // Actions
+    var actionsHtml = '<div class="ch-actions">' +
+      '<button class="ch-btn-primary" style="background:' + t.grad + '" onclick="document.getElementById(\'channelStatusOverlay\').remove()">\uD83D\uDCAC Open Chat</button>' +
+      '<button class="ch-btn-ghost" onclick="if(window.ChannelOnboarding&&window.ChannelOnboarding.open){document.getElementById(\'channelStatusOverlay\').remove();window.ChannelOnboarding.open(\'' + channelId + '\');}">\u2699\uFE0F Configure</button>' +
+    '</div>';
+
+    body.innerHTML = body.querySelector('.ch-stats').outerHTML + activityHtml + configHtml + actionsHtml;
+
+    // Toggle config accordion
+    document.getElementById('chConfigToggle').onclick = function() {
+      var b = document.getElementById('chConfigBody');
+      var a = document.getElementById('chConfigArrow');
+      b.classList.toggle('open');
+      a.textContent = b.classList.contains('open') ? '\u2039' : '\u203A';
+    };
+  }).catch(function() {
+    var body = document.getElementById('channelCardBody');
+    if (!body) return;
+    var act = body.querySelector('.ch-activity');
+    if (act) act.innerHTML = '<div class="ch-activity-title">Could not load config</div>';
+  });
+};
+
 // FIX 3: Channel button click handlers
 (function() {
   function attachChannelClicks() {
@@ -505,7 +742,10 @@
         if (!name) return;
         var channelId = name.toLowerCase();
         console.log('[MissionDesk] Channel click:', channelId);
-        if (window.ChannelOnboarding && window.ChannelOnboarding.open) {
+        var isConnected = ch.hasAttribute('data-connected');
+        if (isConnected) {
+          if (window.openChannelStatusPanel) window.openChannelStatusPanel(channelId, name);
+        } else if (window.ChannelOnboarding && window.ChannelOnboarding.open) {
           window.ChannelOnboarding.open(channelId);
         }
       });
