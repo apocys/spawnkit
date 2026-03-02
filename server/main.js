@@ -2804,7 +2804,7 @@
         }
 
         async function renderMemory() {
-            var mem = liveMemoryData;
+            var mem = liveMemoryData || (window.SpawnKit && window.SpawnKit.data && window.SpawnKit.data.memory) || null;
             // Resolve if liveMemoryData is a Promise
             if (mem && typeof mem.then === 'function') {
                 try { mem = await mem; } catch(e) { mem = null; }
