@@ -227,6 +227,7 @@
                 });
                 
                 console.debug('🏢 [Executive] Loaded REAL per-agent data for', Object.keys(LIVE_AGENT_DATA).length, 'agents');
+                updateTodoCount();
             } catch (e) {
                 console.warn('🏢 [Executive] Failed to load agent data:', e);
                 LIVE_AGENT_DATA = {};
@@ -2148,6 +2149,32 @@
             var statusEl = document.getElementById('statusSystem');
             if (statusEl) {
                 statusEl.textContent = 'All systems nominal • ' + h + ':' + m;
+            }
+        }
+
+
+        function updateTodoCount() {
+            if (!LIVE_AGENT_DATA) return;
+            var totalTodos = 0;
+            var doneTodos = 0;
+            Object.values(LIVE_AGENT_DATA).forEach(function(agentData) {
+                if (agentData.todos && agentData.todos.length > 0) {
+                    agentData.todos.forEach(function(todo) {
+                        totalTodos++;
+                        if (todo.status === 'done') doneTodos++;
+                    });
+                }
+            });
+            var activeTodos = totalTodos - doneTodos;
+            var statusEl = document.getElementById('statusTodoCount');
+            if (statusEl) {
+                if (activeTodos === 0) {
+                    statusEl.textContent = 'All clear';
+                    statusEl.style.color = 'var(--status-active)';
+                } else {
+                    statusEl.textContent = activeTodos + ' TODO' + (activeTodos !== 1 ? 's' : '');
+                    statusEl.style.color = 'var(--text-secondary)';
+                }
             }
         }
 
