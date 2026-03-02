@@ -1661,6 +1661,11 @@ class MedievalCastle3D {
     async loadAgentThoughts(agentId) {
         const feed = document.getElementById('agentThoughtsFeed');
         if (!feed || this.currentDetailTab !== 'thoughts') return;
+
+        // Escape helper — prevents XSS from agent personality data in innerHTML
+        function escHtml(s) {
+            return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
         
         // Get personality and lifecycle data
         const lifecycle = window.MedievalLifecycle;
@@ -1673,12 +1678,12 @@ class MedievalCastle3D {
         if (personality || agentState) {
             const mood = agentState ? agentState.mood : 0.5;
             const energy = agentState ? agentState.energy : 0.5;
-            const emoji = agentState ? (agentState.currentEmoji || '💤') : '💤';
-            const thought = agentState ? (agentState.currentThought || '') : '';
-            const title = personality ? personality.title : 'Knight';
+            const emoji = escHtml(agentState ? (agentState.currentEmoji || '💤') : '💤');
+            const thought = escHtml(agentState ? (agentState.currentThought || '') : '');
+            const title = escHtml(personality ? personality.title : 'Knight');
             const moodLabel = mood > 0.7 ? '😊 High spirits' : mood > 0.4 ? '😐 Neutral' : '😤 Troubled';
             const energyLabel = energy > 0.7 ? '⚡ Energized' : energy > 0.4 ? '🔋 Steady' : '😴 Fatigued';
-            const moodEmojis = personality && personality.moodEmojis ? Object.values(personality.moodEmojis).flat().slice(0, 8).join(' ') : '💤 ⚔️ 📜 🍺';
+            const moodEmojis = escHtml(personality && personality.moodEmojis ? Object.values(personality.moodEmojis).flat().slice(0, 8).join(' ') : '💤 ⚔️ 📜 🍺');
             
             personalityHtml = '<div style="padding:12px;">';
             personalityHtml += '<div style="text-align:center;font-size:32px;margin-bottom:8px;">' + emoji + '</div>';
@@ -1693,7 +1698,7 @@ class MedievalCastle3D {
         } else {
             // Unknown agent — show basic emoticon from mesh
             const emoticon = charData && charData.group ? (charData.group.userData.emoticon || '💤 Idle') : '💤';
-            personalityHtml = '<div style="text-align:center;padding:30px;font-size:28px;">' + emoticon.split(' ')[0] + '</div>';
+            personalityHtml = '<div style="text-align:center;padding:30px;font-size:28px;">' + escHtml(emoticon.split(' ')[0] || '💤') + '</div>';
             personalityHtml += '<div style="text-align:center;font-size:12px;opacity:.5;">No personality data for this knight</div>';
         }
         
