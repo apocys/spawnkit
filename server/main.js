@@ -3616,6 +3616,15 @@
             document.body.style.overflow = '';
         };
 
+        /* ── Window API: expose all panel functions globally ── */
+        window.openCronPanel    = openCronPanel;    window.closeCronPanel    = closeCronPanel;
+        window.openMemoryPanel  = openMemoryPanel;  window.closeMemoryPanel  = closeMemoryPanel;
+        window.openRemoteOverlay= openRemoteOverlay;window.closeRemotePanel  = closeRemotePanel;
+        window.openSettingsPanel= openSettingsPanel;window.closeSettingsPanel= closeSettingsPanel;
+        window.openChatHistory  = openChatHistory;  window.closeChatHistory  = closeChatHistory;
+        window.openMeetingPanel = openMeetingPanel; window.closeMeetingPanel = closeMeetingPanel;
+        window.openMailbox      = openMailbox;      window.closeMailbox      = closeMailbox;
+
         /* ═══════════════════════════════════════════════
            Fleet Communication Animation System
            ═══════════════════════════════════════════════ */
