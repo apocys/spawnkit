@@ -1,0 +1,101 @@
+name: PR Check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Job 1: Lint & basic syntax checks (mirrors deploy.yml)
+  # ──────────────────────────────────────────────
+  lint-check:
+    name: Lint Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate JSON files
+        run: |
+          echo "🔍 Validating JSON files..."
+          FAILED=0
+          for f in $(find . -name "*.json" -not -path "./.git/*" -not -path "*/node_modules/*"); do
+            if node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" 2>/dev/null; then
+              echo "  ✅ $f"
+            else
+              echo "  ❌ $f — invalid JSON"
+              FAILED=1
+            fi
+          done
+          if [ "$FAILED" -eq 1 ]; then
+            echo "One or more JSON files failed validation."
+            exit 1
+          fi
+          echo "All JSON files are valid."
+
+      - name: Check JS syntax in src/
+        run: |
+          echo "🔍 Checking JS syntax in src/..."
+          FAILED=0
+          JS_FILES=$(find src/ -name "*.js" 2>/dev/null)
+          if [ -z "$JS_FILES" ]; then
+            echo "  No .js files found in src/ — skipping."
+          else
+            for f in $JS_FILES; do
+              if node --check "$f" 2>/dev/null; then
+                echo "  ✅ $f"
+              else
+                echo "  ❌ $f — syntax error"
+                node --check "$f" || true
+                FAILED=1
+              fi
+            done
+          fi
+          if [ "$FAILED" -eq 1 ]; then
+            echo "One or more JS files have syntax errors."
+            exit 1
+          fi
+          echo "All JS files passed syntax check."
+
+  # ──────────────────────────────────────────────
+  # Job 2: Binary bloat detection
+  # ──────────────────────────────────────────────
+  size-check:
+    name: Repo Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history so du reflects real content
+          fetch-depth: 1
+
+      - name: Check total repo size
+        run: |
+          echo "📦 Checking total repo size..."
+          REPO_SIZE_KB=$(du -sk . --exclude=.git | awk '{print $1}')
+          REPO_SIZE_MB=$(echo "scale=2; $REPO_SIZE_KB / 1024" | bc)
+          THRESHOLD_MB=50
+          THRESHOLD_KB=$((THRESHOLD_MB * 1024))
+
+          echo "  Repo size: ${REPO_SIZE_MB} MB (${REPO_SIZE_KB} KB)"
+
+          if [ "$REPO_SIZE_KB" -gt "$THRESHOLD_KB" ]; then
+            echo ""
+            echo "⚠️  WARNING: Repo size exceeds ${THRESHOLD_MB}MB!"
+            echo "   This may indicate binary bloat. Large files:"
+            find . -not -path "./.git/*" -type f -size +1M \
+              -exec du -sh {} \; | sort -rh | head -20
+            echo ""
+            echo "   Consider adding large binaries to .gitignore or using Git LFS."
+            # Warn but don't fail — this is advisory
+            exit 0
+          else
+            echo "  ✅ Size is within limit (< ${THRESHOLD_MB}MB). No bloat detected."
+          fi

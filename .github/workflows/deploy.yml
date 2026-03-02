@@ -1,0 +1,169 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      build_electron:
+        description: 'Build Electron apps (linux/mac/win)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Job 1: Lint & basic syntax checks
+  # ──────────────────────────────────────────────
+  lint-check:
+    name: Lint Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate JSON files
+        run: |
+          echo "🔍 Validating JSON files..."
+          FAILED=0
+          for f in $(find . -name "*.json" -not -path "./.git/*" -not -path "*/node_modules/*"); do
+            if node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" 2>/dev/null; then
+              echo "  ✅ $f"
+            else
+              echo "  ❌ $f — invalid JSON"
+              FAILED=1
+            fi
+          done
+          if [ "$FAILED" -eq 1 ]; then
+            echo "One or more JSON files failed validation."
+            exit 1
+          fi
+          echo "All JSON files are valid."
+
+      - name: Check JS syntax in src/
+        run: |
+          echo "🔍 Checking JS syntax in src/..."
+          FAILED=0
+          JS_FILES=$(find src/ -name "*.js" 2>/dev/null)
+          if [ -z "$JS_FILES" ]; then
+            echo "  No .js files found in src/ — skipping."
+          else
+            for f in $JS_FILES; do
+              if node --check "$f" 2>/dev/null; then
+                echo "  ✅ $f"
+              else
+                echo "  ❌ $f — syntax error"
+                node --check "$f" || true
+                FAILED=1
+              fi
+            done
+          fi
+          if [ "$FAILED" -eq 1 ]; then
+            echo "One or more JS files have syntax errors."
+            exit 1
+          fi
+          echo "All JS files passed syntax check."
+
+  # ──────────────────────────────────────────────
+  # Job 2: Deploy to GitHub Pages
+  # ──────────────────────────────────────────────
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: lint-check
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Deploy from repo root (no separate site/ directory)
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ──────────────────────────────────────────────
+  # Job 3: Electron build (manual dispatch only)
+  # ──────────────────────────────────────────────
+  electron-build:
+    name: Electron Build (${{ matrix.os }})
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.build_electron == 'true'
+    needs: lint-check
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            runner: ubuntu-latest
+            build_cmd: npm run build:linux
+            artifact_glob: 'electron/dist/*.AppImage electron/dist/*.deb'
+          - os: mac
+            runner: macos-latest
+            build_cmd: npm run build:mac
+            artifact_glob: 'electron/dist/*.dmg electron/dist/*.zip'
+          - os: win
+            runner: windows-latest
+            build_cmd: npm run build:win
+            artifact_glob: 'electron/dist/*.exe'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: electron/package-lock.json
+
+      - name: Install dependencies
+        working-directory: electron
+        run: npm install
+
+      - name: Build Electron app (${{ matrix.os }})
+        working-directory: electron
+        run: ${{ matrix.build_cmd }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifact (${{ matrix.os }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: spawnkit-${{ matrix.os }}
+          path: |
+            electron/dist/*.AppImage
+            electron/dist/*.deb
+            electron/dist/*.dmg
+            electron/dist/*.zip
+            electron/dist/*.exe
+          retention-days: 7
+          if-no-files-found: warn
