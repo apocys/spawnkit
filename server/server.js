@@ -1239,6 +1239,7 @@ const server = http.createServer(async (req, res) => {
       case '/api/oc/chat': data = getChat(); break;
       case '/api/oc/chat/history': data = getChat(); break;
       case '/api/oc/agents': data = getAgents(); break;
+      case '/api/oc/skills': { const skillDirs = [require('path').join(require('os').homedir(), '.npm-global/lib/node_modules/openclaw/skills'), require('path').join(WORKSPACE, 'skills')]; const skills = []; const seen = new Set(); for (const dir of skillDirs) { try { const entries = require('fs').readdirSync(dir); for (const n of entries) { if (seen.has(n)) continue; try { const md = require('fs').readFileSync(require('path').join(dir, n, 'SKILL.md'), 'utf8'); const m = md.match(/description[:\s]*(.+)/i); skills.push({ id: n, description: m ? m[1].trim().slice(0,200) : '', installed: true }); seen.add(n); } catch(e) {} } } catch(e) {} } data = { skills }; break; }
       case '/api/oc/health': data = { ok: true, uptime: process.uptime() }; break;
       default: res.writeHead(404); res.end(JSON.stringify({error:'not found'})); return;
     }
