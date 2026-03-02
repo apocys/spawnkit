@@ -3914,10 +3914,15 @@
         });
     }
 
+    window.openMarketplace = openMarketplace;
     function openMarketplace() {
+        if (typeof window.closeAllPanels === 'function') window.closeAllPanels();
+        if (window.SkillMarketplace && typeof window.SkillMarketplace.open === 'function') {
+            window.SkillMarketplace.open();
+            return;
+        }
         var overlay = document.getElementById('marketplaceOverlay');
         if (!overlay) return;
-        if (typeof window.closeAllPanels === 'function') window.closeAllPanels();
         overlay.classList.add('open');
         document.body.style.overflow = 'hidden';
         renderMarketplace();
@@ -4018,6 +4023,7 @@
         renderSkillsBody();
     }
 
+    window.openSkills = openSkills;
     function openSkills() {
         var overlay = document.getElementById('skillsOverlay');
         if (!overlay) return;
@@ -4152,6 +4158,7 @@
         }
     }
 
+    window.openCreatorProfile = openCreatorProfile;
     function openCreatorProfile() {
         var overlay = document.getElementById('creatorProfileOverlay');
         if (!overlay) return;
