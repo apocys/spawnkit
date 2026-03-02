@@ -14,6 +14,7 @@
     opts.headers = opts.headers || {};
     var token = localStorage.getItem(STORAGE_KEY) || '';
     opts.headers['Authorization'] = 'Bearer ' + token;
+    opts.signal = opts.signal || AbortSignal.timeout(8000);
     return fetch(url, opts).then(function(resp) {
       if (resp.status === 401) {
         console.warn('[Auth] 401 on', url);
