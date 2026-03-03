@@ -425,10 +425,14 @@
       }
     });
 
-    /* Suggestion chips */
+    /* Suggestion chips — inject prompt into input (do NOT auto-send) */
     document.querySelectorAll('.md-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
-        activate(chip.getAttribute('data-prompt'));
+        var prompt = chip.getAttribute('data-prompt');
+        if (!prompt) return;
+        heroInput.value = prompt;
+        heroInput.dispatchEvent(new Event('input')); // update send-btn visibility
+        heroInput.focus();
       });
     });
 
