@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  var GOOGLE_CLIENT_ID = ''; // Set via window.SPAWNKIT_GOOGLE_CLIENT_ID or localStorage
+  var GOOGLE_CLIENT_ID = '1001032049963-7or701jbmegurbhn6d15hor1j326fgh3.apps.googleusercontent.com'; // Set via window.SPAWNKIT_GOOGLE_CLIENT_ID or localStorage
   var API_BASE = window.OC_API_URL ||
     (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8765');
 
