@@ -2270,7 +2270,7 @@
                     bodyHtml = '<div class="typing-dots"><span>●</span><span>●</span><span>●</span></div>';
                 } else {
                     var preview = m.text.length > 300 ? m.text.substring(0, 300) + '…' : m.text;
-                    bodyHtml = '<div>' + esc(preview) + '</div>';
+                    bodyHtml = '<div>' + md(preview) + '</div>';
                 }
                 div.innerHTML = bodyHtml +
                     (m.time ? '<div class="chat-tab-msg-time">' + esc(m.time) + '</div>' : '');
@@ -2379,6 +2379,8 @@
                     showToast('Target changed to ' + (availableChatTargets.find(t => t.id === currentChatTarget)?.name || currentChatTarget));
                 });
             }
+            // Populate default targets immediately so "Loading targets..." is replaced
+            updateChatTargetSelector();
         });
 
         /* ── Chat History Functions ─────────────────── */
@@ -3544,6 +3546,34 @@
         }
 
         // Helper: escape HTML (if not already defined)
+
+        // Simple markdown → HTML renderer (safe: escapes first, then applies formatting)
+        function md(s) {
+            if (typeof s !== 'string') return '';
+            // Escape HTML first
+            s = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            // Code blocks (triple backtick)
+            s = s.replace(/```([\s\S]*?)```/g, '<pre style="background:rgba(255,255,255,0.06);padding:8px 12px;border-radius:8px;font-size:12px;overflow-x:auto;margin:6px 0"><code></code></pre>');
+            // Inline code
+            s = s.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.08);padding:2px 5px;border-radius:4px;font-size:12px"></code>');
+            // Bold
+            s = s.replace(/\*\*(.+?)\*\*/g, '<strong></strong>');
+            // Italic
+            s = s.replace(/\*(.+?)\*/g, '<em></em>');
+            // Headers (h3 max for chat)
+            s = s.replace(/^### (.+)$/gm, '<div style="font-weight:700;font-size:14px;margin:8px 0 4px"></div>');
+            s = s.replace(/^## (.+)$/gm, '<div style="font-weight:700;font-size:15px;margin:8px 0 4px"></div>');
+            s = s.replace(/^# (.+)$/gm, '<div style="font-weight:700;font-size:16px;margin:8px 0 4px"></div>');
+            // Bullet lists
+            s = s.replace(/^[\-\*] (.+)$/gm, '<div style="padding-left:12px">• </div>');
+            // Numbered lists
+            s = s.replace(/^(\d+)\. (.+)$/gm, '<div style="padding-left:12px">. </div>');
+            // Line breaks
+            s = s.replace(/
+/g, '<br>');
+            return s;
+        }
+
         function esc(s) {
             if (typeof s !== 'string') return '';
             return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
