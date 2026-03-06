@@ -83,7 +83,7 @@
             return;
         }
 
-        window.closeMailbox();
+        if (typeof window.closeMailbox === 'function') window.closeMailbox();
         closeTodoPanel();
 
         var agent = AGENTS[agentId] || (window._spawnkitAgents && window._spawnkitAgents[agentId]);
