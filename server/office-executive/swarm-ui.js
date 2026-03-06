@@ -36,21 +36,12 @@
     return window.OC_API_URL || window.location.origin;
   }
 
-  async function fetchSubagents() {
-    try {
-      var url = getApiUrl() + '/api/oc/sessions';
-      var resp;
-      if (window.ThemeAuth) {
-        resp = await ThemeAuth.fetch(url);
-      } else {
-        var headers = {};
-        if (API_TOKEN) headers['Authorization'] = 'Bearer ' + API_TOKEN;
-        resp = await fetch(url, { headers: headers });
-      }
-      if (!resp.ok) return [];
-      var data = await resp.json();
-      return (Array.isArray(data) ? data : []).filter(function (s) { return s.kind === 'subagent'; });
-    } catch (e) { return []; }
+  function getSubagents() {
+    // Use OcStore data instead of direct fetch to avoid redundant polling
+    if (window.OcStore && Array.isArray(window.OcStore.sessions)) {
+      return window.OcStore.sessions.filter(function (s) { return s.kind === 'subagent'; });
+    }
+    return [];
   }
 
   function timeAgo(ts) {
@@ -132,8 +123,8 @@
     renderList(subagents);
   }
 
-  async function poll() {
-    var subs = await fetchSubagents();
+  function updateFromOcStore() {
+    var subs = getSubagents();
     lastSubagents = subs;
     updateBadge(subs);
     updatePanel(subs);
@@ -178,8 +169,19 @@
       });
     }
 
-    poll();
-    pollInterval = setInterval(poll, 5000);
+    // Subscribe to OcStore updates instead of polling
+    if (window.OcStore) {
+      window.OcStore.subscribe(updateFromOcStore);
+      updateFromOcStore(); // initial update
+    } else {
+      // Fallback: wait for OcStore to load
+      document.addEventListener('DOMContentLoaded', function() {
+        if (window.OcStore) {
+          window.OcStore.subscribe(updateFromOcStore);
+          updateFromOcStore();
+        }
+      });
+    }
   }
 
   if (document.readyState === 'loading') {
