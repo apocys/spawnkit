@@ -976,7 +976,7 @@ ${customBlock}`;
         '--workspace', agentDir
       ], { encoding: 'utf8', timeout: 10000 });
 
-      console.log('[agents] Created agent:', agentId, 'workspace:', agentDir);
+      console.log('[SpawnKit] Agent Creation v2.1.0-medieval-agents — created agent:', agentId, 'workspace:', agentDir);
 
       res.writeHead(201);
       res.end(JSON.stringify({ ok: true, agentId, displayName, workspace: agentDir, model: modelId }));

@@ -37,6 +37,12 @@
             else if (window.ThemeCustomize) ThemeCustomize.show();
         }},
         { key: '6', icon: '⚔️', label: 'Summon', action: function() {
+            // Prefer the new SummonKnight wizard when available
+            if (window.SummonWizard && typeof window.SummonWizard.open === 'function') {
+                window.SummonWizard.open();
+                return;
+            }
+            // Fallback to legacy summon overlay
             var overlay = document.getElementById('summonOverlay');
             if (!overlay) return;
             overlay.style.display = 'flex';
