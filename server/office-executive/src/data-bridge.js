@@ -439,11 +439,15 @@
     async function fetchRelayData() {
         if (!hasRelayAPI) return false;
         try {
-            // Fetch all endpoints in parallel
+            // Use OcStore cache for sessions/crons/memory (avoids duplicate fetches)
+            // Only fetch config + agents independently (not in OcStore)
+            const ocStore = window.OcStore;
+            const useCache = ocStore && ocStore.lastUpdated > 0 && (Date.now() - ocStore.lastUpdated < 30000);
+            
             const [sessions, crons, memory, config, agents] = await Promise.all([
-                relayFetch('/api/oc/sessions'),
-                relayFetch('/api/oc/crons'),
-                relayFetch('/api/oc/memory'),
+                useCache ? Promise.resolve(ocStore.sessions) : relayFetch('/api/oc/sessions'),
+                useCache ? Promise.resolve(ocStore.crons) : relayFetch('/api/oc/crons'),
+                useCache ? Promise.resolve(ocStore.memory) : relayFetch('/api/oc/memory'),
                 relayFetch('/api/oc/config'),
                 relayFetch('/api/oc/agents')
             ]);
