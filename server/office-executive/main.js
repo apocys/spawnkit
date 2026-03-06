@@ -3550,27 +3550,17 @@
         // Simple markdown → HTML renderer (safe: escapes first, then applies formatting)
         function md(s) {
             if (typeof s !== 'string') return '';
-            // Escape HTML first
             s = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-            // Code blocks (triple backtick)
-            s = s.replace(/```([\s\S]*?)```/g, '<pre style="background:rgba(255,255,255,0.06);padding:8px 12px;border-radius:8px;font-size:12px;overflow-x:auto;margin:6px 0"><code></code></pre>');
-            // Inline code
-            s = s.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.08);padding:2px 5px;border-radius:4px;font-size:12px"></code>');
-            // Bold
-            s = s.replace(/\*\*(.+?)\*\*/g, '<strong></strong>');
-            // Italic
-            s = s.replace(/\*(.+?)\*/g, '<em></em>');
-            // Headers (h3 max for chat)
-            s = s.replace(/^### (.+)$/gm, '<div style="font-weight:700;font-size:14px;margin:8px 0 4px"></div>');
-            s = s.replace(/^## (.+)$/gm, '<div style="font-weight:700;font-size:15px;margin:8px 0 4px"></div>');
-            s = s.replace(/^# (.+)$/gm, '<div style="font-weight:700;font-size:16px;margin:8px 0 4px"></div>');
-            // Bullet lists
-            s = s.replace(/^[\-\*] (.+)$/gm, '<div style="padding-left:12px">• </div>');
-            // Numbered lists
-            s = s.replace(/^(\d+)\. (.+)$/gm, '<div style="padding-left:12px">. </div>');
-            // Line breaks
-            s = s.replace(/
-/g, '<br>');
+            s = s.replace(/```([\s\S]*?)```/g, '<pre style="background:rgba(255,255,255,0.06);padding:8px 12px;border-radius:8px;font-size:12px;overflow-x:auto;margin:6px 0"><code>$1</code></pre>');
+            s = s.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.08);padding:2px 5px;border-radius:4px;font-size:12px">$1</code>');
+            s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            s = s.replace(/^### (.+)$/gm, '<div style="font-weight:700;font-size:14px;margin:8px 0 4px">$1</div>');
+            s = s.replace(/^## (.+)$/gm, '<div style="font-weight:700;font-size:15px;margin:8px 0 4px">$1</div>');
+            s = s.replace(/^# (.+)$/gm, '<div style="font-weight:700;font-size:16px;margin:8px 0 4px">$1</div>');
+            s = s.replace(/^[-*] (.+)$/gm, '<div style="padding-left:12px">\u2022 $1</div>');
+            s = s.replace(/^(\d+)\. (.+)$/gm, '<div style="padding-left:12px">$1. $2</div>');
+            s = s.replace(/\n/g, '<br>');
             return s;
         }
 
