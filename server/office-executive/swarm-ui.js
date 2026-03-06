@@ -33,8 +33,7 @@
 `;
 
   function getApiUrl() {
-    return window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai')
-      ? window.location.origin : 'http://127.0.0.1:8222');
+    return window.OC_API_URL || window.location.origin;
   }
 
   async function fetchSubagents() {

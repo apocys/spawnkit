@@ -98,7 +98,7 @@
                 },
                 async getTranscript(sessionKey) {
                     try {
-                        var apiUrl = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+                        var apiUrl = window.OC_API_URL || (window.location.origin);
                         var resp = await fetch(apiUrl + '/api/oc/chat');
                         if (!resp.ok) return [];
                         var data = await resp.json();
@@ -651,11 +651,39 @@
 
             // Metrics section
             body += '<div class="detail-section"><div class="detail-section-title">Metrics</div>';
+            // Calculate KPIs immediately from OcStore (no async wait)
+            var kpiTokens = 0, kpiSessions = 0, kpiLastActive = 0, kpiModel = '—';
+            if (window.OcStore && window.OcStore.sessions.length > 0) {
+                window.OcStore.sessions.forEach(function(s) {
+                    var match = false;
+                    if (agentId === 'ceo') {
+                        match = (s.key && s.key.startsWith('agent:main'));
+                    } else {
+                        match = (s.kind === 'subagent' && s.label && s.label.toLowerCase().indexOf(agentId.toLowerCase()) >= 0);
+                    }
+                    if (match) {
+                        kpiTokens += s.totalTokens || 0;
+                        kpiSessions++;
+                        if (s.lastActive > kpiLastActive) {
+                            kpiLastActive = s.lastActive;
+                            if (s.model && s.model !== 'unknown') kpiModel = s.model;
+                        }
+                    }
+                });
+            }
+            var kpiLastStr = '—';
+            if (kpiLastActive > 0) {
+                var kpiAgo = Date.now() - kpiLastActive;
+                kpiLastStr = kpiAgo < 60000 ? 'Just now' :
+                    kpiAgo < 3600000 ? Math.floor(kpiAgo/60000) + 'm ago' :
+                    kpiAgo < 86400000 ? Math.floor(kpiAgo/3600000) + 'h ago' :
+                    Math.floor(kpiAgo/86400000) + 'd ago';
+            }
             body += '<div class="detail-metrics">';
             body += '<div class="detail-metric"><div class="detail-metric-value">' + (['active','working','busy','building'].indexOf(agent.status) >= 0 ? '🟢' : '💤') + '</div><div class="detail-metric-label">Status</div></div>';
-            body += '<div class="detail-metric"><div class="detail-metric-value">—</div><div class="detail-metric-label">Tokens Used</div></div>';
-            body += '<div class="detail-metric"><div class="detail-metric-value">—</div><div class="detail-metric-label">API Calls</div></div>';
-            body += '<div class="detail-metric"><div class="detail-metric-value">—</div><div class="detail-metric-label">Last Active</div></div>';
+            body += '<div class="detail-metric"><div class="detail-metric-value">' + (kpiTokens > 0 ? kpiTokens.toLocaleString() : '—') + '</div><div class="detail-metric-label">Tokens Used</div></div>';
+            body += '<div class="detail-metric"><div class="detail-metric-value">' + (kpiSessions > 0 ? kpiSessions.toString() : '—') + '</div><div class="detail-metric-label">Sessions</div></div>';
+            body += '<div class="detail-metric"><div class="detail-metric-value">' + kpiLastStr + '</div><div class="detail-metric-label">Last Active</div></div>';
             body += '</div></div>';
 
             // Use cached sessions from OcStore (no extra fetch)
@@ -663,17 +691,18 @@
                 try {
                     var sessions = (window.OcStore && window.OcStore.sessions) || [];
                     // Map agentId to session key patterns
-                    var agentKeyMap = {
-                        ceo: 'agent:main:main',
-                        atlas: 'atlas', forge: 'forge', hunter: 'hunter', echo: 'echo', sentinel: 'sentinel'
-                    };
-                    var matchKey = agentKeyMap[agentId] || agentId;
-                    // Find main session or matching sub-agents
+                    // Match strategy per agent role
                     var totalTokens = 0, subCount = 0, lastActiveMs = 0, modelName = '—';
                     sessions.forEach(function(s) {
-                        var keyMatch = (matchKey === 'agent:main:main') ?
-                            (s.key === 'agent:main:main') :
-                            (s.label && s.label.toLowerCase().indexOf(matchKey) >= 0);
+                        var keyMatch = false;
+                        if (agentId === 'ceo') {
+                            // CEO = main agent + all subagents + all crons (the whole operation)
+                            keyMatch = (s.key && s.key.startsWith('agent:main'));
+                        } else {
+                            // Other roles: match subagents whose label contains the role name
+                            var roleName = agentId.toLowerCase();
+                            keyMatch = (s.kind === 'subagent' && s.label && s.label.toLowerCase().indexOf(roleName) >= 0);
+                        }
                         if (keyMatch) {
                             totalTokens += s.totalTokens || 0;
                             subCount++;
@@ -1579,7 +1608,7 @@
         /* ── Load Live Messages — Fleet Relay messages from remote offices ─── */
         async function loadLiveMessages() {
             try {
-                var apiUrl = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+                var apiUrl = window.OC_API_URL || (window.location.origin);
                 var resp = await skFetch(apiUrl + '/api/remote/offices');
                 if (resp.ok) {
                     var data = await resp.json();
@@ -2104,7 +2133,7 @@
 
             // Spawn a session via API
             var agentName = agent.name;
-            var apiUrl = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+            var apiUrl = window.OC_API_URL || (window.location.origin);
             skFetch(apiUrl + '/api/oc/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2393,7 +2422,7 @@
 
             try {
                 // Send to local API bridge (primary) or fleet relay (fallback)
-                var apiUrl = (window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222')) + '/api/oc/chat';
+                var apiUrl = (window.OC_API_URL || (window.location.origin)) + '/api/oc/chat';
                 const response = await skFetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2497,7 +2526,7 @@
             
             try {
                 // 2. Fetch from local API bridge (sessions data)
-                var apiUrl = (window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222'));
+                var apiUrl = (window.OC_API_URL || (window.location.origin));
                 
                 // Try the dedicated chat history endpoint first
                 var response = await  skFetch(apiUrl + '/api/oc/chat/history');
@@ -2589,7 +2618,7 @@
             feed.innerHTML = '<div class="activity-item"><span class="activity-icon">⏳</span><div class="activity-content"><div class="activity-text">Loading…</div><div class="activity-time"></div></div></div>';
 
             var activities = [];
-            var apiUrl = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+            var apiUrl = window.OC_API_URL || (window.location.origin);
 
             // Use OcStore sessions (no extra fetch)
             try {
@@ -2744,7 +2773,7 @@
 
             // 1) Prefer API bridge (has full state with nextRunAtMs)
             try {
-                var apiUrl = (window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222'));
+                var apiUrl = (window.OC_API_URL || (window.location.origin));
                 var fetchFn = window.skFetch || fetch;
                 var resp = await fetchFn(apiUrl + '/api/oc/crons');
                 if (resp.ok) {
@@ -2823,7 +2852,7 @@
                     var cronId = btn.dataset.cronId;
                     var currentState = btn.classList.contains('on');
                     btn.classList.toggle('on'); // optimistic update
-                    var apiUrl = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+                    var apiUrl = window.OC_API_URL || (window.location.origin);
                     (window.skFetch || fetch)(apiUrl + '/api/oc/crons', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
@@ -2948,7 +2977,7 @@
             // Fallback: fetch from API bridge
             if (!mem) {
                 try {
-                    var apiUrl = (window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222'));
+                    var apiUrl = (window.OC_API_URL || (window.location.origin));
                     var fetchFn = window.skFetch || fetch;
                     var resp = await fetchFn(apiUrl + '/api/oc/memory');
                     if (resp.ok) {
@@ -2970,7 +2999,7 @@
                 memoryBody.innerHTML = '<div class="cron-empty" style="text-align:center;padding:40px 20px;">' +
                     '<div style="font-size:40px;margin-bottom:12px;">🧠</div>' +
                     '<div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:6px;">No Memory Data</div>' +
-                    '<div style="font-size:12px;color:var(--text-tertiary);line-height:1.5;">Memory files will appear here when available.<br>Ensure the API bridge is running on port 8222.</div>' +
+                    '<div style="font-size:12px;color:var(--text-tertiary);line-height:1.5;">Memory files will appear here when available.<br>Ensure the SpawnKit server is running.</div>' +
                     '</div>';
                 return;
             }
@@ -3243,7 +3272,7 @@
             btn.textContent = '🚀 Launching...';
 
             // Send as brainstorm (uses the CEO to process)
-            var apiUrl = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+            var apiUrl = window.OC_API_URL || (window.location.origin);
              skFetch(apiUrl + '/api/brainstorm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -3462,7 +3491,7 @@
             ];
             // Try to load from API
             try {
-                var apiUrl2 = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+                var apiUrl2 = window.OC_API_URL || (window.location.origin);
                 skFetch(apiUrl2 + '/api/oc/agents').then(function(r) {
                     if (r.ok) return r.json();
                 }).then(function(data) {
@@ -3569,7 +3598,7 @@
 
             // Fetch remote offices from API
             try {
-                var apiUrl = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+                var apiUrl = window.OC_API_URL || (window.location.origin);
                 var resp = await skFetch(apiUrl + '/api/remote/offices');
                 if (resp.ok) {
                     var data = await resp.json();

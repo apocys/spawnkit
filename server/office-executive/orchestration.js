@@ -1,7 +1,7 @@
     (function() {
         'use strict';
 
-        var RELAY_URL = window.OC_RELAY_URL || 'http://127.0.0.1:18789';
+        var RELAY_URL = window.OC_API_URL || window.OC_RELAY_URL || window.location.origin;
         var RELAY_TOKEN = window.OC_RELAY_TOKEN || '';
 
         // Configuration

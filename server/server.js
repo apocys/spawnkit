@@ -16,6 +16,16 @@ const VERSION_FILE = path.join(__dirname, 'version.json');
 const REPO_DIR = process.env.SPAWNKIT_REPO || path.join(process.env.HOME, 'spawnkit');
 const UPDATE_TOKEN = process.env.SK_API_TOKEN || '';
 
+// ── OpenClaw Gateway Connection ─────────────────────────────────────────
+const OC_GATEWAY = process.env.OC_GATEWAY_URL || 'http://localhost:18789';
+let OC_TOKEN = process.env.OC_GATEWAY_TOKEN || '';
+if (!OC_TOKEN) {
+  try {
+    const ocConfig = JSON.parse(fs.readFileSync(path.join(process.env.HOME || '', '.openclaw', 'openclaw.json'), 'utf8'));
+    OC_TOKEN = ocConfig?.gateway?.auth?.token || '';
+  } catch(e) { console.warn('[server] Could not read OC gateway token from config'); }
+}
+
 // ── Version Management ──────────────────────────────────────────────────
 function getLocalVersion() {
   try { return JSON.parse(fs.readFileSync(VERSION_FILE, 'utf8')); }
@@ -1026,8 +1036,6 @@ ${customBlock}`;
       return;
     }
     try {
-      const OC_GATEWAY = 'http://localhost:18789';
-      const OC_TOKEN = process.env.OC_GATEWAY_TOKEN || '2b1b2cdb509e42c71b487eca06502e794baff0d7e6a8e81e';
       const resp = await fetch(OC_GATEWAY + '/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OC_TOKEN },
@@ -1067,8 +1075,6 @@ ${customBlock}`;
       return;
     }
     try {
-      const OC_GATEWAY = 'http://localhost:18789';
-      const OC_TOKEN = process.env.OC_GATEWAY_TOKEN || '2b1b2cdb509e42c71b487eca06502e794baff0d7e6a8e81e';
 
       // If targeting a specific sub-agent session, use sessions_send
       if (targetSession && targetSession !== 'agent:main:main') {

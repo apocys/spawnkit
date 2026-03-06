@@ -13,11 +13,7 @@
     var POLL_INTERVAL = 15000; // 15 seconds
 
     function getApiUrl() {
-        return window.OC_API_URL || (
-            window.location.hostname.includes('spawnkit.ai')
-                ? window.location.origin
-                : 'http://127.0.0.1:8222'
-        );
+        return window.OC_API_URL || window.location.origin;
     }
 
     var store = {

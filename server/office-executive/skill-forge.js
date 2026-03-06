@@ -160,7 +160,7 @@ function doInstall() {
       payload.resources[cat] = state.resources[cat];
     }
   }
-  var apiUrl = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+  var apiUrl = window.OC_API_URL || (window.location.origin);
   var skF = window.skFetch || fetch;
 
   // Show installing state

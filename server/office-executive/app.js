@@ -10,7 +10,7 @@
         if (isProduction) {
             relayUrl = window.location.origin; // ALWAYS same-origin in production
         } else {
-            var defaultUrl = 'http://127.0.0.1:8222';
+            var defaultUrl = window.location.origin; // Same-origin: server.js bridges to OpenClaw gateway
             relayUrl = stored.relayUrl || params.get('relay') || defaultUrl;
         }
         // Make API URL available globally for all panels

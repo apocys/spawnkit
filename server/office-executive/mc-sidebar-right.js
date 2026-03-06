@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var API_URL = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+  var API_URL = window.OC_API_URL || (window.location.origin);
 
   function skF(url, opts) {
     return (window.skFetch || fetch)(url, opts);

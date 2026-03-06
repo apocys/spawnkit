@@ -227,7 +227,7 @@
 
     try {
       var base = window.OC_API_URL ||
-        (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+        (window.location.origin);
       var apiUrl = base + '/api/oc/chat';
       var token = localStorage.getItem('spawnkit-api-token') || '';
       var headers = { 'Content-Type': 'application/json' };
@@ -400,14 +400,22 @@
     console.log('[MissionDesk] onboarded:', localStorage.getItem('spawnkit-onboarded') ? 'yes' : 'no');
     /* Onboarding guard removed — always show Mission Desk (Kira 2026-02-28) */
 
-    /* Show connection banner if no token (BUG-006 fix) */
-    var hasToken = !!(localStorage.getItem('spawnkit-token') || window.OC_RELAY_TOKEN);
-    if (!hasToken) {
-      setTimeout(function() {
+    /* Show connection banner only if the API is unreachable (BUG-006 fix, updated: check real connectivity) */
+    setTimeout(function() {
+      var base = window.OC_API_URL || window.location.origin;
+      (window.skFetch || fetch)(base + '/api/oc/sessions').then(function(r) {
+        if (!r.ok) throw new Error('status ' + r.status);
+        return r.json();
+      }).then(function(data) {
+        // API works — hide banner (connected)
+        var banner = document.getElementById('mdConnectBanner');
+        if (banner) banner.style.display = 'none';
+      }).catch(function() {
+        // API unreachable — show connect banner
         var banner = document.getElementById('mdConnectBanner');
         if (banner) banner.style.display = 'flex';
-      }, 1500);
-    }
+      });
+    }, 1500);
 
     /* Find container */
     var container = document.querySelector('.exec-container');

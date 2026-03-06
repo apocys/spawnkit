@@ -7,7 +7,7 @@
         var mcCenter = document.getElementById('mcCenterCol');
         var mcRight = document.getElementById('mcRightCol');
         var mcStatus = document.getElementById('mcStatusBar');
-        var API_URL = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+        var API_URL = window.OC_API_URL || (window.location.origin);
         var _mcOcStoreSubscriber = null;
         var mcFeedMode = 'raw'; // 'filtered' or 'raw'
         var mcTodoExpanded = false;
@@ -128,7 +128,7 @@
 
             // Load tasks from /api/tasks + sessions
             if (!mcTodoContent) {
-                var apiUrl = (window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222'));
+                var apiUrl = (window.OC_API_URL || (window.location.origin));
                 skFetch(apiUrl + '/api/tasks').then(function(r) { return r.ok ? r.json() : null; }).then(function(data) {
                     if (data && data.ok) { mcTodoContent = JSON.stringify(data); renderLeftColumn(sessions); }
                 }).catch(function() {});
@@ -469,7 +469,7 @@
                         el.innerHTML += '<div class="mc-transcript-msg mc-transcript-msg--user"><div class="mc-transcript-bubble"><div class="mc-transcript-role">You</div><div>' + msg.replace(/</g, '&lt;').replace(/\n/g, '<br>') + '</div></div></div>';
                         el.scrollTop = el.scrollHeight + 9999;
                     }
-                    var apiUrl = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+                    var apiUrl = window.OC_API_URL || (window.location.origin);
                     skFetch(apiUrl + '/api/oc/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -815,7 +815,7 @@
                 var remoteEl = document.getElementById('mcRemoteList');
                 if (!remoteEl) return;
                 try {
-                    var apiUrl = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8222');
+                    var apiUrl = window.OC_API_URL || (window.location.origin);
                     var resp = await skFetch(apiUrl + '/api/remote/offices');
                     var data = await resp.json();
                     if (data.ok && data.offices && data.offices.length > 0) {
