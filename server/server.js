@@ -814,6 +814,247 @@ const server = http.createServer(async (req, res) => {
 
   // ─── Local API routes ────────────────────────────────────
 
+  // ═══ AGENT CREATION SYSTEM ═══════════════════════════════════════════
+  const AGENTS_BASE_DIR = path.join(WORKSPACE, 'fleet', 'agents');
+
+  // Trait → personality description mapping
+  const TRAIT_MAP = {
+    brave:     'Bold and direct. Takes initiative. Proposes unconventional solutions without hesitation.',
+    wise:      'Thoughtful and considered. Weighs options carefully. Cites reasoning and provides context.',
+    precise:   'Meticulous attention to detail. Catches edge cases. Verifies twice before responding.',
+    loyal:     'Follows instructions exactly. Asks clarifying questions when uncertain. Reliable and consistent.',
+    cunning:   'Creative problem-solver. Finds shortcuts and elegant solutions. Thinks outside the box.',
+    swift:     'Fast execution. Minimal deliberation. Ships quickly and iterates. Concise responses.',
+    creative:  'Imaginative and original. Generates novel ideas. Makes unexpected connections.',
+    analytical:'Data-driven and logical. Breaks problems into components. Methodical approach.',
+  };
+
+  function generateSOUL(config) {
+    const traits = (config.traits || []).map(t => {
+      const desc = TRAIT_MAP[t] || t;
+      return `- **${t.charAt(0).toUpperCase() + t.slice(1)}**: ${desc}`;
+    }).join('\n');
+    const skillsList = (config.skills || []).join(', ') || 'general assistance';
+    const customBlock = config.customInstructions ? `\n## Special Instructions\n${config.customInstructions}\n` : '';
+
+    return `# ${config.displayName} — ${config.role}
+
+## Identity
+You are **${config.displayName}**, a ${config.role} in the SpawnKit agent fleet.
+You were created on ${new Date().toISOString().slice(0, 10)}.
+
+## Personality Traits
+${traits || '- Balanced and professional'}
+
+## Communication Style
+- Respond in character as ${config.displayName}
+- Keep responses focused on your role as ${config.role}
+- Be direct, helpful, and concise
+- You are an independent agent — NOT Sycopa, NOT ApoMac, NOT any other agent
+- When asked "who are you", describe yourself as ${config.displayName} the ${config.role}
+
+## Skills
+You have access to: ${skillsList}
+
+## Rules
+- Stay in character as ${config.displayName}
+- Focus on your role: ${config.role}
+- Be helpful, direct, and concise
+- Never claim to be another agent
+${customBlock}`;
+  }
+
+  function generateIDENTITY(config) {
+    const emoji = config.emoji || '⚔️';
+    return `# IDENTITY.md
+
+- **Name:** ${config.displayName}
+- **Creature:** AI Agent — ${config.role}
+- **Vibe:** ${(config.traits || ['professional']).join(', ')}
+- **Emoji:** ${emoji}
+`;
+  }
+
+  function generateAGENTS(config) {
+    return `# AGENTS.md — ${config.displayName}
+
+## Protocol
+1. Read task → Execute → Report
+2. Stay in character as ${config.displayName}
+3. Focus on ${config.role} responsibilities
+`;
+  }
+
+  // GET /api/oc/agents — List all agents
+  if (req.url === '/api/oc/agents' && req.method === 'GET') {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+      const { spawnSync } = require('child_process');
+      const result = spawnSync('openclaw', ['agents', 'list', '--json'], { encoding: 'utf8', timeout: 10000 });
+      const agents = JSON.parse(result.stdout || '[]');
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, agents }));
+    } catch (e) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // POST /api/oc/agents/create — Create a new agent
+  if (req.url === '/api/oc/agents/create' && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json');
+    const body = await readBody(req);
+    const { name, displayName, role, model, traits, skills, theme, emoji, customInstructions } = body || {};
+
+    if (!name || !displayName) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: 'name and displayName required' }));
+      return;
+    }
+
+    // Sanitize agent name (slug)
+    const agentId = name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
+    const agentDir = path.join(AGENTS_BASE_DIR, agentId);
+
+    try {
+      // Check if agent already exists
+      if (fs.existsSync(agentDir)) {
+        res.writeHead(409);
+        res.end(JSON.stringify({ error: 'Agent already exists: ' + agentId }));
+        return;
+      }
+
+      // Create workspace directory
+      fs.mkdirSync(agentDir, { recursive: true });
+
+      const config = { name: agentId, displayName, role: role || 'General Assistant', model: model || 'sonnet', traits: traits || [], skills: skills || [], theme: theme || 'executive', emoji: emoji || '⚔️', customInstructions: customInstructions || '' };
+
+      // Generate workspace files
+      fs.writeFileSync(path.join(agentDir, 'SOUL.md'), generateSOUL(config));
+      fs.writeFileSync(path.join(agentDir, 'IDENTITY.md'), generateIDENTITY(config));
+      fs.writeFileSync(path.join(agentDir, 'AGENTS.md'), generateAGENTS(config));
+      fs.writeFileSync(path.join(agentDir, 'MEMORY.md'), '# MEMORY.md\n\nFresh agent — no memories yet.\n');
+      fs.writeFileSync(path.join(agentDir, 'TODO.md'), '# TODO.md\n\nNo tasks yet.\n');
+      fs.writeFileSync(path.join(agentDir, 'TOOLS.md'), '# TOOLS.md\n\nStandard tooling.\n');
+      fs.writeFileSync(path.join(agentDir, 'USER.md'), '# USER.md\n\nUser context provided by SpawnKit.\n');
+
+      // Copy skills if requested
+      if (config.skills.length > 0) {
+        const skillsDir = path.join(agentDir, 'skills');
+        fs.mkdirSync(skillsDir, { recursive: true });
+        // Note: actual skill installation would use clawhub or symlinks
+        // For now, create a SKILLS.md reference
+        fs.writeFileSync(path.join(agentDir, 'SKILLS.md'), '# Skills\n\n' + config.skills.map(s => '- ' + s).join('\n') + '\n');
+      }
+
+      // Register with OpenClaw
+      const { spawnSync } = require('child_process');
+      const modelMap = { opus: 'claudemax/claude-opus-4-6', sonnet: 'claudemax2/claude-sonnet-4-20250514', codex: 'codex/codex-mini-latest' };
+      const modelId = modelMap[config.model] || config.model || modelMap.sonnet;
+
+      const addResult = spawnSync('openclaw', [
+        'agents', 'add', agentId,
+        '--workspace', agentDir,
+        '--model', modelId,
+        '--non-interactive'
+      ], { encoding: 'utf8', timeout: 15000 });
+
+      if (addResult.status !== 0) {
+        // Clean up on failure
+        fs.rmSync(agentDir, { recursive: true, force: true });
+        res.writeHead(500);
+        res.end(JSON.stringify({ error: 'openclaw agents add failed', detail: (addResult.stderr || addResult.stdout || '').slice(0, 500) }));
+        return;
+      }
+
+      // Set identity
+      spawnSync('openclaw', [
+        'agents', 'set-identity',
+        '--agent', agentId,
+        '--from-identity',
+        '--workspace', agentDir
+      ], { encoding: 'utf8', timeout: 10000 });
+
+      console.log('[agents] Created agent:', agentId, 'workspace:', agentDir);
+
+      res.writeHead(201);
+      res.end(JSON.stringify({ ok: true, agentId, displayName, workspace: agentDir, model: modelId }));
+    } catch (e) {
+      console.error('[agents] Creation error:', e);
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: 'Agent creation failed', detail: e.message }));
+    }
+    return;
+  }
+
+  // DELETE /api/oc/agents/:id
+  const agentDeleteMatch = req.url.match(/^\/api\/oc\/agents\/([a-z0-9-]+)$/) ;
+  if (agentDeleteMatch && req.method === 'DELETE') {
+    res.setHeader('Content-Type', 'application/json');
+    const agentId = agentDeleteMatch[1];
+    if (agentId === 'main') {
+      res.writeHead(403);
+      res.end(JSON.stringify({ error: 'Cannot delete main agent' }));
+      return;
+    }
+    try {
+      const { spawnSync } = require('child_process');
+      const result = spawnSync('openclaw', ['agents', 'delete', agentId, '--yes'], { encoding: 'utf8', timeout: 10000 });
+      // Also remove workspace
+      const agentDir = path.join(AGENTS_BASE_DIR, agentId);
+      if (fs.existsSync(agentDir)) fs.rmSync(agentDir, { recursive: true, force: true });
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, deleted: agentId }));
+    } catch (e) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // POST /api/oc/agents/:id/chat — Send message to a specific agent
+  const agentChatMatch = req.url.match(/^\/api\/oc\/agents\/([a-z0-9-]+)\/chat$/);
+  if (agentChatMatch && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json');
+    const agentId = agentChatMatch[1];
+    const body = await readBody(req);
+    const message = body?.message;
+    if (!message) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: 'Missing message' }));
+      return;
+    }
+    try {
+      const OC_GATEWAY = 'http://localhost:18789';
+      const OC_TOKEN = process.env.OC_GATEWAY_TOKEN || '2b1b2cdb509e42c71b487eca06502e794baff0d7e6a8e81e';
+      const resp = await fetch(OC_GATEWAY + '/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OC_TOKEN },
+        body: JSON.stringify({
+          model: 'openclaw:' + agentId,
+          messages: [{ role: 'user', content: message }],
+          stream: false,
+        }),
+      });
+      if (!resp.ok) {
+        res.writeHead(502);
+        res.end(JSON.stringify({ error: 'Gateway error', status: resp.status }));
+        return;
+      }
+      const data = await resp.json();
+      const reply = data?.choices?.[0]?.message?.content || '(No response)';
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, reply, agentId }));
+    } catch (e) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // ═══ END AGENT CREATION SYSTEM ═══════════════════════════════════════
+
   // POST /api/oc/chat — Send message to OpenClaw agent via gateway
   if (req.url.replace(/\?.*/, '') === '/api/oc/chat' && req.method === 'POST') {
     res.setHeader('Content-Type', 'application/json');
