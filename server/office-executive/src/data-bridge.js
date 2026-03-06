@@ -407,6 +407,7 @@
                 cpuUsage: 0.32,
                 model: 'claude-opus-4-6'
             },
+            sessions: sessionArray,
             events: [],
             memory: { lastUpdated: new Date(now - 3600000).toISOString(), fileCount: 12, totalSize: '48KB' }
         };
@@ -631,6 +632,7 @@
                 model: mappedAgents[0]?.model || 'unknown'
             },
             events: [],
+            todo: memoryData.todo || '',
             memory: {
                 lastUpdated: memoryData.files && memoryData.files.length > 0 ? new Date().toISOString() : null,
                 fileCount: (memoryData.files || []).length,

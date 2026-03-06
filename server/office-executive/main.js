@@ -183,6 +183,38 @@
         // Live messages loaded from transcript
         var LIVE_MESSAGES = [];
 
+
+        /* Parse TODO.md into structured data */
+        function parseTodoMd(raw) {
+            var lines = raw.split('\n');
+            var todos = [];
+            var nextTask = '';
+            var inActive = false;
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i];
+                if (line.indexOf('>>> NEXT') >= 0) {
+                    nextTask = line.replace(/.*>>> NEXT[:\s]*/i, '').trim() || (lines[i+1] || '').replace(/^[\-\*#]+\s*/, '').trim();
+                }
+                if (/^## .*Active/i.test(line)) { inActive = true; continue; }
+                if (/^## /.test(line) && inActive) { inActive = false; }
+                if (inActive) {
+                    var done = /^\s*[-*]\s*[\u2705\u2714]|^\s*[-*]\s*\[x\]/i.test(line);
+                    var open = /^\s*[-*]\s*[\u2B1C\u2610]|^\s*[-*]\s*\[ \]|^\s*[-*]\s*\*\*/.test(line);
+                    if (done || open) {
+                        var text = line.replace(/^\s*[-*]\s*[\u2705\u2714\u2B1C\u2610\uD83D\uDD04]\s*|^\s*[-*]\s*\[.?\]\s*/u, '').replace(/\*\*/g, '').trim();
+                        if (text) {
+                            todos.push({
+                                icon: done ? '\u2705' : '\u2B1C',
+                                text: text.substring(0, 80),
+                                status: done ? 'done' : 'pending'
+                            });
+                        }
+                    }
+                }
+            }
+            return { nextTask: nextTask, todos: todos.slice(0, 15) };
+        }
+
         /* Agent TODO Data — Live from spawnkitAPI */  
         var LIVE_AGENT_DATA = {};
         
@@ -191,6 +223,21 @@
             var agentIds = ['ceo', 'atlas', 'forge', 'hunter', 'echo', 'sentinel'];
             
             if (!window.spawnkitAPI || !await window.spawnkitAPI.isAvailable()) {
+                // Web mode: parse TODO.md from data-bridge if available
+                var todoRaw = window.SpawnKit && window.SpawnKit.data && window.SpawnKit.data.todo;
+                if (todoRaw) {
+                    console.debug('🏢 [Executive] Parsing TODO.md from data-bridge');
+                    var parsed = parseTodoMd(todoRaw);
+                    LIVE_AGENT_DATA = {};
+                    agentIds.forEach(function(id) {
+                        LIVE_AGENT_DATA[id] = {
+                            currentTask: parsed.nextTask || 'See TODO.md',
+                            todos: id === 'ceo' ? parsed.todos : [],
+                            skills: []
+                        };
+                    });
+                    return;
+                }
                 console.debug('🏢 [Executive] No live data — showing empty state');
                 LIVE_AGENT_DATA = {};
                 agentIds.forEach(function(id) {
