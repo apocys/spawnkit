@@ -600,11 +600,13 @@
             if (settingsBtn) settingsBtn.click();
             else if (typeof openPanel === 'function') openPanel('profile');
           } else if (act === 'logout') {
-            localStorage.removeItem('spawnkit-token');
-            localStorage.removeItem('spawnkit-instance-url');
-            localStorage.removeItem('spawnkit-connected-once');
-            localStorage.removeItem('spawnkit-user-name');
-            localStorage.removeItem('spawnkit-user-avatar');
+            // Clear ALL SpawnKit state for a clean logout
+            var keysToRemove = [];
+            for (var i = 0; i < localStorage.length; i++) {
+              var k = localStorage.key(i);
+              if (k && k.indexOf('spawnkit') === 0) keysToRemove.push(k);
+            }
+            keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
             window.location.reload();
           }
         });
