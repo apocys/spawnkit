@@ -39,101 +39,50 @@
         var API = (typeof window.spawnkitAPI !== 'undefined') ? window.spawnkitAPI : null;
         
         /* BRIDGE: Connect HTML API calls to SpawnKit data system */
-        function createAPIBridge() {
-            if (API && typeof API.isAvailable === 'function') return; // Already have a real API
-            if (!window.SpawnKit) return; // SpawnKit not ready yet
-            
-            console.log('🔌 Creating API bridge to SpawnKit data system');
-            API = {
-                async isAvailable() { return true; },
-                async getSessions() {
-                    if (!window.SpawnKit.data) return { subagents: [], sessions: [] };
-                    return {
-                        subagents: window.SpawnKit.data.subagents || [],
-                        sessions: window.SpawnKit.data.sessions || []
-                    };
-                },
-                async getActiveSubagents() {
-                    if (!window.SpawnKit.data || !window.SpawnKit.data.subagents) return [];
-                    return window.SpawnKit.data.subagents.filter(sa => sa.status === 'active');
-                },
-                async getCrons() {
-                    if (!window.SpawnKit.data || !window.SpawnKit.data.crons) return [];
-                    return window.SpawnKit.data.crons;
-                },
-                async getMemory() {
-                    if (!window.SpawnKit.data || !window.SpawnKit.data.memory) return null;
-                    return window.SpawnKit.data.memory;
-                },
-                async getAgentInfo(agentId) {
-                    // Return basic info for agent panels
-                    return { soul: 'Agent personality and traits would appear here.' };
-                },
-                async listAvailableSkills() {
-                    // Return basic skill list
-                    return [
-                        { name: '🔍 Web Search', description: 'Search the web for information' },
-                        { name: '📝 Note Taking', description: 'Take and manage notes' },
-                        { name: '🎯 Task Planning', description: 'Plan and organize tasks' }
-                    ];
-                },
-                async saveAgentSkills(agentId, skills) {
-                    console.log('saveAgentSkills called for', agentId, skills);
-                    return { success: true };
-                },
-                async saveAgentSoul(agentId, soul) {
-                    console.log('saveAgentSoul called for', agentId, soul);
-                    return { success: true };
-                },
-                async getApiKeys() {
-                    return {}; // No API keys in browser mode
-                },
-                async saveApiKey(provider, key) {
-                    console.log('saveApiKey called for', provider);
-                    return { success: true };
-                },
-                async deleteApiKey(provider) {
-                    console.log('deleteApiKey called for', provider);
-                    return { success: true };
-                },
-                async getTranscript(sessionKey) {
-                    try {
-                        var apiUrl = window.OC_API_URL || (window.location.origin);
-                        var resp = await fetch(apiUrl + '/api/oc/chat');
-                        if (!resp.ok) return [];
-                        var data = await resp.json();
-                        return Array.isArray(data) ? data : (data.messages || []);
-                    } catch(e) { console.warn('getTranscript error:', e); return []; }
-                }
-            };
-        }
-        
-        // Try to create bridge immediately (after DOM loads)
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                createAPIBridge();
-                // Trigger initial meeting preview update if needed
-                if (window.API && typeof updateMeetingPreview === 'function') {
-                    updateMeetingPreview();
-                }
-            }, 1000);
-        });
-        
-        // Also create bridge when SpawnKit initializes
-        if (window.SpawnKit && window.SpawnKit.on) {
-            window.SpawnKit.on('init:complete', createAPIBridge);
-            window.SpawnKit.on('data:refresh', createAPIBridge);
-        }
-        
-        // Fallback: Try every 2 seconds until SpawnKit is available
-        const bridgeRetryInterval = setInterval(() => {
-            if (window.SpawnKit && window.SpawnKit.data && !window.API) {
-                createAPIBridge();
-                if (window.API) {
-                    clearInterval(bridgeRetryInterval);
-                }
+        // Minimal API stubs for agent features that don't use OcStore
+        API = {
+            async isAvailable() { return true; },
+            async getAgentInfo(agentId) {
+                return { soul: 'Agent personality and traits would appear here.' };
+            },
+            async listAvailableSkills() {
+                return [
+                    { name: '🔍 Web Search', description: 'Search the web for information' },
+                    { name: '📝 Note Taking', description: 'Take and manage notes' },
+                    { name: '🎯 Task Planning', description: 'Plan and organize tasks' }
+                ];
+            },
+            async saveAgentSkills(agentId, skills) {
+                console.log('saveAgentSkills called for', agentId, skills);
+                return { success: true };
+            },
+            async saveAgentSoul(agentId, soul) {
+                console.log('saveAgentSoul called for', agentId, soul);
+                return { success: true };
+            },
+            async getApiKeys() {
+                return {}; // No API keys in browser mode
+            },
+            async saveApiKey(provider, key) {
+                console.log('saveApiKey called for', provider);
+                return { success: true };
+            },
+            async deleteApiKey(provider) {
+                console.log('deleteApiKey called for', provider);
+                return { success: true };
+            },
+            async getTranscript(sessionKey) {
+                try {
+                    var apiUrl = window.OC_API_URL || (window.location.origin);
+                    var resp = await fetch(apiUrl + '/api/oc/chat');
+                    if (!resp.ok) return [];
+                    var data = await resp.json();
+                    return Array.isArray(data) ? data : (data.messages || []);
+                } catch(e) { console.warn('getTranscript error:', e); return []; }
             }
-        }, 2000);
+        };
+        
+        // OcStore provides unified data polling - no SpawnKit bridge needed
 
         var AGENTS = {
             ceo:      { name: setupConfig.userName || 'ApoMac', role: setupConfig.ceoName || 'CEO', color: '#007AFF', status: 'active', task: 'Orchestrating fleet operations' },
@@ -1424,7 +1373,9 @@
             var activeSubagents = [];
             if (API) {
                 try {
-                    activeSubagents = await API.getActiveSubagents();
+                    if (window.OcStore && window.OcStore.sessions) {
+                        activeSubagents = window.OcStore.sessions.filter(s => s.kind === 'subagent' && s.status === 'active');
+                    }
                 } catch(e) { console.warn('Failed to load active subagents:', e); }
             }
 
@@ -1508,7 +1459,7 @@
             
             if (API) {
                 try {
-                    var sessions = await API.getSessions();
+                    var sessions = (window.OcStore && window.OcStore.sessions) ? window.OcStore.sessions : [];
                     var completed = (sessions.subagents || []).filter(function(sa) { return sa.status === 'completed'; }).slice(0, 4);
                     if (completed.length > 0) {
                         completed.forEach(function(sa) {
@@ -2793,8 +2744,8 @@
             }
 
             // 4) Fallback to API bridge getCrons() (may have loaded since prefetch)
-            if ((!crons || !Array.isArray(crons) || crons.length === 0) && API && API.getCrons) {
-                try { crons = await Promise.resolve(API.getCrons()); } catch(e) {}
+            if ((!crons || !Array.isArray(crons) || crons.length === 0) && window.OcStore && window.OcStore.crons) {
+                try { crons = window.OcStore.crons.jobs || []; } catch(e) {}
             }
 
             if (!crons || !Array.isArray(crons) || crons.length === 0) {
@@ -2960,7 +2911,7 @@
                 try { mem = await mem; } catch(e) { mem = null; }
             }
             if (API && !mem) {
-                try { mem = await Promise.resolve(API.getMemory()); } catch(e) {}
+                try { mem = (window.OcStore && window.OcStore.memory) ? window.OcStore.memory : {}; } catch(e) {}
             }
 
             // Fallback to SpawnKit data-bridge (direct)
@@ -3306,7 +3257,7 @@
             
             // Try API first
             if (API) {
-                try { sessions = await API.getSessions(); } catch(e) {}
+                try { sessions = (window.OcStore && window.OcStore.sessions) ? window.OcStore.sessions : []; } catch(e) {}
             }
             
             // Fallback: use OcStore cache (no extra fetch)
