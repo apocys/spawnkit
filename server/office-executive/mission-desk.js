@@ -824,25 +824,37 @@ window.openDailyBriefPanel = function() {
   if (existing) existing.remove();
 
   var data = window.SpawnKit && window.SpawnKit.data || {};
+  var todoRaw = data.todo || '';
   var sessions = data.sessions || [];
   var crons = data.crons || [];
   var agents = data.agents || [];
   var memory = data.memory || [];
 
-  // Build active sessions summary
-  // Parse priority tasks from TODO.md
+  // Build priority tasks from TODO.md
   var taskHtml = '';
   if (todoRaw) {
-    var todoLines = todoRaw.split('\n'); var tasks = [];
-      var name = s.label || s.kind || s.sessionKey || 'Session';
-      var model = s.model || '';
-      var age = s.lastActive ? _timeAgo(s.lastActive) : '';
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-subtle,rgba(255,255,255,0.06));">' +
-        '<span style="font-size:13px;color:var(--text-primary,#fff);">' + _esc(name) + '</span>' +
-        '<span style="font-size:11px;color:var(--text-tertiary,#8E8E93);">' + _esc(model) + (age ? ' · ' + age : '') + '</span></div>';
-    }).join('');
+    var todoLines = todoRaw.split('\n');
+    var tasks = [];
+    var inActive = false;
+    for (var i = 0; i < todoLines.length; i++) {
+      var line = todoLines[i];
+      if (/^## /.test(line) && /Active/i.test(line)) { inActive = true; continue; }
+      if (/^## /.test(line) && inActive) break;
+      if (inActive && /^\s*[-*]/.test(line)) {
+        var isDone = line.indexOf('\u2705') >= 0;
+        var text = line.replace(/^\s*[-*]\s*/, '').replace(/[\u2705\u2B1C]/g, '').replace(/\*\*/g, '').trim();
+        if (text && text.length > 2) {
+          tasks.push({done: isDone, text: text.substring(0, 80)});
+        }
+      }
+    }
+    taskHtml = tasks.length > 0 ? tasks.slice(0, 10).map(function(t) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border-subtle,rgba(255,255,255,0.06));">' +
+        '<span style="font-size:14px;">' + (t.done ? '\u2705' : '\u2B1C') + '</span>' +
+        '<span style="font-size:13px;color:var(--text-primary,#fff);' + (t.done ? 'opacity:0.5;text-decoration:line-through;' : '') + '">' + _esc(t.text) + '</span></div>';
+    }).join('') : '<p style="margin:0;color:var(--text-tertiary,#8E8E93);font-size:13px;">No active tasks.</p>';
   } else {
-    sessHtml = '<p style="margin:0;color:var(--text-tertiary,#8E8E93);font-size:13px;">No active sessions.</p>';
+    taskHtml = '<p style="margin:0;color:var(--text-tertiary,#8E8E93);font-size:13px;">Connect to see tasks.</p>';
   }
 
   // Build crons summary
