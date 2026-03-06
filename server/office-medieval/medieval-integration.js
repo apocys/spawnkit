@@ -277,10 +277,13 @@
         var observer = new MutationObserver(function() {
           var persona = window._chatPersona;
           if (!persona || persona === 'ApoMac' || persona === 'ceo') return;
+          // Never show raw UUIDs in chat labels
+          var isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}/.test(persona);
+          var displayName = isUUID ? ('Knight ' + persona.slice(0, 6)) : persona;
           var msgs = chatMsgArea.querySelectorAll('.sk-chat-msg-assistant .sk-chat-msg-label');
           msgs.forEach(function(label) {
             if (label.textContent === '🤖 ApoMac') {
-              label.textContent = '🤖 ' + persona;
+              label.textContent = '🤖 ' + displayName;
             }
           });
         });
