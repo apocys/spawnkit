@@ -314,6 +314,33 @@
         var todoRole        = document.getElementById('todoRole');
         var todoContent     = document.getElementById('todoContent');
 
+        // Wire TODO panel to show real agent data
+        window.openTodoForAgent = function(agentId) {
+            var agent = AGENTS[agentId] || (window._spawnkitAgents && window._spawnkitAgents[agentId]);
+            if (!agent) return;
+            if (todoName) todoName.textContent = agent.name || agentId;
+            if (todoRole) todoRole.textContent = agent.role || 'Agent';
+            // Populate TODO list from LIVE_AGENT_DATA
+            var data = LIVE_AGENT_DATA[agentId];
+            if (todoContent && data && data.todos && data.todos.length) {
+                var html = '';
+                if (data.currentTask) {
+                    html += '<div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:12px;">\ud83c\udfaf ' + esc(data.currentTask) + '</div>';
+                }
+                data.todos.forEach(function(t) {
+                    var isDone = t.status === 'done';
+                    html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-subtle);">';
+                    html += '<span style="font-size:14px;">' + esc(t.icon) + '</span>';
+                    html += '<span style="font-size:13px;color:var(--text-primary);' + (isDone ? 'opacity:0.5;text-decoration:line-through;' : '') + '">' + esc(t.text) + '</span>';
+                    html += '</div>';
+                });
+                todoContent.innerHTML = html;
+            } else if (todoContent) {
+                todoContent.innerHTML = '<div style="color:var(--text-tertiary);font-size:13px;padding:16px 0;">No TODO data available. Connect to a live OpenClaw instance.</div>';
+            }
+            if (todoOverlay) todoOverlay.style.display = 'flex';
+        };
+
         // Meeting Panel elements
         var meetingOverlay  = document.getElementById('meetingOverlay');
         var meetingBackdrop = document.getElementById('meetingBackdrop');
@@ -607,6 +634,11 @@
             document.getElementById('detailName').textContent = agent.name;
             document.getElementById('detailRole').textContent = agent.role;
             document.getElementById('detailTask').textContent = agent.task || (agent.status === 'idle' ? '💤 Idle' : '—');
+
+            // Also update the TODO sidebar panel with this agent's data
+            if (typeof window.openTodoForAgent === 'function') {
+                window.openTodoForAgent(agentId);
+            }
 
             // Build body
             var body = '';
@@ -1647,6 +1679,13 @@
         // Load live data
         loadLiveMessages();
         loadLiveAgentData();
+
+        // Re-load agent data when SpawnKit data bridge refreshes (fixes timing issue)
+        if (window.SpawnKit && window.SpawnKit.on) {
+            window.SpawnKit.on('data:refresh', function() {
+                loadLiveAgentData();
+            });
+        }
 
         /* ═══════════════════════════════════════════════
            Agent Room — Click to Show TODO Panel
