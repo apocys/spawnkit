@@ -156,7 +156,7 @@
     <div class="exec-container">
 
         <!-- ═══ View Toggle ═══ -->
-        <div class="exec-view-toggle">
+        <div class="exec-view-toggle" style="display:none">
             <div class="view-toggle-group" role="tablist" aria-label="View mode">
                 <button class="view-toggle-btn active" role="tab" aria-selected="true" aria-controls="gridView" id="tabGrid" data-view="grid">
                     <span class="view-toggle-icon" aria-hidden="true">⊞</span>
@@ -170,7 +170,7 @@
         </div>
 
         <!-- ═══ Office Floor Grid (Grid View) ═══ -->
-        <div class="exec-floor" id="gridView" role="tabpanel" aria-labelledby="tabGrid">
+        <div class="exec-floor" id="gridView" role="tabpanel" aria-labelledby="tabGrid" style="display:none">
 
             <!-- ── CEO Room ────────────────────────────── -->
             <div class="exec-room exec-room--ceo" role="button" tabindex="0" aria-label="CEO Office — ApoMac" data-agent="ceo">
@@ -369,7 +369,7 @@
         <!-- /exec-hierarchy -->
 
         <!-- ═══ Status Bar (Bottom) ═══ -->
-        <div class="exec-statusbar" role="status" aria-label="Office status bar">
+        <div class="exec-statusbar" role="status" aria-label="Office status bar" style="display:none">
             <div class="statusbar-info">
                 <div class="statusbar-item">
                     <span class="statusbar-dot" aria-hidden="true"></span>
@@ -843,6 +843,8 @@
                     </div>
                     <span class="theme-card-badge">Switch</span>
                 </div>
+                <!-- SimCity decommissioned — hidden from theme picker -->
+                <!--
                 <div class="theme-card" data-theme="simcity">
                     <div class="theme-card-icon">🏙️</div>
                     <div class="theme-card-info">
@@ -851,6 +853,7 @@
                     </div>
                     <span class="theme-card-badge">Switch</span>
                 </div>
+                -->
             </div>
             <div style="text-align:right;margin-top:18px;">
                 <button id="themePickerClose" style="padding:8px 20px;border-radius:10px;border:none;background:var(--exec-gray-100,#E5E5EA);color:var(--text-primary,#1C1C1E);font-weight:600;cursor:pointer;font-size:13px;">Close</button>
