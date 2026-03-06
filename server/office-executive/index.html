@@ -8,6 +8,10 @@
       body.sk-auth-pending #sk-auth-overlay,
       body.sk-auth-pending .sk-ob-overlay,
       body.sk-auth-pending #sk-version { visibility: visible; }
+      /* Hide legacy Office Grid by default — Mission Desk is the primary view */
+      .exec-view-toggle, .exec-statusbar { display: none !important; }
+      #gridView { display: none !important; }
+      .exec-floor { display: none !important; }
     .cron-overlay.open { z-index: 10001 !important; }
     
     /* ── Typing dots animation ── */
