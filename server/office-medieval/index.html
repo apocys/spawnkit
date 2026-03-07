@@ -15,12 +15,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;500;600;700&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet">
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.162.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.162.0/examples/jsm/"
-        }
+    <script>
+    // WebGL detection — determines which engine to load
+    window._hasWebGL = (function() {
+        try {
+            var c = document.createElement('canvas');
+            return !!(c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl'));
+        } catch(e) { return false; }
+    })();
+    if (window._hasWebGL) {
+        document.write('<scr'+'ipt type="importmap">{"imports":{"three":"https://unpkg.com/three@0.162.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.162.0/examples/jsm/"}}</scr'+'ipt>');
     }
     </script>
     <style>
@@ -777,13 +781,43 @@
     <script src="../lib/theme-customize.js"></script>
     <script src="onboarding.js"></script>
     <script src="../src/data-bridge.js"></script>
-    <script type="module" src="medieval-scene.js"></script>
-    <script type="module" src="medieval-world.js"></script>
-    <script type="module" src="medieval-particles.js"></script>
-    <script type="module" src="medieval-characters-v2.js"></script>
-    <script type="module" src="medieval-agent-lifecycle.js"></script>
-    <script type="module" src="medieval-sky.js"></script>
-    <script type="module" src="medieval-weather.js"></script>
+    <script>
+    // Conditional engine loader: WebGL → Three.js, no WebGL → 2D canvas
+    if (window._hasWebGL) {
+        // Load Three.js modules (your polished 3D castle)
+        ['medieval-scene.js','medieval-world.js','medieval-particles.js',
+         'medieval-characters-v2.js','medieval-agent-lifecycle.js',
+         'medieval-sky.js','medieval-weather.js'].forEach(function(src) {
+            var s = document.createElement('script');
+            s.type = 'module';
+            s.src = src;
+            document.head.appendChild(s);
+        });
+    } else {
+        // No WebGL — load 2D canvas engine + compat shim
+        console.log('[Medieval] No WebGL — loading 2D canvas fallback');
+        // Add canvas element for 2D renderer
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!document.getElementById('game-canvas')) {
+                var canvas = document.createElement('canvas');
+                canvas.id = 'game-canvas';
+                canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;';
+                document.body.insertBefore(canvas, document.body.firstChild);
+            }
+        });
+        ['../office-medieval-v2/three-stub.js',
+         '../office-medieval-v2/medieval-types.js',
+         '../office-medieval-v2/medieval-map.js',
+         '../office-medieval-v2/medieval-renderer.js',
+         '../office-medieval-v2/medieval-personalities.js',
+         '../office-medieval-v2/medieval-engine.js',
+         '../office-medieval-v2/medieval-compat.js'].forEach(function(src) {
+            var s = document.createElement('script');
+            s.src = src;
+            document.head.appendChild(s);
+        });
+    }
+    </script>
 
     <!-- ═══ MISSION CONTROL OVERLAY ═══ -->
     <div class="mc-overlay" id="missionControlOverlay">
@@ -1113,6 +1147,7 @@
     <!-- ═══ MODULAR JS ═══ -->
     <script src="medieval-mission-control.js"></script>
     <script src="medieval-integration.js"></script>
+    <script src="medieval-game-engine.js"></script>
 
     <!-- Roblox-style Hotbar -->
     <div id="roblox-hotbar" style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:100;pointer-events:auto;"></div>
