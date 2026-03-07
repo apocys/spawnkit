@@ -1,9 +1,16 @@
 /**
  * medieval-types.js — Medieval-specific constants, tile types, zones, palettes
- * Extends the base OfficeTypes with castle theme.
+ * Defines base OfficeTypes + extends with castle theme.
  */
 (function () {
   'use strict';
+
+  // ── Base office types (needed by renderer) ──
+  var TILE_SIZE = 20;
+  window.OfficeTypes = window.OfficeTypes || {};
+  window.OfficeTypes.TILE_SIZE = TILE_SIZE;
+  window.OfficeTypes.Direction = { UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 };
+  window.OfficeTypes.CharacterState = { IDLE: 0, WALK: 1, WORK: 2 };
 
   // ── Medieval tile types (extend base) ──
   var MedTileType = {
