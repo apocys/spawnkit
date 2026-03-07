@@ -890,7 +890,7 @@
 
 
     <!-- ═══ Theme Picker Overlay ═══ -->
-    <div class="theme-picker-overlay" id="themePickerOverlay">
+    <div class="theme-picker-overlay" id="themePickerOverlay" onclick="if(event.target===this)this.classList.remove('open')">
         <div class="theme-picker-panel">
             <div class="theme-picker-title">🎨 Choose Your Theme</div>
             <div class="theme-picker-subtitle">Switch between different visual experiences for your fleet</div>
@@ -914,7 +914,7 @@
 
             </div>
             <div style="text-align:right;margin-top:18px;">
-                <button id="themePickerClose" style="padding:8px 20px;border-radius:10px;border:none;background:var(--exec-gray-100,#E5E5EA);color:var(--text-primary,#1C1C1E);font-weight:600;cursor:pointer;font-size:13px;">Close</button>
+                <button id="themePickerClose" onclick="document.getElementById('themePickerOverlay').classList.remove('open')" style="padding:8px 20px;border-radius:10px;border:none;background:var(--exec-gray-100,#E5E5EA);color:var(--text-primary,#1C1C1E);font-weight:600;cursor:pointer;font-size:13px;">Close</button>
             </div>
         </div>
     </div>
