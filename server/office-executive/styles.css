@@ -4,6 +4,41 @@
            SVG Avatars + Hierarchy View + Agent TODO Panel
            ═══════════════════════════════════════════════════════════════ */
 
+/* ── Overlay default: hidden until .open ─────────────────────────────── */
+.mailbox-overlay,
+.todo-overlay,
+.meeting-overlay,
+.detail-overlay,
+.chat-overlay,
+.cron-overlay,
+.memory-overlay,
+.chat-history-overlay,
+.mc-overlay,
+.theme-picker-overlay,
+#settingsOverlay,
+#missionsOverlay,
+#remoteOverlay,
+#orchestrationOverlay,
+#addAgentOverlay,
+#activateAgentModal { display: none !important; }
+
+.mailbox-overlay.open,
+.todo-overlay.open,
+.meeting-overlay.open,
+.detail-overlay.open,
+.chat-overlay.open,
+.cron-overlay.open,
+.memory-overlay.open,
+.chat-history-overlay.open,
+.mc-overlay.open,
+.theme-picker-overlay.open,
+#settingsOverlay.open,
+#missionsOverlay.open,
+#remoteOverlay.open,
+#orchestrationOverlay.open,
+#addAgentOverlay.open,
+#activateAgentModal.open { display: block !important; }
+
 /* ── Z-Index Scale (single source of truth) ──────────────────────────────
    100  base panels / dropdowns
    200  side panels (cron, remote, settings, missions, chat)
