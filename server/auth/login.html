@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in to SpawnKit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #007AFF;
+            --primary-blue-hover: #0056CC;
+            --text-primary: #1D1D1F;
+            --text-secondary: #86868B;
+            --background: #FBFBFD;
+            --surface: #FFFFFF;
+            --border: #D2D2D7;
+            --success-green: #30D158;
+            --error-red: #FF3B30;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 40px 32px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid var(--border);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            font-size: 16px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        input[type="email"] {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 16px;
+            background: var(--surface);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        input[type="email"]:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+        }
+
+        input[type="email"]::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            background: var(--primary-blue-hover);
+            transform: translateY(-1px);
+        }
+
+        .submit-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            margin-top: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .message.success {
+            background: rgba(48, 209, 88, 0.1);
+            color: var(--success-green);
+            border: 1px solid rgba(48, 209, 88, 0.2);
+        }
+
+        .message.error {
+            background: rgba(255, 59, 48, 0.1);
+            color: var(--error-red);
+            border: 1px solid rgba(255, 59, 48, 0.2);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .check-email-state {
+            display: none;
+            text-align: center;
+        }
+
+        .check-email-state .icon {
+            width: 64px;
+            height: 64px;
+            background: var(--primary-blue);
+            border-radius: 50%;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: white;
+        }
+
+        .check-email-state h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .check-email-state p {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .back-btn {
+            background: transparent;
+            color: var(--primary-blue);
+            border: 2px solid var(--primary-blue);
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .back-btn:hover {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 24px;
+                margin: 0 16px;
+            }
+
+            .logo h1 {
+                font-size: 28px;
+            }
+
+            input[type="email"], .submit-btn {
+                padding: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loginForm">
+            <div class="logo">
+                <h1>SpawnKit</h1>
+                <p>AI Agent Platform</p>
+            </div>
+
+            <form id="magicLinkForm">
+                <div class="form-group">
+                    <label for="email">Email address</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="you@company.com" 
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <span id="submitText">Send magic link</span>
+                    <div class="spinner" id="spinner" style="display: none;"></div>
+                </button>
+            </form>
+
+            <div class="message" id="message"></div>
+
+            <div class="footer">
+                We'll send you a secure sign-in link via email.<br>
+                No passwords required.
+            </div>
+        </div>
+
+        <div class="check-email-state" id="checkEmailState">
+            <div class="icon">✉️</div>
+            <h2>Check your email</h2>
+            <p>We've sent a magic link to <span id="sentEmailAddress"></span></p>
+            <p style="margin-bottom: 32px;">Click the link in your email to sign in. The link expires in 24 hours.</p>
+            <button class="back-btn" onclick="showLoginForm()">Send another link</button>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('magicLinkForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const submitText = document.getElementById('submitText');
+        const spinner = document.getElementById('spinner');
+        const message = document.getElementById('message');
+        const loginForm = document.getElementById('loginForm');
+        const checkEmailState = document.getElementById('checkEmailState');
+        const sentEmailAddress = document.getElementById('sentEmailAddress');
+
+        // Check for token in URL (magic link verification)
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        
+        if (token) {
+            // This is a magic link verification
+            verifyToken(token);
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            
+            if (!email) return;
+
+            setLoading(true);
+            hideMessage();
+
+            try {
+                const response = await fetch('/api/auth/magic-link', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showCheckEmailState(email);
+                } else {
+                    showMessage(data.error || 'Failed to send magic link', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'error');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        async function verifyToken(token) {
+            try {
+                const response = await fetch(`/api/auth/verify?token=${token}`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    // Successful verification, redirect to main app
+                    window.location.href = '/';
+                } else {
+                    const data = await response.json();
+                    showMessage(data.error || 'Invalid or expired magic link', 'error');
+                }
+            } catch (error) {
+                showMessage('Failed to verify magic link', 'error');
+            }
+        }
+
+        function setLoading(loading) {
+            submitBtn.disabled = loading;
+            submitText.style.display = loading ? 'none' : 'inline';
+            spinner.style.display = loading ? 'inline-block' : 'none';
+        }
+
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = `message ${type}`;
+            message.style.display = 'block';
+        }
+
+        function hideMessage() {
+            message.style.display = 'none';
+        }
+
+        function showCheckEmailState(email) {
+            sentEmailAddress.textContent = email;
+            loginForm.style.display = 'none';
+            checkEmailState.style.display = 'block';
+        }
+
+        function showLoginForm() {
+            loginForm.style.display = 'block';
+            checkEmailState.style.display = 'none';
+            document.getElementById('email').value = '';
+            hideMessage();
+        }
+
+        // Auto-focus email input
+        document.getElementById('email').focus();
+    </script>
+</body>
+</html>

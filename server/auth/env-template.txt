@@ -1,0 +1,53 @@
+# SpawnKit Environment Variables
+
+# === AUTHENTICATION ===
+# Required: Secret key for JWT signing (minimum 32 characters)
+SK_AUTH_SECRET="your-super-secret-jwt-signing-key-minimum-32-chars"
+
+# Required: Resend API key for sending magic link emails
+# Get from: https://resend.com/api-keys
+RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# === STRIPE BILLING ===
+# Required: Stripe secret key (use sk_test_ for testing, sk_live_ for production)
+# Get from: https://dashboard.stripe.com/apikeys
+STRIPE_SECRET_KEY="sk_test_YOUR_KEY_HERE"
+
+# Required: Webhook signing secret for verifying Stripe webhooks
+# Get from: https://dashboard.stripe.com/webhooks
+STRIPE_WEBHOOK_SECRET="whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Required: Price ID for your Pro plan ($49/mo)
+# Create in: https://dashboard.stripe.com/products
+STRIPE_PRICE_ID="price_xxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# === OPTIONAL ===
+# Node environment (defaults to 'development')
+NODE_ENV="development"
+
+# Server port (defaults to 8765)
+PORT="8765"
+
+# === SETUP INSTRUCTIONS ===
+
+# 1. Resend Setup:
+#    - Sign up at https://resend.com
+#    - Add your domain (spawnkit.dev) and verify DNS
+#    - Create API key and copy above
+
+# 2. Stripe Setup:
+#    - Create products for Free and Pro plans
+#    - Copy the Pro plan price ID above
+#    - Set up webhook endpoint: https://spawnkit.dev/api/billing/webhook
+#    - Select events: checkout.session.completed, customer.subscription.*
+#    - Copy webhook signing secret above
+
+# 3. Generate Auth Secret:
+#    You can generate a secure secret with:
+#    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# 4. Domain Setup:
+#    Update the magic link and redirect URLs in the code if using a different domain:
+#    - auth.js: magicLink URL
+#    - billing.js: success_url and cancel_url
+#    - login.html: form action (if needed)
