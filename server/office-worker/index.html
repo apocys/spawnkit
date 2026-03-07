@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpawnKit — Office Worker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; font-family: system-ui, sans-serif; }
+    #office-canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+    #office-canvas:active { cursor: grabbing; }
+
+    /* HUD overlay */
+    .hud { position: fixed; top: 16px; left: 16px; z-index: 10; display: flex; gap: 8px; align-items: center; }
+    .hud-badge { background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; padding: 6px 12px; color: #e0e0e0; font-size: 13px; user-select: none; }
+    .hud-badge span { color: #4ade80; font-weight: 600; }
+
+    /* Zoom controls */
+    .zoom-controls { position: fixed; bottom: 16px; right: 16px; z-index: 10; display: flex; flex-direction: column; gap: 4px; }
+    .zoom-btn { width: 36px; height: 36px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); color: #e0e0e0; font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .zoom-btn:hover { background: rgba(255,255,255,0.1); }
+
+    /* Agent list */
+    .agent-list { position: fixed; top: 16px; right: 16px; z-index: 10; display: flex; flex-direction: column; gap: 4px; max-height: calc(100vh - 80px); overflow-y: auto; }
+    .agent-card { background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; padding: 8px 12px; color: #e0e0e0; font-size: 12px; cursor: pointer; min-width: 160px; }
+    .agent-card:hover { border-color: rgba(74,222,128,0.3); }
+    .agent-card .name { font-weight: 600; margin-bottom: 2px; }
+    .agent-card .status { color: #9ca3af; font-size: 11px; }
+    .agent-card .status.active { color: #4ade80; }
+  </style>
+</head>
+<body>
+  <canvas id="office-canvas"></canvas>
+
+  <div class="hud">
+    <div class="hud-badge">🏢 SpawnKit Office — <span id="agent-count">0</span> agents</div>
+  </div>
+
+  <div class="zoom-controls">
+    <button class="zoom-btn" onclick="zoomIn()">+</button>
+    <button class="zoom-btn" onclick="zoomOut()">−</button>
+    <button class="zoom-btn" onclick="resetView()" title="Reset view">⌂</button>
+  </div>
+
+  <div class="agent-list" id="agentList"></div>
+
+  <!-- Engine modules (load order matters) -->
+  <script src="types.js"></script>
+  <script src="tile-map.js"></script>
+  <script src="characters.js"></script>
+  <script src="renderer.js"></script>
+  <script src="office-state.js"></script>
+  <script src="game-loop.js"></script>
+  <script src="agent-bridge.js"></script>
+
+  <script>
+  (function () {
+    'use strict';
+    var T = window.OfficeTypes;
+
+    // ── Default office layout ──
+    var DEFAULT_LAYOUT = {
+      version: 1,
+      cols: 20,
+      rows: 14,
+      tiles: (function () {
+        var tiles = [];
+        for (var r = 0; r < 14; r++) {
+          var row = [];
+          for (var c = 0; c < 20; c++) {
+            if (r === 0 || r === 13 || c === 0 || c === 19) row.push(T.TileType.WALL);
+            else row.push(T.TileType.FLOOR);
+          }
+          tiles.push(row);
+        }
+        return tiles;
+      })(),
+      furniture: [
+        // Top row desks
+        { type: 'desk', col: 3, row: 2, width: 2, height: 1 },
+        { type: 'desk', col: 6, row: 2, width: 2, height: 1 },
+        { type: 'desk', col: 9, row: 2, width: 2, height: 1 },
+        { type: 'desk', col: 12, row: 2, width: 2, height: 1 },
+        { type: 'desk', col: 15, row: 2, width: 2, height: 1 },
+        // Bottom row desks
+        { type: 'desk', col: 3, row: 8, width: 2, height: 1 },
+        { type: 'desk', col: 6, row: 8, width: 2, height: 1 },
+        { type: 'desk', col: 9, row: 8, width: 2, height: 1 },
+        { type: 'desk', col: 12, row: 8, width: 2, height: 1 },
+        { type: 'desk', col: 15, row: 8, width: 2, height: 1 },
+        // Decor
+        { type: 'plant', col: 1, row: 1, width: 1, height: 1 },
+        { type: 'plant', col: 18, row: 1, width: 1, height: 1 },
+        { type: 'plant', col: 1, row: 12, width: 1, height: 1 },
+        { type: 'plant', col: 18, row: 12, width: 1, height: 1 },
+        { type: 'bookshelf', col: 1, row: 5, width: 1, height: 2 },
+        { type: 'bookshelf', col: 1, row: 8, width: 1, height: 2 },
+        { type: 'cooler', col: 18, row: 6, width: 1, height: 1 },
+      ],
+      seats: [
+        // Top row seats (facing desks)
+        { id: 'seat-1', col: 3, row: 3, facingDir: T.Direction.UP },
+        { id: 'seat-2', col: 6, row: 3, facingDir: T.Direction.UP },
+        { id: 'seat-3', col: 9, row: 3, facingDir: T.Direction.UP },
+        { id: 'seat-4', col: 12, row: 3, facingDir: T.Direction.UP },
+        { id: 'seat-5', col: 15, row: 3, facingDir: T.Direction.UP },
+        // Bottom row seats
+        { id: 'seat-6', col: 3, row: 9, facingDir: T.Direction.UP },
+        { id: 'seat-7', col: 6, row: 9, facingDir: T.Direction.UP },
+        { id: 'seat-8', col: 9, row: 9, facingDir: T.Direction.UP },
+        { id: 'seat-9', col: 12, row: 9, facingDir: T.Direction.UP },
+        { id: 'seat-10', col: 15, row: 9, facingDir: T.Direction.UP },
+      ]
+    };
+
+    // ── Init ──
+    var canvas = document.getElementById('office-canvas');
+    var state = new OfficeState(DEFAULT_LAYOUT);
+    var bridge = new AgentBridge(state);
+
+    // Canvas resize
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      state.centerCamera(canvas.width, canvas.height);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // ── Camera controls ──
+    var isDragging = false;
+    var dragStart = { x: 0, y: 0 };
+    var cameraStart = { x: 0, y: 0 };
+
+    canvas.addEventListener('mousedown', function (e) {
+      isDragging = true;
+      dragStart.x = e.clientX;
+      dragStart.y = e.clientY;
+      cameraStart.x = state.camera.x;
+      cameraStart.y = state.camera.y;
+    });
+    window.addEventListener('mousemove', function (e) {
+      if (!isDragging) return;
+      state.camera.x = cameraStart.x + (e.clientX - dragStart.x);
+      state.camera.y = cameraStart.y + (e.clientY - dragStart.y);
+    });
+    window.addEventListener('mouseup', function () { isDragging = false; });
+
+    canvas.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      var delta = e.deltaY > 0 ? -0.1 : 0.1;
+      state.camera.zoom = Math.max(0.5, Math.min(5, state.camera.zoom + delta));
+    }, { passive: false });
+
+    window.zoomIn = function () { state.camera.zoom = Math.min(5, state.camera.zoom + 0.25); };
+    window.zoomOut = function () { state.camera.zoom = Math.max(0.5, state.camera.zoom - 0.25); };
+    window.resetView = function () { state.camera.zoom = 2.0; state.centerCamera(canvas.width, canvas.height); };
+
+    // ── Agent list UI ──
+    function updateAgentList() {
+      var list = document.getElementById('agentList');
+      var html = '';
+      state.characters.forEach(function (ch) {
+        var statusClass = ch.isActive ? 'active' : '';
+        var statusText = ch.isActive ? (ch.toolStatus || 'Working...') : 'Idle';
+        html += '<div class="agent-card" onclick="focusAgent(\'' + ch.id + '\')">' +
+          '<div class="name">' + ch.emoji + ' ' + escapeHtml(ch.name) + '</div>' +
+          '<div class="status ' + statusClass + '">' + escapeHtml(statusText) + '</div></div>';
+      });
+      list.innerHTML = html;
+      document.getElementById('agent-count').textContent = state.characters.size;
+    }
+
+    window.focusAgent = function (id) {
+      var ch = state.characters.get(id);
+      if (!ch) return;
+      state.camera.x = canvas.width / 2 - ch.x * state.camera.zoom;
+      state.camera.y = canvas.height / 2 - ch.y * state.camera.zoom;
+    };
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Update agent list every 2 seconds
+    setInterval(updateAgentList, 2000);
+
+    // ── Demo agents (if API not available) ──
+    var demoNames = ['Sycopa', 'Forge', 'Atlas', 'Hunter', 'Echo', 'Sentinel'];
+    var demoEmoji = ['🎭', '🔨', '🗺️', '🎯', '📡', '🛡️'];
+    for (var i = 0; i < 6; i++) {
+      var ch = state.addAgent('demo-' + i, demoNames[i], demoEmoji[i]);
+      ch.isActive = i < 4; // First 4 active, last 2 idle
+      if (ch.isActive) {
+        ch.toolStatus = ['Reading auth.js', 'Running: npm test', 'Searching code', 'Writing index.html'][i] || '';
+      }
+    }
+    updateAgentList();
+
+    // ── Game loop ──
+    GameLoop.start(canvas, {
+      update: function (dt) {
+        state.update(dt);
+      },
+      render: function (ctx) {
+        var cam = state.camera;
+        // Clear
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Render layers
+        Renderer.renderTiles(ctx, state.tileMap, cam.x, cam.y, cam.zoom);
+        Renderer.renderSeats(ctx, state.seats, cam.x, cam.y, cam.zoom);
+        Renderer.renderFurniture(ctx, state.furniture, cam.x, cam.y, cam.zoom);
+        Renderer.renderCharacters(ctx, state.characters, cam.x, cam.y, cam.zoom);
+      }
+    });
+
+    // Start API bridge (will overlay demo agents with real data if available)
+    bridge.start();
+  })();
+  </script>
+</body>
+</html>
