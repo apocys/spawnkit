@@ -237,10 +237,12 @@
 
       // Wrap sendMessage to route to sub-agent or persona
       var origSend = window.ThemeChat._sendMessage;
+      console.log('[Chat-Wire] ThemeChat._sendMessage exists:', !!origSend);
       if (origSend) {
         window.ThemeChat._sendMessage = function(text) {
           var persona = window._chatPersona;
           var sessionKey = window._chatSessionKey; // set when selecting a sub-agent
+          console.log('[Chat-Route] persona:', persona, '| sessionKey:', sessionKey, '| text:', text.substring(0, 40));
 
           // If targeting a sub-agent session, send directly to that session
           if (sessionKey && sessionKey !== 'agent:main:main') {

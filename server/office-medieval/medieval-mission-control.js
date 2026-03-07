@@ -474,6 +474,37 @@
         }
     });
 
+    // Chat button — open chat with the selected agent
+    var chatBtn = document.getElementById('agentChatBtn');
+    if (chatBtn) {
+        chatBtn.addEventListener('click', function() {
+            var agentId = document.getElementById('agentDetailName').textContent;
+            if (!agentId) return;
+            closeAgentDetail();
+            // Set persona and open chat
+            window._chatPersona = agentId;
+            window._chatSessionKey = null;
+            // Check if this agent has a sub-agent session
+            var app = window.castleApp;
+            if (app && app.characterModels) {
+                var charData = app.characterModels.get(agentId);
+                if (charData && charData.sessionKey) {
+                    window._chatSessionKey = charData.sessionKey;
+                }
+            }
+            // Open chat panel
+            if (window.ThemeChat) {
+                window.ThemeChat.show();
+                var chatContainer = document.querySelector('.sk-chat-panel');
+                if (chatContainer) chatContainer.style.display = 'flex';
+                var headerLabel = chatContainer ? chatContainer.querySelector('span') : null;
+                if (headerLabel) headerLabel.textContent = '💬 Speaking to ' + agentId;
+                var input = chatContainer ? chatContainer.querySelector('input') : null;
+                if (input) { input.placeholder = 'Speak to ' + agentId + '...'; input.disabled = false; input.focus(); }
+            }
+        });
+    }
+
     // Decommission button
     var decommBtn = document.getElementById('agentDecommissionBtn');
     if (decommBtn) {
