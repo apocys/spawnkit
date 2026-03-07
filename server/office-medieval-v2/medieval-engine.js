@@ -102,7 +102,8 @@
       getZoneAt: window.MedMap.getZoneAt,
       getZoneCenter: window.MedMap.getZoneCenter,
       _dayNightState: { progress: 0, timeOfDay: 'morning' },
-      toggleEditMode: function () { /* stub for hotbar */ }
+      toggleEditMode: function () { /* stub for hotbar */ },
+      _2dCamera: camera
     };
 
     // Start data polling
