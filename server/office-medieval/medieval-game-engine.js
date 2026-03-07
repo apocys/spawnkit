@@ -142,10 +142,12 @@
       }
     });
 
-    // Apply to each agent
+    // Apply to each agent — if no session found, force idle
     coreAgents.forEach(function (agentId) {
       var sessionData = agentSessions[agentId];
       var newAction = sessionData ? sessionData.action : 'idle';
+      // If action was inferred as 'idle' from keyword but session is active, use 'working'
+      if (sessionData && newAction === 'idle' && sessionData.action !== 'idle') newAction = 'working';
       var config = ACTION_CONFIG[newAction] || ACTION_CONFIG.idle;
       var current = agentActions.get(agentId);
 
@@ -330,11 +332,11 @@
     if (!bar) {
       bar = document.createElement('div');
       bar.id = 'game-engine-status';
-      bar.style.cssText = 'position:fixed;top:60px;right:12px;z-index:150;' +
-        'background:rgba(26,26,46,0.9);border:1px solid rgba(201,169,89,0.4);' +
+      bar.style.cssText = 'position:fixed;top:52px;right:12px;z-index:150;' +
+        'background:rgba(26,26,46,0.92);border:1px solid rgba(201,169,89,0.4);' +
         'border-radius:8px;padding:8px 12px;font-family:Crimson Text,serif;' +
         'color:#f4e4bc;font-size:11px;max-width:220px;backdrop-filter:blur(8px);' +
-        'box-shadow:0 2px 12px rgba(0,0,0,0.3);';
+        'box-shadow:0 2px 12px rgba(0,0,0,0.3);pointer-events:none;';
       document.body.appendChild(bar);
     }
 
@@ -358,7 +360,8 @@
         '⚔️ Active Quests (' + lines.length + ')</div>' + lines.join('');
       bar.style.display = 'block';
     } else {
-      bar.innerHTML = '<div style="color:#64748b;font-style:italic;">🏰 Castle is quiet...</div>';
+      // Hide completely when no active quests
+      bar.style.display = 'none';
     }
   }
 

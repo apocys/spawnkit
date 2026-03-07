@@ -370,8 +370,9 @@
         var sessions = data.sessions || data || [];
 
         // Update header with real agent count
+        var coreAgents = ['sycopa', 'forge', 'atlas', 'hunter', 'echo', 'sentinel'];
         var activeCount = 0;
-        app.characterModels.forEach(function() { activeCount++; });
+        coreAgents.forEach(function(id) { if (app.characterModels.has(id)) activeCount++; });
         var subActive = sessions.filter(function(s) { return s.kind === 'subagent' && s.status === 'active'; }).length;
         var headerEl = document.getElementById('active-agents');
         if (headerEl) headerEl.textContent = activeCount + ' Knights Active' + (subActive ? ' + ' + subActive + ' Questing' : '');
