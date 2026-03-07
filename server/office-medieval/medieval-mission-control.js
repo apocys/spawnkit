@@ -473,6 +473,36 @@
             closeAgentDetail();
         }
     });
+
+    // Decommission button
+    var decommBtn = document.getElementById('agentDecommissionBtn');
+    if (decommBtn) {
+        decommBtn.addEventListener('click', function() {
+            var agentId = document.getElementById('agentDetailName').textContent;
+            if (!agentId) return;
+
+            // Confirmation — medieval style
+            var confirmed = confirm('💀 Decommission ' + agentId + '?\n\nThis knight will walk to the graveyard and leave the realm.');
+            if (!confirmed) return;
+
+            closeAgentDetail();
+
+            // Trigger the full decommission animation
+            if (window.MedievalLifecycle && window.MedievalLifecycle.decommissionAgent) {
+                window.MedievalLifecycle.decommissionAgent(agentId);
+            } else {
+                // Fallback: just remove from scene
+                var app = window.castleApp;
+                if (app && app.characterModels.has(agentId)) {
+                    var charData = app.characterModels.get(agentId);
+                    if (charData.group) app.scene.remove(charData.group);
+                    app.characterModels.delete(agentId);
+                    var label = app.labelElements && app.labelElements.get(agentId);
+                    if (label) { label.remove(); app.labelElements.delete(agentId); }
+                }
+            }
+        });
+    }
 })();
 
 // ═══════════════════════════════════════════════════════════════
