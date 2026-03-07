@@ -1086,6 +1086,7 @@ ${customBlock}`;
     const body = await readBody(req);
     const message = body?.message;
     const targetSession = body?.sessionKey; // Optional: route to sub-agent session
+    console.log('[chat-route] message:', (message||'').substring(0, 80), '| sessionKey:', targetSession || 'none');
     if (!message || typeof message !== 'string') {
       res.writeHead(400);
       res.end(JSON.stringify({ error: 'Missing message field' }));
@@ -1119,9 +1120,12 @@ ${customBlock}`;
       // Detect persona prefix: [Speaking to Hunter] message
       let agentMessage = message;
       const personaMatch = message.match(/^\[Speaking to (\w+)\]\s*(.*)/s);
+      console.log('[chat-route] persona match:', personaMatch ? personaMatch[1] : 'none', '| raw message start:', message.substring(0, 60));
       
       if (personaMatch) {
-        // PERSONA CHAT — standalone completion, NOT routed through Sycopa's session
+        // PERSONA CHAT — direct to LLM provider, bypassing OpenClaw gateway entirely
+        // The gateway creates sessions with SOUL.md that override our system prompt.
+        // CLIProxyAPI (port 8317) gives us clean, stateless completions.
         const personaName = personaMatch[1];
         const userText = personaMatch[2];
         const personaPath = path.join(__dirname, 'office-medieval', 'personalities', personaName.toLowerCase() + '.md');
@@ -1131,61 +1135,63 @@ ${customBlock}`;
             personaCtx = fs.readFileSync(personaPath, 'utf8');
           }
         } catch(e) {}
-        
-        const systemPrompt = personaCtx 
-          ? `You are ${personaName}, a knight in a medieval castle. Respond FULLY IN CHARACTER. Use the personality, speech style, and temperament described below. Do NOT break character, do NOT mention being an AI or Sycopa. Stay brief (2-4 sentences) and medieval-flavored.\n\n${personaCtx}`
-          : `You are ${personaName}, a knight in a medieval castle. Respond in character — brief, medieval-flavored, 2-4 sentences. Do NOT break character or mention being an AI.`;
 
-        // Use OpenAI-compatible endpoint directly (not openclaw:main which routes to Sycopa's session)
-        const resp = await fetch(OC_GATEWAY + '/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + OC_TOKEN,
-          },
-          body: JSON.stringify({
-            model: 'openclaw:ephemeral',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userText },
-            ],
-            stream: false,
-          }),
-        });
-        if (!resp.ok) {
-          // Fallback: route through main if ephemeral model not available
-          const resp2 = await fetch(OC_GATEWAY + '/v1/chat/completions', {
+        // Fallback role descriptions if no personality file
+        const KNIGHT_ROLES = {
+          sycopa: 'the Lord Commander, digital alter ego of the castle lord. Cool, direct, action-oriented.',
+          forge: 'the Master Builder, responsible for code and infrastructure. Gruff, practical, proud of craftsmanship.',
+          atlas: 'the Navigator, handles research and analysis. Scholarly, curious, loves maps and knowledge.',
+          hunter: 'the Scout, market intelligence and opportunities. Sharp-eyed, competitive, always tracking prey.',
+          echo: 'the Communicator, handles channels and messaging. Swift, reliable, carries every word faithfully.',
+          sentinel: 'the Guardian, security and quality assurance. Vigilant, stern, trusts nothing without verification.',
+        };
+        const roleDesc = KNIGHT_ROLES[personaName.toLowerCase()] || 'a loyal knight of the castle';
+
+        const systemPrompt = personaCtx 
+          ? `You are ${personaName}, a knight in a medieval castle. Respond FULLY IN CHARACTER using the personality below. Stay brief (2-4 sentences), medieval-flavored. Never break character, never mention AI.\n\n${personaCtx}`
+          : `You are ${personaName}, ${roleDesc}. You serve in a medieval castle. Respond in character — brief (2-4 sentences), medieval-flavored. Never break character, never mention being an AI. Use thy/thee/ye sparingly for flavor.`;
+
+        console.log('[chat-persona] Direct LLM call for', personaName, '| has personality file:', !!personaCtx);
+
+        try {
+          // Direct call to CLIProxyAPI — clean stateless completion
+          const LLM_URL = process.env.LLM_PROXY_URL || 'http://127.0.0.1:8317';
+          const LLM_MODEL = process.env.LLM_PERSONA_MODEL || 'claude-sonnet-4-6';
+          
+          const resp = await fetch(LLM_URL + '/v1/chat/completions', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + OC_TOKEN,
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: 'openclaw:main',
+              model: LLM_MODEL,
               messages: [
-                { role: 'user', content: `[IMPORTANT: Respond ONLY as ${personaName}, not as Sycopa. Stay in character. Brief, medieval-flavored, 2-4 sentences.]\n\n${userText}` },
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userText },
               ],
               stream: false,
+              max_tokens: 300,
             }),
           });
-          if (!resp2.ok) {
-            const errText = await resp2.text();
-            console.error('[chat] Persona fallback error:', resp2.status, errText);
+          
+          if (!resp.ok) {
+            const errText = await resp.text();
+            console.error('[chat-persona] LLM error:', resp.status, errText.substring(0, 200));
             res.writeHead(502);
-            res.end(JSON.stringify({ error: 'Gateway error', status: resp2.status }));
+            res.end(JSON.stringify({ error: 'LLM provider error', status: resp.status }));
             return;
           }
-          const data2 = await resp2.json();
-          const reply2 = data2?.choices?.[0]?.message?.content || '(No response)';
+          
+          const data = await resp.json();
+          const reply = data?.choices?.[0]?.message?.content || '(The knight remains silent...)';
+          console.log('[chat-persona]', personaName, 'replied:', reply.substring(0, 60));
           res.writeHead(200);
-          res.end(JSON.stringify({ ok: true, reply: reply2, persona: personaName }));
+          res.end(JSON.stringify({ ok: true, reply, persona: personaName }));
+          return;
+        } catch (e) {
+          console.error('[chat-persona] Direct LLM failed:', e.message);
+          res.writeHead(502);
+          res.end(JSON.stringify({ error: 'LLM connection failed', details: e.message }));
           return;
         }
-        const data = await resp.json();
-        const reply = data?.choices?.[0]?.message?.content || '(No response)';
-        res.writeHead(200);
-        res.end(JSON.stringify({ ok: true, reply, persona: personaName }));
-        return;
       }
 
       // DEFAULT: No persona — send to main session (Sycopa)
