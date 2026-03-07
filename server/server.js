@@ -1119,10 +1119,11 @@ ${customBlock}`;
       // Detect persona prefix: [Speaking to Hunter] message
       let agentMessage = message;
       const personaMatch = message.match(/^\[Speaking to (\w+)\]\s*(.*)/s);
+      
       if (personaMatch) {
+        // PERSONA CHAT — standalone completion, NOT routed through Sycopa's session
         const personaName = personaMatch[1];
         const userText = personaMatch[2];
-        // Load persona file if it exists
         const personaPath = path.join(__dirname, 'office-medieval', 'personalities', personaName.toLowerCase() + '.md');
         let personaCtx = '';
         try {
@@ -1130,13 +1131,64 @@ ${customBlock}`;
             personaCtx = fs.readFileSync(personaPath, 'utf8');
           }
         } catch(e) {}
-        if (personaCtx) {
-          agentMessage = `The user is speaking to ${personaName} in the medieval castle UI. Respond FULLY IN CHARACTER as ${personaName}. Use their personality, speech style, and temperament. Do NOT break character or mention being Sycopa/an AI. Stay brief and medieval-flavored.\n\nPersona:\n${personaCtx}\n\nUser says: ${userText}`;
-        } else {
-          agentMessage = `The user is speaking to ${personaName} in the medieval castle UI. Respond in character as ${personaName}, a knight of the castle. Stay brief and medieval-flavored.\n\nUser says: ${userText}`;
+        
+        const systemPrompt = personaCtx 
+          ? `You are ${personaName}, a knight in a medieval castle. Respond FULLY IN CHARACTER. Use the personality, speech style, and temperament described below. Do NOT break character, do NOT mention being an AI or Sycopa. Stay brief (2-4 sentences) and medieval-flavored.\n\n${personaCtx}`
+          : `You are ${personaName}, a knight in a medieval castle. Respond in character — brief, medieval-flavored, 2-4 sentences. Do NOT break character or mention being an AI.`;
+
+        // Use OpenAI-compatible endpoint directly (not openclaw:main which routes to Sycopa's session)
+        const resp = await fetch(OC_GATEWAY + '/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + OC_TOKEN,
+          },
+          body: JSON.stringify({
+            model: 'openclaw:ephemeral',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userText },
+            ],
+            stream: false,
+          }),
+        });
+        if (!resp.ok) {
+          // Fallback: route through main if ephemeral model not available
+          const resp2 = await fetch(OC_GATEWAY + '/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + OC_TOKEN,
+            },
+            body: JSON.stringify({
+              model: 'openclaw:main',
+              messages: [
+                { role: 'user', content: `[IMPORTANT: Respond ONLY as ${personaName}, not as Sycopa. Stay in character. Brief, medieval-flavored, 2-4 sentences.]\n\n${userText}` },
+              ],
+              stream: false,
+            }),
+          });
+          if (!resp2.ok) {
+            const errText = await resp2.text();
+            console.error('[chat] Persona fallback error:', resp2.status, errText);
+            res.writeHead(502);
+            res.end(JSON.stringify({ error: 'Gateway error', status: resp2.status }));
+            return;
+          }
+          const data2 = await resp2.json();
+          const reply2 = data2?.choices?.[0]?.message?.content || '(No response)';
+          res.writeHead(200);
+          res.end(JSON.stringify({ ok: true, reply: reply2, persona: personaName }));
+          return;
         }
+        const data = await resp.json();
+        const reply = data?.choices?.[0]?.message?.content || '(No response)';
+        res.writeHead(200);
+        res.end(JSON.stringify({ ok: true, reply, persona: personaName }));
+        return;
       }
 
+      // DEFAULT: No persona — send to main session (Sycopa)
       const resp = await fetch(OC_GATEWAY + '/v1/chat/completions', {
         method: 'POST',
         headers: {

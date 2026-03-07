@@ -247,7 +247,6 @@
             if (!text.trim()) return;
             var input = chatContainer.querySelector('input');
             if (input) { input.value = ''; input.focus(); }
-            // Show user message
             window.ThemeChat._appendMsg && window.ThemeChat._appendMsg({ role: 'user', content: text, timestamp: Date.now() });
             window.ThemeAuth.fetch(window.ThemeAuth.getApiUrl() + '/api/oc/chat', {
               method: 'POST',
@@ -255,7 +254,7 @@
               body: JSON.stringify({ message: text, sessionKey: sessionKey })
             }).then(function(resp) {
               if (resp.ok) return resp.json().then(function(data) {
-                if (data.reply) window.ThemeChat._appendMsg && window.ThemeChat._appendMsg({ role: 'assistant', content: data.reply, timestamp: Date.now() });
+                if (data.reply) window.ThemeChat._appendMsg && window.ThemeChat._appendMsg({ role: 'assistant', content: data.reply, timestamp: Date.now(), label: '⚔️ ' + (persona || 'Knight') });
               });
             }).catch(function() {
               window.ThemeChat._appendMsg && window.ThemeChat._appendMsg({ role: 'assistant', content: '(Connection lost)', timestamp: Date.now() });
@@ -263,9 +262,27 @@
             return;
           }
 
-          if (persona && persona !== 'ApoMac' && persona !== 'ceo') {
-            text = '[Speaking to ' + persona + '] ' + text;
+          // Core agent persona chat — route with persona prefix, get response labeled as the agent
+          if (persona && persona !== 'ApoMac' && persona !== 'ceo' && persona !== 'sycopa') {
+            if (!text.trim()) return;
+            var input = chatContainer.querySelector('input');
+            if (input) { input.value = ''; input.focus(); }
+            window.ThemeChat._appendMsg && window.ThemeChat._appendMsg({ role: 'user', content: text, timestamp: Date.now() });
+            window.ThemeAuth.fetch(window.ThemeAuth.getApiUrl() + '/api/oc/chat', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: '[Speaking to ' + persona + '] ' + text })
+            }).then(function(resp) {
+              if (resp.ok) return resp.json().then(function(data) {
+                if (data.reply) window.ThemeChat._appendMsg && window.ThemeChat._appendMsg({ role: 'assistant', content: data.reply, timestamp: Date.now(), label: '⚔️ ' + persona });
+              });
+            }).catch(function() {
+              window.ThemeChat._appendMsg && window.ThemeChat._appendMsg({ role: 'assistant', content: '(Connection lost)', timestamp: Date.now() });
+            });
+            return;
           }
+
+          // Default: send to Sycopa (main session)
           origSend(text);
         };
       }
