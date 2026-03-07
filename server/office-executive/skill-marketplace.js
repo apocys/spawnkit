@@ -1,13 +1,13 @@
 (function() {
   var CATEGORIES = {
     'messaging':   { emoji: '💬', label: 'Messaging',    keywords: ['message','chat','discord','slack','telegram','whatsapp','imsg','imessage','bluebubble','wacli'] },
-    'productivity':{ emoji: '📋', label: 'Productivity', keywords: ['note','remind','things','trello','notion','obsidian','todo','task'] },
-    'media':       { emoji: '🎨', label: 'Media',        keywords: ['image','video','audio','tts','speech','whisper','gif','pdf','song','spotify','banana'] },
+    'productivity':{ emoji: '📋', label: 'Productivity', keywords: ['note','remind','things','trello','notion','obsidian','todo','task','meeting','travel','planner','strategy','consultant'] },
+    'media':       { emoji: '🎨', label: 'Media',        keywords: ['image','video','audio','tts','speech','whisper','gif','pdf','song','spotify','banana','podcast','blog-to-podcast'] },
     'development': { emoji: '💻', label: 'Development',  keywords: ['code','github','coding','build','large-build','skill-creator'] },
     'smart-home':  { emoji: '🏠', label: 'Smart Home',   keywords: ['hue','sonos','eight','camera','cam'] },
-    'data':        { emoji: '📊', label: 'Data & Search',keywords: ['search','weather','places','blog','summarize','oracle','gemini','model-usage','session'] },
+    'data':        { emoji: '📊', label: 'Data & Search',keywords: ['search','weather','places','blog','summarize','oracle','gemini','model-usage','session','research','deep-research','investment','analyst','due-diligence','journalist'] },
     'security':    { emoji: '🔒', label: 'Security',     keywords: ['health','password','1password','security'] },
-    'automation':  { emoji: '⚡', label: 'Automation',   keywords: ['cron','tmux','food','order','mcp','voice-call'] },
+    'automation':  { emoji: '⚡', label: 'Automation',   keywords: ['cron','tmux','food','order','mcp','voice-call','scraper','web-scraper','extract'] },
     'email':       { emoji: '📧', label: 'Email',        keywords: ['mail','gmail','himalaya','gog'] }
   };
   var OTHER_CAT = { emoji: '📦', label: 'Other' };
