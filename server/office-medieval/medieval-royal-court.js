@@ -2,6 +2,9 @@
   'use strict';
 
   var STORAGE_KEY = 'medieval-court-seen';
+
+  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
   var CONFIG_KEY = 'spawnkit-config';
 
   var KNIGHTS = [
@@ -99,7 +102,7 @@
     var userName = getUserName();
     var tod = getTimeOfDay();
     var greeting = el('div', { id: 'rc-greeting' });
-    greeting.innerHTML = '<h1>⚜ Welcome to the Kingdom, ' + userName + ' ⚜</h1><p>' + (TIME_SUBTEXTS[tod] || TIME_SUBTEXTS.morning) + '</p>';
+    greeting.innerHTML = '<h1>⚜ Welcome to the Kingdom, ' + esc(userName) + ' ⚜</h1><p>' + (TIME_SUBTEXTS[tod] || TIME_SUBTEXTS.morning) + '</p>';
     content.appendChild(greeting);
 
     var divider = el('div', { className: 'rc-divider' });
