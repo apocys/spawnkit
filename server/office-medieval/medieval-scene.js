@@ -1457,7 +1457,7 @@ class MedievalCastle3D {
             });
             
             // Update sidebar
-            this.refreshSidebar();
+            // refreshSidebar removed — sidebar updates handled by data-bridge polling
         } catch(e) {
             console.warn('[Medieval] Failed to sync agent status:', e);
         }

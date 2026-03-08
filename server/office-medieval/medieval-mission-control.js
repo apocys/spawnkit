@@ -551,15 +551,19 @@
     // Polling function for Medieval theme
     async function pollMedievalAgentState() {
         try {
+            if (typeof ThemeAuth === 'undefined' || !ThemeAuth.fetch) return;
             const [sessionsResp, memoryResp, chatResp] = await Promise.allSettled([
                 ThemeAuth.fetch(API_URL + '/api/oc/sessions'),
                 ThemeAuth.fetch(API_URL + '/api/oc/memory'),
                 ThemeAuth.fetch(API_URL + '/api/oc/chat')
             ]);
             
-            const sessions = sessionsResp.status === 'fulfilled' && sessionsResp.value.ok ? await sessionsResp.value.json() : [];
-            const memory = memoryResp.status === 'fulfilled' && memoryResp.value.ok ? await memoryResp.value.json() : {};
-            const chat = chatResp.status === 'fulfilled' && chatResp.value.ok ? await chatResp.value.json() : [];
+            var sessions = [];
+            var memory = {};
+            var chat = [];
+            try { if (sessionsResp.status === 'fulfilled' && sessionsResp.value.ok) sessions = await sessionsResp.value.json(); } catch(_) {}
+            try { if (memoryResp.status === 'fulfilled' && memoryResp.value.ok) memory = await memoryResp.value.json(); } catch(_) {}
+            try { if (chatResp.status === 'fulfilled' && chatResp.value.ok) chat = await chatResp.value.json(); } catch(_) {}
             
             processMedievalStateChanges(sessions, memory, chat);
         } catch (error) {

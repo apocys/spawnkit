@@ -112,7 +112,10 @@ function initWeather(app) {
 
     async function fetchWeather() {
         try {
-            const resp = await fetch('https://wttr.in/Annecy?format=j1');
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
+            const resp = await fetch('https://wttr.in/Annecy?format=j1', { signal: controller.signal });
+            clearTimeout(timeout);
             const data = await resp.json();
             const code = parseInt(data.current_condition[0].weatherCode);
             if (RAIN_CODES.includes(code)) currentWeather = 'rain';
