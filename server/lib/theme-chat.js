@@ -160,8 +160,8 @@ window.ThemeChat = {
     function startPoll() { if (!pollTimer) pollTimer = setInterval(poll, options.pollInterval); }
     function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 
-    input.addEventListener('keydown', function(e) { if (e.key === 'Enter') sendMessage(input.value); });
-    btn.addEventListener('click', function() { sendMessage(input.value); });
+    input.addEventListener('keydown', function(e) { if (e.key === 'Enter') self._sendMessage(input.value); });
+    btn.addEventListener('click', function() { self._sendMessage(input.value); });
 
     poll();
     startPoll();
