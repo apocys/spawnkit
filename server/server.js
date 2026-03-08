@@ -496,6 +496,30 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ─── Deploy Assets (static files for cloud-init) ────────────────────
+  if (req.url.startsWith('/api/deploy/assets/') && req.method === 'GET') {
+    const assetName = req.url.replace('/api/deploy/assets/', '').split('?')[0];
+    const ASSETS_DIR = require('path').join(process.env.HOME || '/home/apocyz_runner', 'managed-deploy');
+    const assetPath = require('path').join(ASSETS_DIR, assetName);
+    // Security: only serve files directly in ASSETS_DIR (no path traversal)
+    if (!assetPath.startsWith(ASSETS_DIR) || assetName.includes('..') || assetName.includes('/')) {
+      res.writeHead(403, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({error:'forbidden'}));
+      return;
+    }
+    try {
+      const data = require('fs').readFileSync(assetPath);
+      const ext = require('path').extname(assetName);
+      const mime = {'.js':'application/javascript','.json':'application/json','.gz':'application/gzip','.tar':'application/x-tar','.sh':'text/x-shellscript'}[ext] || 'application/octet-stream';
+      res.writeHead(200, {'Content-Type': mime, 'Content-Length': data.length, 'Cache-Control': 'public, max-age=300'});
+      res.end(data);
+    } catch(e) {
+      res.writeHead(404, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({error:'Asset not found: ' + assetName}));
+    }
+    return;
+  }
+
   // ─── Deploy Provisioning Proxy (routes to provisioning API on :3456) ────
   if (req.url.startsWith('/api/deploy/') && (req.method === 'POST' || req.method === 'GET')) {
     // Auth: require Bearer token OR same-origin (dashboard UI)
