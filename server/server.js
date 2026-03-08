@@ -1750,10 +1750,15 @@ ${customBlock}`;
     res.setHeader('Content-Type', 'application/json');
     const route = req.url.replace(/\?.*/, '');
     // Auth check: all /api/oc/ routes except health require a valid token
+    // Same-origin requests (from the dashboard UI served by this server) bypass auth
     const publicRoutes = ['/api/oc/health'];
     if (!publicRoutes.includes(route)) {
       const authHeader = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
-      if (OC_TOKEN && authHeader !== OC_TOKEN) {
+      const origin = req.headers.origin || '';
+      const referer = req.headers.referer || '';
+      const selfHosts = ['app.spawnkit.ai', 'localhost:' + PORT, '127.0.0.1:' + PORT];
+      const isSameOrigin = selfHosts.some(h => origin.includes(h) || referer.includes(h));
+      if (OC_TOKEN && authHeader !== OC_TOKEN && !isSameOrigin) {
         res.writeHead(401); res.end(JSON.stringify({error:'unauthorized'})); return;
       }
     }
