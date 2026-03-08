@@ -1,0 +1,309 @@
+/*
+ * responsive.css — SpawnKit Shared Responsive Styles
+ * Covers: Medieval + Executive themes
+ * Breakpoints: 768px (tablet), 480px (phone)
+ * Rules: @media only, no JS, minimal !important usage
+ */
+
+/* ============================================================
+   GLOBAL MOBILE RULES
+   ============================================================ */
+
+@media (max-width: 768px) {
+    /* Touch targets — minimum 44×44px per Apple HIG */
+    button,
+    .bp-btn,
+    .md-agent,
+    .rc-quest-tile,
+    .agent-action-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Prevent iOS zoom on input focus */
+    input,
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
+
+    /* Smooth momentum scrolling on iOS */
+    * {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+
+/* ============================================================
+   MEDIEVAL THEME
+   ============================================================ */
+
+/* --- Hotbar (#roblox-hotbar) --- */
+
+@media (max-width: 768px) {
+    #roblox-hotbar {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        justify-content: flex-start;
+        padding: 0 8px;
+        scrollbar-width: none;
+    }
+
+    #roblox-hotbar::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    #roblox-hotbar {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #roblox-hotbar .hotbar-slot {
+        min-width: 44px;
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
+    }
+
+    #roblox-hotbar .hotbar-slot .slot-label {
+        display: none;
+    }
+}
+
+
+/* --- Building Panel (.building-panel) --- */
+
+@media (max-width: 768px) {
+    .building-panel {
+        position: fixed;
+        width: 100%;
+        max-width: 100%;
+        bottom: 0;
+        top: auto;
+        right: 0;
+        left: 0;
+        height: 70vh;
+        border-radius: 16px 16px 0 0;
+        overflow-y: auto;
+        z-index: 900;
+    }
+}
+
+
+/* --- Mission Control Overlay (.mc-overlay) --- */
+
+@media (max-width: 768px) {
+    .mc-overlay .mc-body {
+        flex-direction: column;
+    }
+
+    .mc-overlay .mc-col {
+        width: 100%;
+        max-height: 40vh;
+        overflow-y: auto;
+    }
+}
+
+
+/* --- Medieval Chat (#medievalChat) --- */
+
+@media (max-width: 768px) {
+    #medievalChat {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-height: 60vh;
+        border-radius: 16px 16px 0 0;
+        top: auto;
+        z-index: 850;
+    }
+}
+
+
+/* --- Persona Card (#persona-card-overlay .pc-card) --- */
+
+@media (max-width: 768px) {
+    #persona-card-overlay .pc-card {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0;
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        height: 100%;
+    }
+}
+
+
+/* --- Royal Court (#royal-court-overlay) --- */
+
+@media (max-width: 768px) {
+    .rc-content {
+        padding: 16px;
+    }
+
+    #rc-knight-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    #rc-knight-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    #rc-quest-grid {
+        flex-direction: column;
+    }
+}
+
+
+/* ============================================================
+   EXECUTIVE THEME
+   ============================================================ */
+
+/* --- Mission Desk Agent Grid (.md-agent-grid, .md-team-grid) --- */
+
+@media (max-width: 768px) {
+    .md-agent-grid,
+    .md-team-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .md-agent-grid,
+    .md-team-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* --- MC Layout (.mc-layout) --- */
+
+@media (max-width: 768px) {
+    .mc-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .mc-layout > * {
+        width: 100%;
+    }
+}
+
+
+/* --- Orchestration Panel (.orch-panel, #orchestrationOverlay) --- */
+
+@media (max-width: 768px) {
+    .orch-panel,
+    #orchestrationOverlay {
+        width: 100%;
+        max-width: 100%;
+        height: 100vh;
+        border-radius: 0;
+        margin: 0;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+}
+
+
+/* --- Deploy Wizard (.dw-overlay) --- */
+
+@media (max-width: 768px) {
+    .dw-overlay {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        border-radius: 0;
+        max-height: 100vh;
+        overflow-y: auto;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+}
+
+
+/* --- Mission Desk Chat Bar (.md-chat-bar, .md-input-row) --- */
+
+@media (max-width: 768px) {
+    .md-chat-bar,
+    .md-input-row {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 8px;
+        z-index: 800;
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+
+/* ============================================================
+   SHARED UTILITY OVERRIDES (tablet + phone)
+   ============================================================ */
+
+/* Hide decorative sidebars on small screens */
+@media (max-width: 768px) {
+    .sidebar-decorative,
+    .panel-ornament {
+        display: none;
+    }
+}
+
+/* Overlay backdrops: full viewport on mobile */
+@media (max-width: 768px) {
+    .overlay-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 700;
+    }
+}
+
+/* Scrollable modal bodies on small screens */
+@media (max-width: 768px) {
+    .modal-body,
+    .panel-body,
+    .mc-body {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Ensure fixed-bottom panels clear the safe area on notched phones */
+@media (max-width: 480px) {
+    .building-panel,
+    #medievalChat,
+    .md-chat-bar,
+    .md-input-row {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+}
