@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var STORAGE_KEY = 'medieval-court-seen';
+  var STORAGE_KEY = 'medieval-court-seen-v2';
 
   function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
@@ -188,10 +188,21 @@
 
   injectStyles();
   if (window.RoyalCourt.isFirstVisit()) {
+    // Wait for auth to complete before showing (auth overlay is z-index:9999, we're 9998)
+    function showAfterAuth() {
+      if (window.ThemeAuth && typeof window.ThemeAuth.onAuth === 'function') {
+        window.ThemeAuth.onAuth(function () {
+          setTimeout(function () { window.RoyalCourt.show(); }, 600);
+        });
+      } else {
+        // No auth module — show after short delay
+        setTimeout(function () { window.RoyalCourt.show(); }, 1000);
+      }
+    }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function () { window.RoyalCourt.show(); });
+      document.addEventListener('DOMContentLoaded', showAfterAuth);
     } else {
-      window.RoyalCourt.show();
+      showAfterAuth();
     }
   }
 

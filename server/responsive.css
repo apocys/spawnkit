@@ -307,3 +307,54 @@
         padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 }
+
+/* ── Royal Court Mobile Fixes ──────────────────────────────── */
+@media (max-width: 768px) {
+    #royal-court-overlay {
+        align-items: flex-end;
+    }
+
+    .rc-content {
+        width: 100vw !important;
+        max-height: 85vh;
+        border-radius: 16px 16px 0 0;
+        padding: 20px 16px;
+        margin: 0;
+    }
+
+    #rc-greeting h1 {
+        font-size: 20px !important;
+    }
+
+    .rc-bottom-row {
+        grid-template-columns: 1fr !important;
+        gap: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .rc-content {
+        max-height: 80vh;
+        padding: 16px 12px;
+    }
+
+    #rc-knight-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .rc-knight-avatar {
+        font-size: 24px !important;
+    }
+
+    .rc-knight-title {
+        font-size: 12px !important;
+    }
+
+    #rc-greeting h1 {
+        font-size: 18px !important;
+    }
+
+    #rc-greeting p {
+        font-size: 12px !important;
+    }
+}
