@@ -11,14 +11,57 @@
 
   /* ── Config ─────────────────────────────────────────────────────── */
 
-  var AGENTS = [
-    { id: 'ceo',      name: 'ApoMac',   role: 'CEO', avatar: '#avatar-ceo',      status: 'active', color: '#007AFF' },
-    { id: 'atlas',    name: 'Atlas',    role: 'COO', avatar: '#avatar-atlas',    status: 'idle',   color: '#BF5AF2' },
-    { id: 'forge',    name: 'Forge',    role: 'CTO', avatar: '#avatar-forge',    status: 'idle',   color: '#FF9F0A' },
-    { id: 'hunter',   name: 'Hunter',   role: 'CRO', avatar: '#avatar-hunter',   status: 'idle',   color: '#FF453A' },
-    { id: 'echo',     name: 'Echo',     role: 'CMO', avatar: '#avatar-echo',     status: 'idle',   color: '#0A84FF' },
-    { id: 'sentinel', name: 'Sentinel', role: 'QA',  avatar: '#avatar-sentinel', status: 'idle',   color: '#30D158' }
+  // BUG-007 FIX: Only CEO (main agent) is shown by default.
+  // Other agents are loaded dynamically from API/OcStore sessions.
+  // Template agents are shown only in demo mode.
+  var AGENTS_TEMPLATES = [
+    { id: 'ceo',      name: 'ApoMac',   role: 'CEO', avatar: '#avatar-ceo',      status: 'active', color: '#007AFF', real: true },
+    { id: 'atlas',    name: 'Atlas',    role: 'COO', avatar: '#avatar-atlas',    status: 'idle',   color: '#BF5AF2', real: false },
+    { id: 'forge',    name: 'Forge',    role: 'CTO', avatar: '#avatar-forge',    status: 'idle',   color: '#FF9F0A', real: false },
+    { id: 'hunter',   name: 'Hunter',   role: 'CRO', avatar: '#avatar-hunter',   status: 'idle',   color: '#FF453A', real: false },
+    { id: 'echo',     name: 'Echo',     role: 'CMO', avatar: '#avatar-echo',     status: 'idle',   color: '#0A84FF', real: false },
+    { id: 'sentinel', name: 'Sentinel', role: 'QA',  avatar: '#avatar-sentinel', status: 'idle',   color: '#30D158', real: false }
   ];
+
+  // Connected mode: only show main agent + real sub-agents from API
+  // Demo mode: show all templates
+  var _isConnected = false;
+  var _realAgentSessions = [];
+
+  function getAgentList() {
+    if (!_isConnected && !window.__skDemoMode) {
+      // Not connected yet — show only CEO with "connect to see your team" hint
+      return [AGENTS_TEMPLATES[0]];
+    }
+    if (window.__skDemoMode || !_isConnected) {
+      // Demo mode — show all templates
+      return AGENTS_TEMPLATES;
+    }
+    // Connected mode — show CEO + real sub-agents from sessions
+    var agents = [AGENTS_TEMPLATES[0]]; // Always include CEO
+    _realAgentSessions.forEach(function(s) {
+      var name = s.label || s.displayName || s.key || 'Agent';
+      name = name.replace(/^agent:main:/, '').replace(/^subagent:/, '');
+      // Deduplicate: don't add if name matches existing template
+      var existing = agents.find(function(a) { return a.id === name.toLowerCase() || a.name.toLowerCase() === name.toLowerCase(); });
+      if (!existing) {
+        agents.push({
+          id: name.toLowerCase().replace(/[^a-z0-9]/g, ''),
+          name: name.charAt(0).toUpperCase() + name.slice(1),
+          role: s.kind === 'subagent' ? 'Sub-Agent' : 'Agent',
+          avatar: null,
+          status: s.status === 'active' ? 'active' : 'idle',
+          color: '#007AFF',
+          real: true,
+          sessionKey: s.key
+        });
+      }
+    });
+    return agents;
+  }
+
+  // Legacy compat: AGENTS variable used by getAllAgents
+  var AGENTS = AGENTS_TEMPLATES;
 
   /* ── Helpers ─────────────────────────────────────────────────────── */
 
@@ -44,11 +87,11 @@
   /* ── Dynamic content renderers ──────────────────────────────────── */
 
   function getAllAgents() {
-    var all = AGENTS.slice();
+    var all = getAgentList();
     try {
       var created = JSON.parse(localStorage.getItem('spawnkit-created-agents') || '[]');
       created.forEach(function(c) {
-        all.push({ id: c.id, name: (c.emoji||'') + ' ' + c.name, role: c.role || 'Custom', avatar: null, status: 'active', color: '#007AFF' });
+        all.push({ id: c.id, name: (c.emoji||'') + ' ' + c.name, role: c.role || 'Custom', avatar: null, status: 'active', color: '#007AFF', real: true });
       });
     } catch(e) {}
     return all;
@@ -56,16 +99,20 @@
 
   function renderTeamGrid(container) {
     if (!container) return;
-    container.innerHTML = getAllAgents().map(function(a) {
+    var agents = getAllAgents();
+    container.innerHTML = agents.map(function(a) {
+      var isTemplate = a.real === false;
       var av = a.avatar
         ? '<svg viewBox="0 0 48 48"><use href="' + a.avatar + '"/></svg>'
         : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px;background:' + (a.color||'#007AFF') + '22;border-radius:50%;">' + esc(a.name.charAt(0)) + '</div>';
-      return '<button class="md-agent" data-agent-id="' + a.id + '" aria-label="' + esc(a.name) + '">' +
+      var templateStyle = isTemplate ? 'opacity:0.5;' : '';
+      var roleLabel = isTemplate ? esc(a.role) + ' (template)' : esc(a.role);
+      return '<button class="md-agent' + (isTemplate ? ' md-agent--template' : '') + '" data-agent-id="' + a.id + '" aria-label="' + esc(a.name) + '" style="' + templateStyle + '">' +
         '<div class="md-agent-avatar">' + av +
           '<span class="md-agent-status' + (a.status==='active' ? ' md-agent-status--active' : '') + '"></span>' +
         '</div>' +
         '<div class="md-agent-name">' + esc(a.name) + '</div>' +
-        '<div class="md-agent-role">' + esc(a.role) + '</div>' +
+        '<div class="md-agent-role">' + roleLabel + '</div>' +
       '</button>';
     }).join('') +
     '<button class="md-agent md-agent--add" aria-label="Add Agent">' +
@@ -244,7 +291,25 @@
   /* ── Agent click ────────────────────────────────────────────────── */
 
   function handleAgentClick(agentId) {
-    if (agentId === 'ceo' && typeof window.openMissionControl === 'function') { window.openMissionControl(); return; }
+    // BUG-005 FIX: Agent clicks open 1:1 chat, not dashboard
+    // Open Mission Control with agent pre-selected for chat
+    if (typeof window.openMissionControl === 'function') {
+      window.openMissionControl();
+      // Select the agent in Mission Control chat after it opens
+      setTimeout(function() {
+        if (typeof window.McSelectAgent === 'function') {
+          window.McSelectAgent(agentId);
+        } else {
+          // Fallback: dispatch event for mc-center.js to pick up
+          var evt;
+          try { evt = new CustomEvent('mc:select-agent', { detail: { id: agentId } }); }
+          catch(e) { evt = document.createEvent('CustomEvent'); evt.initCustomEvent('mc:select-agent', true, true, { id: agentId }); }
+          document.dispatchEvent(evt);
+        }
+      }, 200);
+      return;
+    }
+    // Fallback: open detail panel if Mission Control not available
     if (typeof window.openDetailPanel === 'function') { window.openDetailPanel(agentId); return; }
     var el = document.querySelector('[data-agent="' + agentId + '"]');
     if (el) el.click();
@@ -328,9 +393,19 @@
       (window.skFetch || fetch)(base + '/api/oc/sessions').then(function(r) {
         if (!r.ok) throw new Error('');
         return r.json();
-      }).then(function() {
+      }).then(function(sessions) {
+        _isConnected = true;
         var b = $('mdConnectBanner'); if (b) b.style.display = 'none';
+        // BUG-007 FIX: Update real agent list from sessions
+        if (Array.isArray(sessions)) {
+          _realAgentSessions = sessions.filter(function(s) {
+            return s.key && (s.key.indexOf('agent:') === 0 || s.kind === 'subagent');
+          });
+        }
+        // Refresh team grid with real data
+        renderTeamGrid($('missionDeskTeam'));
       }).catch(function() {
+        _isConnected = false;
         var b = $('mdConnectBanner'); if (b) b.style.display = 'flex';
       });
     }, 1500);
@@ -358,15 +433,33 @@
     updateChatResumeBtn();
     checkConnectivity();
 
-    // Demo mode CTA — only show if NOT connected to a real instance
-    var isConnected = !!localStorage.getItem('spawnkit-token') || localStorage.getItem('spawnkit-connected-once') === '1';
-    if (window.__skDemoMode && !isConnected) {
+    // BUG-006 FIX: Show clear onboarding/connect guidance when no token exists
+    var hasToken = !!localStorage.getItem('spawnkit-token') || !!localStorage.getItem('spawnkit-api-token');
+    var isConnectedOnce = localStorage.getItem('spawnkit-connected-once') === '1';
+    if (!hasToken && !isConnectedOnce) {
+      // No token — show Get Started CTA prominently
       var actions = $('missionDeskActions');
       if (actions) {
         var cta = document.createElement('div');
+        cta.id = 'mdGetStartedCta';
         cta.style.cssText = 'margin:16px 0 0;text-align:center;';
-        cta.innerHTML = '<button class="md-action md-cta-primary" data-action="deploy" style="width:100%;padding:14px;font-size:14px;font-weight:600;background:linear-gradient(135deg,var(--exec-blue,#007AFF),#5856D6);color:#fff;border:none;border-radius:12px;cursor:pointer;box-shadow:0 4px 16px rgba(0,122,255,0.3);">🚀 Get Started</button>';
+        cta.innerHTML = '<div style="padding:16px;background:rgba(0,122,255,0.08);border:1px solid rgba(0,122,255,0.2);border-radius:14px;margin-bottom:12px;">' +
+          '<div style="font-size:15px;font-weight:600;color:var(--text-primary,#1c1c1e);margin-bottom:6px;">👋 Connect Your Instance</div>' +
+          '<div style="font-size:13px;color:var(--text-secondary,#636366);margin-bottom:12px;line-height:1.5;">Connect to your OpenClaw gateway to manage agents, chat, and automate tasks.</div>' +
+          '<button class="md-action md-cta-primary" data-action="deploy" style="width:100%;padding:14px;font-size:14px;font-weight:600;background:linear-gradient(135deg,var(--exec-blue,#007AFF),#5856D6);color:#fff;border:none;border-radius:12px;cursor:pointer;box-shadow:0 4px 16px rgba(0,122,255,0.3);">🚀 Get Started</button>' +
+          '</div>';
         actions.parentNode.insertBefore(cta, actions.nextSibling);
+        // Bind the deploy action
+        var ctaBtn = cta.querySelector('[data-action="deploy"]');
+        if (ctaBtn) ctaBtn.addEventListener('click', function() { openPanel('deploy'); });
+      }
+    } else if (window.__skDemoMode && !hasToken) {
+      var actions2 = $('missionDeskActions');
+      if (actions2) {
+        var cta2 = document.createElement('div');
+        cta2.style.cssText = 'margin:16px 0 0;text-align:center;';
+        cta2.innerHTML = '<button class="md-action md-cta-primary" data-action="deploy" style="width:100%;padding:14px;font-size:14px;font-weight:600;background:linear-gradient(135deg,var(--exec-blue,#007AFF),#5856D6);color:#fff;border:none;border-radius:12px;cursor:pointer;box-shadow:0 4px 16px rgba(0,122,255,0.3);">🚀 Get Started</button>';
+        actions2.parentNode.insertBefore(cta2, actions2.nextSibling);
       }
     }
 

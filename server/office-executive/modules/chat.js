@@ -293,15 +293,47 @@
     ];
 
     function loadChatTargets() {
-        // Try to enrich targets from relay/data-bridge
+        // BUG-008 FIX: Always populate targets, using multiple sources as fallback
+        var targets = [];
+
+        // Source 1: SpawnKit.data.agents
         try {
             var agents = (window.SpawnKit && window.SpawnKit.data && window.SpawnKit.data.agents) || [];
             if (agents.length > 0) {
-                availableChatTargets = agents.map(function(a) {
+                targets = agents.map(function(a) {
                     return { id: a.id, name: a.name + ' (' + (a.role || '') + ')', emoji: a.id === 'ceo' ? '\uD83C\uDFAD' : '\uD83E\uDD16' };
                 });
             }
         } catch(e) {}
+
+        // Source 2: OcStore sessions (fallback)
+        if (targets.length === 0) {
+            try {
+                var sessions = (window.OcStore && window.OcStore.sessions) || [];
+                if (sessions.length > 0) {
+                    var seen = {};
+                    sessions.forEach(function(s) {
+                        if (!s.key) return;
+                        var name = s.label || s.displayName || s.key;
+                        var shortName = name.replace(/^agent:main:/, '').replace(/^telegram:g-/, '');
+                        if (seen[shortName]) return;
+                        seen[shortName] = true;
+                        targets.push({
+                            id: s.key,
+                            name: shortName,
+                            emoji: s.key === 'agent:main:main' ? '\uD83C\uDFAD' : '\uD83E\uDD16'
+                        });
+                    });
+                }
+            } catch(e) {}
+        }
+
+        // Source 3: Use defaults if still empty
+        if (targets.length > 0) {
+            availableChatTargets = targets;
+        }
+        // availableChatTargets always has at least the 2 defaults set above
+
         updateChatTargetSelector();
     }
 
@@ -674,9 +706,16 @@
     }
 
     // Chat auto-refresh via OcStore (replaces dedicated 10s setInterval)
+    // BUG-008 FIX: Also refresh targets when OcStore data arrives
     function initChatRefresh() {
         if (window.OcStore) {
+            var _targetsRefreshed = false;
             window.OcStore.subscribe(function() {
+                // Refresh targets once when OcStore data first arrives
+                if (!_targetsRefreshed) {
+                    _targetsRefreshed = true;
+                    loadChatTargets();
+                }
                 if (mailboxOverlay.classList.contains('open') && document.getElementById('chatTab').classList.contains('active')) {
                     loadChatTabTranscript();
                 }
