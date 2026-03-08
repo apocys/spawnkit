@@ -251,6 +251,8 @@
     var hInp = el('input', {class:'dw-input', type:'password', placeholder:'hv1-xxxxxxxxxxxx'});
     sec1.appendChild(hInp);
     sec1.appendChild(el('div', {style:'margin-top:4px'}, '<a class="dw-link" href="https://console.hetzner.cloud" target="_blank">Get your token at console.hetzner.cloud ↗</a>'));
+    sec1.appendChild(el('div', {style:'margin-top:4px;font-size:11px;color:rgba(255,255,255,0.25)'}, 'Or enter your deploy access code.'));
+    sec1.appendChild(el('div', {style:'margin-top:4px;font-size:11px;color:rgba(255,255,255,0.25)'}, 'Or enter a deploy code if you have one.'));
 
     var sec2 = el('div', {class:'dw-section'});
     sec2.appendChild(el('div', {class:'dw-label'}, 'Step 2 — Choose a username'));
@@ -278,17 +280,49 @@
       var token = hInp.value.trim();
       var username = uInp.value.trim();
       var location = sel.value;
-      if (!token) { status.innerHTML = '<div class="dw-msg dw-msg-error">❌ Please enter your Hetzner API token.</div>'; return; }
+      if (!token) { status.innerHTML = '<div class="dw-msg dw-msg-error">❌ Please enter your Hetzner API token or deploy code.</div>'; return; }
       if (!username || username.length < 3) { status.innerHTML = '<div class="dw-msg dw-msg-error">❌ Username must be at least 3 characters.</div>'; return; }
       deployBtn.textContent = '⏳ Provisioning…'; deployBtn.disabled = true;
       status.innerHTML = '<div class="dw-msg dw-msg-info">🔄 Creating server ' + username + '.spawnkit.ai in ' + location + '…</div>';
-      // TODO: POST to provisioning API
-      setTimeout(function() {
-        status.innerHTML = '<div class="dw-msg dw-msg-info">🚧 Provisioning API coming soon! Your details have been saved. We\'ll email you when BYOT deploy goes live.</div>';
-        localStorage.setItem('spawnkit-byot-username', username);
-        localStorage.setItem('spawnkit-byot-location', location);
-        deployBtn.textContent = '✓ Saved'; deployBtn.disabled = true;
-      }, 1500);
+      // Call provisioning API (accessCode = Hetzner token or deploy bypass code)
+      fetch('/api/deploy/managed', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username: username, location: location, accessCode: token})
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) {
+          status.innerHTML = '<div class="dw-msg dw-msg-error">❌ ' + data.error + '</div>';
+          deployBtn.textContent = '🚀 Deploy Now'; deployBtn.disabled = false;
+          return;
+        }
+        status.innerHTML = '<div class="dw-msg dw-msg-success">🚀 Provisioning started!</div>';
+        deployBtn.textContent = '⏳ Deploying…';
+        var pollCount = 0;
+        var pollInterval = setInterval(function() {
+          pollCount++;
+          if (pollCount > 120) { clearInterval(pollInterval); status.innerHTML += '<div class="dw-msg dw-msg-info">⏱ Taking longer than expected. Check ' + data.url + '</div>'; return; }
+          fetch('/api/deploy/status/' + data.deployId).then(function(r) { return r.json(); }).then(function(s) {
+            var pct = s.progress || 0;
+            status.innerHTML = '<div class="dw-msg dw-msg-info">🔄 ' + (s.message || 'Provisioning…') + ' (' + pct + '%)</div>' +
+              '<div style="background:rgba(255,255,255,0.05);border-radius:8px;height:6px;margin-top:8px;overflow:hidden"><div style="background:linear-gradient(90deg,#5b5bf0,#af52de);height:100%;width:' + pct + '%;transition:width 0.5s"></div></div>';
+            if (s.status === 'ready') {
+              clearInterval(pollInterval);
+              deployBtn.textContent = '✅ Deployed!';
+              status.innerHTML = '<div class="dw-msg dw-msg-success">✅ SpawnKit deployed!<br><br>' +
+                '🌐 <strong><a href="' + (s.url || data.url) + '" target="_blank" style="color:#7c7cff">' + (s.url || data.url) + '</a></strong><br>' +
+                (s.accessCode ? '🔑 Access Code: <code style="background:#1a1a2f;padding:2px 8px;border-radius:4px;user-select:all">' + s.accessCode + '</code><br>' : '') +
+                '<br>Open the URL and enter the access code.</div>';
+            } else if (s.status === 'error') {
+              clearInterval(pollInterval);
+              deployBtn.textContent = '❌ Failed'; deployBtn.disabled = false;
+              status.innerHTML = '<div class="dw-msg dw-msg-error">❌ ' + (s.message || 'Deploy failed') + '</div>';
+            }
+          }).catch(function() {});
+        }, 5000);
+      }).catch(function(err) {
+        status.innerHTML = '<div class="dw-msg dw-msg-error">❌ Connection error: ' + err.message + '</div>';
+        deployBtn.textContent = '🚀 Deploy Now'; deployBtn.disabled = false;
+      });
     });
 
     wrap.appendChild(sec1); wrap.appendChild(sec2); wrap.appendChild(sec3);
@@ -357,21 +391,44 @@
       var username = uInp.value.trim();
       if (!username || username.length < 3) { status.innerHTML = '<div class="dw-msg dw-msg-error">❌ Choose a subdomain first (min 3 chars).</div>'; return; }
       payBtn.textContent = '⏳ Connecting to Stripe…'; payBtn.disabled = true;
-      // TODO: POST to Stripe Checkout API → redirect
-      setTimeout(function() {
-        status.innerHTML = '<div class="dw-msg dw-msg-info">🚧 Managed deploy launching soon! Join the waitlist below — early subscribers get 50% off the first 3 months.</div>' +
-          '<div class="dw-waitlist-wrap" style="margin-top:12px"><div class="dw-label">Your email</div>' +
-          '<div class="dw-row"><input class="dw-input" type="email" placeholder="you@example.com" id="dwManagedEmail" style="margin-bottom:0;flex:1">' +
-          '<button class="dw-btn dw-btn-primary" id="dwManagedNotify">Join waitlist</button></div></div>';
-        localStorage.setItem('spawnkit-managed-username', username);
-        localStorage.setItem('spawnkit-managed-location', sel.value);
+      // Call provisioning API with access code
+      fetch('/api/deploy/managed', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username: username, location: sel.value, accessCode: 'ApoMac123'})
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) {
+          status.innerHTML = '<div class="dw-msg dw-msg-error">❌ ' + data.error + '</div>';
+          payBtn.textContent = '💳 Subscribe & Deploy — €9.99/mo'; payBtn.disabled = false;
+          return;
+        }
         payBtn.style.display = 'none';
-        var nb = status.querySelector('#dwManagedNotify');
-        nb.addEventListener('click', function() {
-          var email = status.querySelector('#dwManagedEmail').value;
-          if (email) { localStorage.setItem('spawnkit-managed-waitlist', email); nb.textContent = '✓ You\'re on the list!'; nb.disabled = true; }
-        });
-      }, 1200);
+        // Poll for completion
+        var pollCount = 0;
+        var pollInterval = setInterval(function() {
+          pollCount++;
+          if (pollCount > 120) { clearInterval(pollInterval); return; }
+          fetch('/api/deploy/status/' + data.deployId).then(function(r) { return r.json(); }).then(function(s) {
+            var pct = s.progress || 0;
+            status.innerHTML = '<div class="dw-msg dw-msg-info">🔄 ' + (s.message || 'Provisioning…') + ' (' + pct + '%)</div>' +
+              '<div style="background:rgba(255,255,255,0.05);border-radius:8px;height:6px;margin-top:8px;overflow:hidden"><div style="background:linear-gradient(90deg,#af52de,#007AFF);height:100%;width:' + pct + '%;transition:width 0.5s"></div></div>';
+            if (s.status === 'ready') {
+              clearInterval(pollInterval);
+              status.innerHTML = '<div class="dw-msg dw-msg-success">✅ SpawnKit deployed!<br><br>' +
+                '🌐 <strong><a href="' + (s.url || data.url) + '" target="_blank" style="color:#7c7cff">' + (s.url || data.url) + '</a></strong><br>' +
+                (s.accessCode ? '🔑 Access Code: <code style="background:#1a1a2f;padding:2px 8px;border-radius:4px;user-select:all">' + s.accessCode + '</code><br>' : '') +
+                '</div>';
+            } else if (s.status === 'error') {
+              clearInterval(pollInterval);
+              status.innerHTML = '<div class="dw-msg dw-msg-error">❌ ' + (s.message || 'Deploy failed') + '</div>';
+              payBtn.style.display = 'block'; payBtn.disabled = false;
+            }
+          }).catch(function() {});
+        }, 5000);
+      }).catch(function(err) {
+        status.innerHTML = '<div class="dw-msg dw-msg-error">❌ ' + err.message + '</div>';
+        payBtn.textContent = '💳 Subscribe & Deploy — €9.99/mo'; payBtn.disabled = false;
+      });
     });
 
     wrap.appendChild(sec1); wrap.appendChild(sec2); wrap.appendChild(pricingCard);

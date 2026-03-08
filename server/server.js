@@ -496,7 +496,39 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ─── Version & Update endpoints ───────────────────────────
+  // ─── Deploy Provisioning Proxy (routes to provisioning API on :3456) ────
+  if (req.url.startsWith('/api/deploy/') && (req.method === 'POST' || req.method === 'GET')) {
+    const provisionUrl = 'http://localhost:3456' + req.url;
+    const proxyReq = require('http').request(provisionUrl, {
+      method: req.method,
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 30000,
+    }, (proxyRes) => {
+      let data = '';
+      proxyRes.on('data', c => data += c);
+      proxyRes.on('end', () => {
+        res.writeHead(proxyRes.statusCode, { 'Content-Type': 'application/json' });
+        res.end(data);
+      });
+    });
+    proxyReq.on('error', (e) => {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Provisioning service unavailable: ' + e.message }));
+    });
+    proxyReq.on('timeout', () => {
+      proxyReq.destroy();
+      res.writeHead(504, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Provisioning service timeout' }));
+    });
+    if (req.method === 'POST') {
+      req.pipe(proxyReq);
+    } else {
+      proxyReq.end();
+    }
+    return;
+  }
+
+    // ─── Version & Update endpoints ───────────────────────────
   if (req.url === '/api/oc/version' && req.method === 'GET') {
     res.setHeader('Content-Type', 'application/json');
     const versionInfo = getLatestVersion();
