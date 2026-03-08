@@ -1,0 +1,16 @@
+{
+  "name": "SpawnKit",
+  "short_name": "SpawnKit",
+  "description": "AI team management dashboard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -115,7 +115,8 @@
         window.__skAuthResolve();
         window.__skAuthResolve = null;
       }
-      // Signal onboarding can start now
+      // Signal onboarding can start now + remove auth gate directly
+      document.body.classList.remove('sk-auth-pending');
       window.dispatchEvent(new Event('skAuthResolved'));
     });
     d.appendChild(btn);
