@@ -188,21 +188,40 @@
 
   injectStyles();
   if (window.RoyalCourt.isFirstVisit()) {
-    // Wait for auth to complete before showing (auth overlay is z-index:9999, we're 9998)
-    function showAfterAuth() {
-      if (window.ThemeAuth && typeof window.ThemeAuth.onAuth === 'function') {
-        window.ThemeAuth.onAuth(function () {
-          setTimeout(function () { window.RoyalCourt.show(); }, 600);
+    // Show only after auth overlay is gone from the DOM (event-driven, no timeouts)
+    function showWhenReady() {
+      // If no auth overlay exists, show immediately
+      if (!document.getElementById('skAuthOverlay')) {
+        window.RoyalCourt.show();
+        return;
+      }
+      // Auth overlay present — watch for its removal
+      var authEl = document.getElementById('skAuthOverlay');
+      if (authEl && typeof MutationObserver !== 'undefined') {
+        var parent = authEl.parentNode || document.body;
+        var obs = new MutationObserver(function (mutations) {
+          if (!document.getElementById('skAuthOverlay')) {
+            obs.disconnect();
+            window.RoyalCourt.show();
+          }
         });
-      } else {
-        // No auth module — show after short delay
-        setTimeout(function () { window.RoyalCourt.show(); }, 1000);
+        obs.observe(parent, { childList: true });
+      } else if (window.ThemeAuth && typeof window.ThemeAuth.onAuth === 'function') {
+        // Fallback: use onAuth callback + verify overlay gone
+        window.ThemeAuth.onAuth(function () {
+          var check = setInterval(function () {
+            if (!document.getElementById('skAuthOverlay')) {
+              clearInterval(check);
+              window.RoyalCourt.show();
+            }
+          }, 100);
+        });
       }
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', showAfterAuth);
+      document.addEventListener('DOMContentLoaded', showWhenReady);
     } else {
-      showAfterAuth();
+      showWhenReady();
     }
   }
 
