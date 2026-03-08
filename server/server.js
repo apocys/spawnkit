@@ -498,7 +498,19 @@ const server = http.createServer(async (req, res) => {
 
   // ─── Deploy Provisioning Proxy (routes to provisioning API on :3456) ────
   if (req.url.startsWith('/api/deploy/') && (req.method === 'POST' || req.method === 'GET')) {
+    // Auth: require Bearer token OR same-origin (dashboard UI)
+    const deployAuthHeader = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+    const deployOrigin = req.headers.origin || '';
+    const deployReferer = req.headers.referer || '';
+    const deploySelfHosts = ['app.spawnkit.ai', 'localhost:' + PORT, '127.0.0.1:' + PORT];
+    const deployIsSameOrigin = deploySelfHosts.some(h => deployOrigin.includes(h) || deployReferer.includes(h));
+    if (!deployIsSameOrigin && (!OC_TOKEN || deployAuthHeader !== OC_TOKEN)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'unauthorized' }));
+      return;
+    }
     const provisionUrl = 'http://localhost:3456' + req.url;
+    const DEPLOY_BYPASS_CODE = process.env.DEPLOY_ACCESS_CODE || '';
     
     if (req.method === 'POST') {
       // Handle POST: read body, check for useServerBypass flag
@@ -508,8 +520,8 @@ const server = http.createServer(async (req, res) => {
         try {
           const data = JSON.parse(body);
           // If useServerBypass flag is set, inject the server-side bypass code
-          if (data.useServerBypass) {
-            data.accessCode = 'ApoMac123';
+          if (data.useServerBypass && DEPLOY_BYPASS_CODE) {
+            data.accessCode = DEPLOY_BYPASS_CODE;
             delete data.useServerBypass;
           }
           
