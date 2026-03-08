@@ -102,16 +102,27 @@
       if (elTitle) elTitle.innerHTML = 'Mission Control <span class="mc-chevron">⌄</span>';
     } else {
       var def = AGENT_DEFS[agentId];
-      if (!def) return;
-      currentAgent = { id: agentId, name: def.name, avatar: def.avatar, role: def.role };
-      if (elTitle) {
-        elTitle.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px;">' +
-          '<svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0;"><use href="' + escMc(def.avatar) + '"/></svg>' +
-          escMc(def.name) + '</span> <span class="mc-chevron">⌄</span>';
+      if (!def) {
+        // Support unknown/dynamic agents not in AGENT_DEFS
+        var displayName = agentId.charAt(0).toUpperCase() + agentId.slice(1);
+        currentAgent = { id: agentId, name: displayName, avatar: null, role: 'Agent' };
+        if (elTitle) {
+          elTitle.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px;">🤖 ' +
+            escMc(displayName) + '</span> <span class="mc-chevron">⌄</span>';
+        }
+      } else {
+        currentAgent = { id: agentId, name: def.name, avatar: def.avatar, role: def.role };
+        if (elTitle) {
+          elTitle.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px;">' +
+            '<svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0;"><use href="' + escMc(def.avatar) + '"/></svg>' +
+            escMc(def.name) + '</span> <span class="mc-chevron">⌄</span>';
+        }
       }
     }
     setTab('chat');
   }
+  // Expose for mission-desk.js agent click routing (BUG-005 fix)
+  window.McSelectAgent = selectAgent;
 
   // Listen for agent selection events from detail panel / mission desk
   document.addEventListener('mc:select-agent', function (e) {

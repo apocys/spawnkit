@@ -11,6 +11,9 @@
     var _subscribers = [];
     var _started = false;
     var POLL_INTERVAL = 15000; // 15 seconds
+    var _consecutiveFailures = 0;
+    var _MAX_FAILURES_BEFORE_BACKOFF = 3;
+    var _backoffInterval = null;
 
     function getApiUrl() {
         return window.OC_API_URL || window.location.origin;
@@ -77,14 +80,40 @@
             skF(base + '/api/oc/crons')
         ]).then(function(results) {
             var p = [];
+            var allUnauthorized = true;
             // Parse JSON from each settled response
             for (var i = 0; i < results.length; i++) {
                 if (results[i].status === 'fulfilled' && results[i].value && results[i].value.ok) {
+                    allUnauthorized = false;
                     p.push(results[i].value.json().catch(function() { return null; }));
                 } else {
+                    // Check if it's a 401
+                    if (results[i].status === 'fulfilled' && results[i].value && results[i].value.status !== 401) {
+                        allUnauthorized = false;
+                    }
                     p.push(Promise.resolve(null));
                 }
             }
+
+            // Back off on repeated 401s to avoid console spam
+            if (allUnauthorized) {
+                _consecutiveFailures++;
+                if (_consecutiveFailures >= _MAX_FAILURES_BEFORE_BACKOFF) {
+                    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+                    _backoffInterval = Math.min(120000, POLL_INTERVAL * Math.pow(2, _consecutiveFailures - _MAX_FAILURES_BEFORE_BACKOFF));
+                    console.log('[OcStore] All endpoints returned 401 — backing off to ' + (_backoffInterval / 1000) + 's. Connect an instance to resume.');
+                    _pollTimer = setInterval(function() { _poll(); }, _backoffInterval);
+                }
+            } else {
+                if (_consecutiveFailures >= _MAX_FAILURES_BEFORE_BACKOFF) {
+                    // Recovered — restore normal polling
+                    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+                    _pollTimer = setInterval(function() { _poll(); }, POLL_INTERVAL);
+                    console.log('[OcStore] Connection restored — resuming normal polling');
+                }
+                _consecutiveFailures = 0;
+            }
+
             return Promise.all(p);
         }).then(function(parsed) {
             store.sessions = Array.isArray(parsed[0]) ? parsed[0] : [];

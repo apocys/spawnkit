@@ -25,6 +25,8 @@
 
         // ── Open/Close (uses OcStore subscription instead of polling) ──
         window.openMissionControl = function() {
+            window.closeAllPanels();
+            mcOverlay.classList.add('open');
             mcOverlay.style.display = 'flex';
             requestAnimationFrame(function() { mcOverlay.classList.add('visible'); });
             loadMissionControl();
@@ -43,6 +45,7 @@
 
         function closeMissionControl() {
             mcOverlay.classList.remove('visible');
+            mcOverlay.classList.remove('open');
             setTimeout(function() { mcOverlay.style.display = 'none'; }, 300);
             // Unsubscribe from OcStore
             if (window.OcStore && _mcOcStoreSubscriber) {
