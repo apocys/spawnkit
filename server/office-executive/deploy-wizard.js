@@ -269,7 +269,7 @@
     var sec3 = el('div', {class:'dw-section'});
     sec3.appendChild(el('div', {class:'dw-label'}, 'Step 3 — Server location'));
     var sel = el('select', {class:'dw-input', style:'cursor:pointer'});
-    [['fsn1','Falkenstein, Germany'],['nbg1','Nuremberg, Germany'],['hel1','Helsinki, Finland'],['ash','Ashburn, Virginia']].forEach(function(o) {
+    [['nbg1','Nuremberg, Germany'],['hel1','Helsinki, Finland'],['ash','Ashburn, Virginia']].forEach(function(o) {
       sel.appendChild(el('option', {value:o[0]}, o[1]));
     });
     sec3.appendChild(sel);
@@ -363,7 +363,7 @@
     var sec2 = el('div', {class:'dw-section'});
     sec2.appendChild(el('div', {class:'dw-label'}, 'Step 2 — Server location'));
     var sel = el('select', {class:'dw-input', style:'cursor:pointer'});
-    [['fsn1','Falkenstein, Germany'],['nbg1','Nuremberg, Germany'],['hel1','Helsinki, Finland'],['ash','Ashburn, Virginia']].forEach(function(o) {
+    [['nbg1','Nuremberg, Germany'],['hel1','Helsinki, Finland'],['ash','Ashburn, Virginia']].forEach(function(o) {
       sel.appendChild(el('option', {value:o[0]}, o[1]));
     });
     sec2.appendChild(sel);
