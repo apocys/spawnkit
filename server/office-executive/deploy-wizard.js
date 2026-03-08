@@ -395,7 +395,7 @@
       fetch('/api/deploy/managed', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({username: username, location: sel.value, accessCode: 'ApoMac123'})
+        body: JSON.stringify({username: username, location: sel.value, useServerBypass: true})
       }).then(function(r) { return r.json(); }).then(function(data) {
         if (data.error) {
           status.innerHTML = '<div class="dw-msg dw-msg-error">❌ ' + data.error + '</div>';

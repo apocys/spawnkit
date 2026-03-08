@@ -499,30 +499,71 @@ const server = http.createServer(async (req, res) => {
   // ─── Deploy Provisioning Proxy (routes to provisioning API on :3456) ────
   if (req.url.startsWith('/api/deploy/') && (req.method === 'POST' || req.method === 'GET')) {
     const provisionUrl = 'http://localhost:3456' + req.url;
-    const proxyReq = require('http').request(provisionUrl, {
-      method: req.method,
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 30000,
-    }, (proxyRes) => {
-      let data = '';
-      proxyRes.on('data', c => data += c);
-      proxyRes.on('end', () => {
-        res.writeHead(proxyRes.statusCode, { 'Content-Type': 'application/json' });
-        res.end(data);
-      });
-    });
-    proxyReq.on('error', (e) => {
-      res.writeHead(502, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Provisioning service unavailable: ' + e.message }));
-    });
-    proxyReq.on('timeout', () => {
-      proxyReq.destroy();
-      res.writeHead(504, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Provisioning service timeout' }));
-    });
+    
     if (req.method === 'POST') {
-      req.pipe(proxyReq);
+      // Handle POST: read body, check for useServerBypass flag
+      let body = '';
+      req.on('data', c => { body += c; if (body.length > 1e6) req.destroy(); });
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          // If useServerBypass flag is set, inject the server-side bypass code
+          if (data.useServerBypass) {
+            data.accessCode = 'ApoMac123';
+            delete data.useServerBypass;
+          }
+          
+          const proxyReq = require('http').request(provisionUrl, {
+            method: req.method,
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 30000,
+          }, (proxyRes) => {
+            let responseData = '';
+            proxyRes.on('data', c => responseData += c);
+            proxyRes.on('end', () => {
+              res.writeHead(proxyRes.statusCode, { 'Content-Type': 'application/json' });
+              res.end(responseData);
+            });
+          });
+          proxyReq.on('error', (e) => {
+            res.writeHead(502, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Provisioning service unavailable: ' + e.message }));
+          });
+          proxyReq.on('timeout', () => {
+            proxyReq.destroy();
+            res.writeHead(504, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Provisioning service timeout' }));
+          });
+          proxyReq.write(JSON.stringify(data));
+          proxyReq.end();
+        } catch(e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON body' }));
+        }
+      });
     } else {
+      // Handle GET: simple proxy
+      const proxyReq = require('http').request(provisionUrl, {
+        method: req.method,
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 30000,
+      }, (proxyRes) => {
+        let data = '';
+        proxyRes.on('data', c => data += c);
+        proxyRes.on('end', () => {
+          res.writeHead(proxyRes.statusCode, { 'Content-Type': 'application/json' });
+          res.end(data);
+        });
+      });
+      proxyReq.on('error', (e) => {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Provisioning service unavailable: ' + e.message }));
+      });
+      proxyReq.on('timeout', () => {
+        proxyReq.destroy();
+        res.writeHead(504, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Provisioning service timeout' }));
+      });
       proxyReq.end();
     }
     return;
