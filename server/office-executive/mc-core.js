@@ -7,6 +7,8 @@
 
     // ─── Open / Close ────────────────────────────────────────────────────────────
     window.openMissionControl = function() {
+        if (typeof window.closeAllPanels === 'function') window.closeAllPanels();
+        mcOverlay.classList.add('open');
         mcOverlay.style.display = 'flex';
         requestAnimationFrame(function() {
             mcOverlay.classList.add('visible');
@@ -22,6 +24,7 @@
 
     window.closeMissionControl = function() {
         mcOverlay.classList.remove('visible');
+        mcOverlay.classList.remove('open');
         setTimeout(function() {
             mcOverlay.style.display = 'none';
         }, 300);
@@ -34,7 +37,7 @@
 
     // ─── ESC to close ────────────────────────────────────────────────────────────
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && mcOverlay.classList.contains('visible')) {
+        if (e.key === 'Escape' && (mcOverlay.classList.contains('visible') || mcOverlay.classList.contains('open'))) {
             window.closeMissionControl();
         }
     });
