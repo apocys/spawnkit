@@ -396,17 +396,16 @@
       }).then(function(sessions) {
         _isConnected = true;
         var b = $('mdConnectBanner'); if (b) b.style.display = 'none';
-        // BUG-007 FIX: Only show named agents, not all 200+ sessions
+        // BUG-007 FIX: Only show named sub-agents in team grid
         if (Array.isArray(sessions)) {
           _realAgentSessions = sessions.filter(function(s) {
             if (!s.key) return false;
-            // Only include sessions that are actual named sub-agents with human-readable labels
-            // Exclude: UUIDs, telegram/whatsapp groups, cron sessions, main session
-            if (s.key === 'agent:main:main') return false;
-            if (s.kind === 'subagent' && s.label && !/^[0-9a-f]{8}-/.test(s.label)) return true;
-            // Named agent sessions (not UUIDs, not chat groups)
-            if (s.label && !/^[0-9a-f]{8}-/.test(s.label) && !/^(telegram:|whatsapp:|cron:|signal:|discord:)/.test(s.key.toLowerCase())) return true;
-            return false;
+            // Only sub-agents with human-readable labels
+            if (s.kind !== 'subagent') return false;
+            if (!s.label) return false;
+            // Exclude UUID-named sessions
+            if (/^[0-9a-f]{8}-/.test(s.label)) return false;
+            return true;
           });
         }
         // Refresh team grid with real data
