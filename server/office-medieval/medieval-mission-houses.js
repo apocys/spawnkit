@@ -659,10 +659,10 @@
             houseGroups.forEach(function(group) {
                 group.traverse(function(c) {
                     if (c.isMesh && c.material) {
-                        c.material._origEmissive = c.material.emissiveIntensity || 0;
-                        c.material.emissive = c.material.emissive || new THREE.Color(0xff8800);
-                        c.material.emissive.set(0xff8800);
-                        c.material.emissiveIntensity = 0.3;
+                        // Save original material and replace with safe glow material
+                        if (!c._editOrigMaterial) c._editOrigMaterial = c.material;
+                        var col = c.material.color ? c.material.color.getHex() : 0xcccccc;
+                        c.material = new THREE.MeshStandardMaterial({ color: col, emissive: 0xff8800, emissiveIntensity: 0.3 });
                     }
                 });
             });
@@ -670,7 +670,11 @@
             if (editIndicator) editIndicator.style.display = 'none';
             houseGroups.forEach(function(group) {
                 group.traverse(function(c) {
-                    if (c.isMesh && c.material && c.material._origEmissive !== undefined) c.material.emissiveIntensity = c.material._origEmissive;
+                    if (c.isMesh && c._editOrigMaterial) {
+                        if (c.material && c.material !== c._editOrigMaterial) c.material.dispose();
+                        c.material = c._editOrigMaterial;
+                        delete c._editOrigMaterial;
+                    }
                 });
             });
         }

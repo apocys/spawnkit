@@ -366,19 +366,42 @@ class MedievalCastle3D {
         if (this._modelCache.has(path)) {
             // Return a deep clone of the cached model
             const cached = this._modelCache.get(path);
+            const cloned = cached.scene.clone(true);
+            this._sanitizeMaterials(cloned);
             return Promise.resolve({
-                scene: cached.scene.clone(true),
+                scene: cloned,
                 animations: cached.animations,
             });
         }
         return new Promise((resolve, reject) => {
             this.loader.load(path, (gltf) => {
                 this._modelCache.set(path, gltf);
+                const cloned = gltf.scene.clone(true);
+                this._sanitizeMaterials(cloned);
                 resolve({
-                    scene: gltf.scene.clone(true),
+                    scene: cloned,
                     animations: gltf.animations,
                 });
             }, undefined, reject);
+        });
+    }
+
+    // Prevent refreshUniformsCommon crash: null out any texture property
+    // that is defined but has no valid .image (undefined/corrupted after clone)
+    _sanitizeMaterials(root) {
+        const texProps = ['map','lightMap','aoMap','emissiveMap','bumpMap','normalMap',
+            'displacementMap','roughnessMap','metalnessMap','alphaMap','envMap',
+            'specularMap','gradientMap'];
+        root.traverse(child => {
+            if (child.isMesh && child.material) {
+                const mat = child.material;
+                texProps.forEach(prop => {
+                    if (mat[prop] !== undefined && mat[prop] !== null && !mat[prop].image) {
+                        mat[prop] = null;
+                    }
+                });
+                mat.needsUpdate = true;
+            }
         });
     }
 
