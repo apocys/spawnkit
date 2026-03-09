@@ -31,11 +31,12 @@
     ];
 
     // ── Placement grid (south of village, around z=20-32) ─────────────
+    // Positions: closer to village center, visible from default camera angle
     var HOUSE_POSITIONS = [
-        { x: 14, z: 24 }, { x: -14, z: 24 }, { x: 16, z: 28 },
-        { x: -16, z: 28 }, { x: 12, z: 30 }, { x: -12, z: 30 },
-        { x: 18, z: 22 }, { x: -18, z: 22 }, { x: 20, z: 26 },
-        { x: -20, z: 26 }, { x: 14, z: 32 }, { x: -14, z: 32 },
+        { x:  12, z: 18 }, { x: -12, z: 18 }, { x:  14, z: 22 },
+        { x: -14, z: 22 }, { x:  10, z: 24 }, { x: -10, z: 24 },
+        { x:  16, z: 20 }, { x: -16, z: 20 }, { x:  12, z: 26 },
+        { x: -12, z: 26 }, { x:  16, z: 26 }, { x: -16, z: 26 },
     ];
 
     var AGENTS = [
@@ -131,7 +132,8 @@
     }
 
     function checkScene() {
-        if (typeof THREE === 'undefined' && !window.THREE) { return false; } // Silent — expected during load
+        var T = window.THREE;
+        if (!T || !T.Group || !T.Mesh || !T.BoxGeometry) { return false; } // Need real THREE, not stub
         if (!window.castleApp) { return false; }
         if (!window.castleApp.scene) { return false; }
         return true;
@@ -309,7 +311,12 @@
             group.position.y = -t * 0.5;
             group.traverse(function(child) {
                 if (child.isMesh && child.material) {
-                    if (!child.material._cloned) { child.material = child.material.clone(); child.material.transparent = true; child.material._cloned = true; }
+                    if (!child.material._cloned) {
+                        // Create a simple replacement material to avoid clone issues with maps/uniforms
+                        var oldColor = child.material.color ? child.material.color.getHex() : 0xcccccc;
+                        child.material = new THREE.MeshBasicMaterial({ color: oldColor, transparent: true, opacity: 1 });
+                        child.material._cloned = true;
+                    }
                     child.material.opacity = Math.max(0, 1 - t * 1.5);
                 }
             });
