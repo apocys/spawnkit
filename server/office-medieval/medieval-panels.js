@@ -103,98 +103,108 @@
 
     // ── Render: Mission Hall ────────────────────────────────────────────
     function renderMissionHall(container) {
-        // Mission Control button
-        container.innerHTML = '<button class="bp-btn" id="bp-open-mc" style="width:100%;margin-bottom:12px;">⚔️ Open Mission Control</button><div class="bp-section-title">Active Quests</div>';
+        var html = '';
+
+        // New Mission button (primary action)
+        html += '<button class="bp-btn" id="bp-new-mission" style="width:100%;margin-bottom:12px;background:rgba(201,169,89,.15);border-color:rgba(201,169,89,.5);color:#c9a959;font-size:14px;">🏗️ New Mission</button>';
+
+        // Open full Mission Control
+        html += '<button class="bp-btn" id="bp-open-mc" style="width:100%;margin-bottom:16px;font-size:12px;">⚔️ Open Mission Control</button>';
+
+        // Active missions (from MissionHouses system)
+        html += '<div class="bp-section-title">Active Missions</div>';
+        html += '<div id="bp-active-missions"></div>';
+
+        // Archived / completed
+        html += '<div class="bp-section-title" style="margin-top:12px;">Mission History</div>';
+        html += '<div id="bp-mission-history"></div>';
+
+        container.innerHTML = html;
+
+        // Wire: New Mission
+        document.getElementById('bp-new-mission').addEventListener('click', function() {
+            closeBuildingPanel();
+            setTimeout(function() {
+                if (window.MissionHouses && window.MissionHouses.create) {
+                    window.MissionHouses.create();
+                }
+            }, 200);
+        });
+
+        // Wire: Open Mission Control
         document.getElementById('bp-open-mc').addEventListener('click', function() {
             closeBuildingPanel();
             setTimeout(function() { if (window.openMissionControl) window.openMissionControl(); }, 200);
         });
-        var active = document.createElement('div');
-        active.id = 'bp-active-missions';
-        active.innerHTML = '<div class="bp-empty">Loading missions…</div>';
-        container.appendChild(active);
 
-        var histTitle = document.createElement('div');
-        histTitle.className = 'bp-section-title';
-        histTitle.textContent = 'Mission History';
-        container.appendChild(histTitle);
+        // Populate from MissionHouses
+        var activeEl = document.getElementById('bp-active-missions');
+        var histEl = document.getElementById('bp-mission-history');
 
-        var hist = document.createElement('div');
-        hist.id = 'bp-mission-history';
-        hist.innerHTML = '<div class="bp-empty">—</div>';
-        container.appendChild(hist);
+        if (window.MissionHouses && window.MissionHouses.getMissions) {
+            var allMissions = window.MissionHouses.getMissions();
+            var active = allMissions.filter(function(m) { return m.status === 'active' || m.status === 'paused'; });
+            var archived = allMissions.filter(function(m) { return m.status === 'done' || m.status === 'archived'; });
 
-        var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch)
-            ? ThemeAuth.fetch.bind(ThemeAuth)
-            : window.fetch.bind(window);
+            if (active.length === 0) {
+                activeEl.innerHTML = '<div class="bp-empty">No active missions.<br>Build a new one to start!</div>';
+            } else {
+                active.forEach(function(m) {
+                    activeEl.appendChild(missionHouseCard(m));
+                });
+            }
 
-        fetcher('/api/oc/sessions').then(function (r) { return r.json(); }).then(function (data) {
-            var sessions = Array.isArray(data) ? data : (data.sessions || []);
-            
-            // Filter: only show mission-relevant sessions (sub-agents, spawned tasks)
-            // Exclude: channel sessions (telegram, whatsapp, discord), heartbeats, crons
-            var channelPatterns = ['telegram', 'whatsapp', 'discord', 'signal', 'slack', 'imessage', 'irc', 'heartbeat', 'cron', 'digest'];
-            var missions = sessions.filter(function(s) {
-                var key = (s.key || s.id || '').toLowerCase();
-                var label = (s.label || '').toLowerCase();
-                var kind = (s.kind || '').toLowerCase();
-                // Include: sub-agents, spawned sessions, anything with a task/label
-                if (kind === 'subagent' || kind === 'spawn') return true;
-                // Exclude channel/system sessions
-                for (var i = 0; i < channelPatterns.length; i++) {
-                    if (key.includes(channelPatterns[i]) || label.includes(channelPatterns[i])) return false;
-                }
-                // Include main session
-                if (key.includes('main')) return true;
-                // Include if it has a task description
-                if (s.task) return true;
-                return false;
-            });
-            
-            // Only show sub-agents and spawned sessions (not main or channel sessions)
-            var running = missions.filter(function (s) {
-                var kind = (s.kind || '').toLowerCase();
-                return (kind === 'subagent' || kind === 'spawn') && (s.status === 'active' || s.status === 'running');
-            });
-            var done = missions.filter(function (s) {
-                var kind = (s.kind || '').toLowerCase();
-                return (kind === 'subagent' || kind === 'spawn') && s.status !== 'active' && s.status !== 'running';
-            });
-
-            active.innerHTML = running.length ? '' : '<div class="bp-empty">No active quests.</div>';
-            running.forEach(function (s) { active.appendChild(missionCard(s)); });
-
-            hist.innerHTML = done.length ? '' : '<div class="bp-empty">No completed quests yet.</div>';
-            done.slice(0, 12).forEach(function (s) { hist.appendChild(missionCard(s)); });
-        }).catch(function () {
-            active.innerHTML = '<div class="bp-empty">Could not load missions.</div>';
-        });
+            if (archived.length === 0) {
+                histEl.innerHTML = '<div class="bp-empty">No completed missions yet.</div>';
+            } else {
+                archived.forEach(function(m) {
+                    histEl.appendChild(missionHouseCard(m));
+                });
+            }
+        } else {
+            activeEl.innerHTML = '<div class="bp-empty">Mission system loading…</div>';
+            histEl.innerHTML = '';
+        }
     }
 
-    function missionCard(s) {
+    function missionHouseCard(m) {
         var c = document.createElement('div');
         c.className = 'bp-card';
-        var label = s.label || s.id || 'Mission';
-        var model  = s.model || '';
-        var status = s.status || 'unknown';
-        c.innerHTML = [
-            '<div class="bp-row">',
-            '<span class="bp-status ' + (status === 'active' || status === 'running' ? 'active' : '') + '"></span>',
-            '<strong style="flex:1;font-size:13px;color:#f4e4bc">' + esc(label) + '</strong>',
-            '<span class="bp-tag">' + esc(status) + '</span>',
-            '</div>',
-            model ? '<div class="bp-detail">Model: ' + esc(model) + '</div>' : '',
-        ].join('');
-        var detail = document.createElement('div');
-        detail.className = 'bp-detail';
-        detail.style.display = 'none';
-        detail.textContent = s.task || s.description || '';
-        c.appendChild(detail);
-        c.addEventListener('click', function () {
-            var open = detail.style.display !== 'none';
-            detail.style.display = open ? 'none' : 'block';
-            c.classList.toggle('bp-expanded', !open);
+        c.style.cssText = 'cursor:pointer;transition:border-color 0.15s;';
+        var tasks = m.tasks || [];
+        var done = tasks.filter(function(t) { return t.done; }).length;
+        var total = tasks.length;
+        var pct = total > 0 ? Math.round(done / total * 100) : 0;
+        var statusColors = { active: '#34d399', paused: '#fbbf24', done: '#9ca3af', archived: '#6b7280' };
+        var statusLabel = m.status.charAt(0).toUpperCase() + m.status.slice(1);
+
+        c.innerHTML =
+            '<div class="bp-row">' +
+                '<span style="font-size:18px;margin-right:6px;">' + esc(m.icon || '🏠') + '</span>' +
+                '<strong style="flex:1;font-size:13px;color:#f4e4bc;">' + esc(m.name) + '</strong>' +
+                '<span class="bp-tag" style="background:' + (statusColors[m.status] || '#6b7280') + '22;color:' + (statusColors[m.status] || '#6b7280') + ';">' + esc(statusLabel) + '</span>' +
+            '</div>' +
+            (total > 0 ? '<div style="margin-top:6px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:' + (statusColors[m.status] || '#6b7280') + ';border-radius:2px;"></div></div><div style="font-size:10px;color:rgba(168,162,153,.5);margin-top:2px;">' + done + '/' + total + ' tasks</div>' : '');
+
+        // Click → focus camera on house + open overlay
+        c.addEventListener('click', function() {
+            closeBuildingPanel();
+            setTimeout(function() {
+                // Focus camera on house position
+                if (m.position && window.castleApp && window.castleApp.focusPosition) {
+                    window.castleApp.focusPosition(m.position.x, m.position.z);
+                }
+                // Open mission detail overlay
+                if (window.MissionHouses && window.MissionHouses.show) {
+                    window.MissionHouses.show(m.id);
+                }
+            }, 200);
         });
+
+        // Hover highlight
+        c.addEventListener('mouseenter', function() { c.style.borderColor = 'rgba(201,169,89,.4)'; });
+        c.addEventListener('mouseleave', function() { c.style.borderColor = ''; });
+
         return c;
     }
 

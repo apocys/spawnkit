@@ -1398,6 +1398,40 @@ class MedievalCastle3D {
         }, 4000);
     }
 
+    focusPosition(x, z) {
+        // Smoothly fly camera to focus on a world position
+        if (!this.controls || !this.camera) return;
+        const targetY = 2;
+        const camDist = 15;
+        const camHeight = 12;
+        const target = { x: x, y: targetY, z: z };
+        const camPos = { x: x + camDist * 0.7, y: camHeight, z: z + camDist * 0.7 };
+
+        // Animate over 800ms
+        const startTarget = { x: this.controls.target.x, y: this.controls.target.y, z: this.controls.target.z };
+        const startCam = { x: this.camera.position.x, y: this.camera.position.y, z: this.camera.position.z };
+        const startTime = performance.now();
+        const duration = 800;
+        const self = this;
+
+        function animateFocus() {
+            const t = Math.min((performance.now() - startTime) / duration, 1);
+            // Ease out cubic
+            const e = 1 - Math.pow(1 - t, 3);
+
+            self.controls.target.x = startTarget.x + (target.x - startTarget.x) * e;
+            self.controls.target.y = startTarget.y + (target.y - startTarget.y) * e;
+            self.controls.target.z = startTarget.z + (target.z - startTarget.z) * e;
+            self.camera.position.x = startCam.x + (camPos.x - startCam.x) * e;
+            self.camera.position.y = startCam.y + (camPos.y - startCam.y) * e;
+            self.camera.position.z = startCam.z + (camPos.z - startCam.z) * e;
+            self.controls.update();
+
+            if (t < 1) requestAnimationFrame(animateFocus);
+        }
+        requestAnimationFrame(animateFocus);
+    }
+
     resetCamera() {
         // Smooth reset to default isometric view
         const dist = 60;

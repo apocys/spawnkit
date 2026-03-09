@@ -351,7 +351,9 @@
                 '<h2 style="font-family:Crimson Text,serif;font-size:28px;color:#c9a959;margin:0 0 4px;text-shadow:0 0 15px rgba(201,169,89,.3);">' + esc(mission.icon || '🏠') + ' ' + esc(mission.name) + '</h2>' +
                 '<span style="display:inline-block;padding:3px 12px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:' + (statusColors[mission.status] || '#6b7280') + ';">' + (statusLabels[mission.status] || mission.status) + '</span>' +
                 '<span style="margin-left:8px;font-size:11px;color:rgba(168,162,153,.6);">Created ' + new Date(mission.created).toLocaleDateString() + '</span>' +
+                (mission.agents && mission.agents.length ? '<div style="margin-top:6px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">' + mission.agents.map(function(a) { return '<span style="padding:2px 10px;border-radius:12px;font-size:11px;background:rgba(201,169,89,.1);color:#c9a959;border:1px solid rgba(201,169,89,.2);">⚔️ ' + esc(a) + '</span>'; }).join('') + '</div>' : '') +
             '</div>' +
+            (mission.description ? '<div style="text-align:center;margin-bottom:16px;padding:10px 16px;background:rgba(244,228,188,.05);border:1px solid rgba(201,169,89,.15);border-radius:4px;font-size:13px;color:rgba(168,162,153,.8);font-style:italic;">' + esc(mission.description) + '</div>' : '') +
             '<div style="width:60%;margin:0 auto 20px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,169,89,.4),transparent);"></div>' +
 
             // Progress bar
@@ -533,14 +535,26 @@
         content.style.cssText = 'width:min(500px,90vw);background:rgba(15,25,50,.92);border:1px solid rgba(201,169,89,.4);border-radius:4px;padding:28px;box-shadow:0 0 60px rgba(201,169,89,.15);';
 
         var icons = ['🌐', '📱', '🎮', '🛡️', '🔮', '📦', '🎯', '⚗️', '🗂️', '🚀', '💎', '🏗️'];
+        var availableAgents = [
+            { id: 'Sycopa', icon: '🎭', title: 'Lord Commander' },
+            { id: 'Forge', icon: '⚒️', title: 'Master Smith' },
+            { id: 'Atlas', icon: '📜', title: 'Royal Scribe' },
+            { id: 'Hunter', icon: '🏹', title: 'Royal Huntsman' },
+            { id: 'Echo', icon: '🎵', title: 'Court Bard' },
+            { id: 'Sentinel', icon: '🛡️', title: 'Castle Guard' },
+        ];
 
         content.innerHTML = 
-            '<h2 style="font-family:Crimson Text,serif;font-size:24px;color:#c9a959;margin:0 0 20px;text-align:center;text-shadow:0 0 15px rgba(201,169,89,.3);">🏗️ Build New Mission House</h2>' +
-            '<div style="margin-bottom:16px;">' +
+            '<h2 style="font-family:Crimson Text,serif;font-size:24px;color:#c9a959;margin:0 0 20px;text-align:center;text-shadow:0 0 15px rgba(201,169,89,.3);">🏗️ New Mission</h2>' +
+            '<div style="margin-bottom:14px;">' +
                 '<label style="font-size:12px;color:rgba(168,162,153,.7);display:block;margin-bottom:4px;">Mission Name</label>' +
                 '<input id="mc-name" type="text" placeholder="e.g. Translator, Remember, SpawnKit..." style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.3);border:1px solid rgba(168,162,153,.3);border-radius:4px;color:#f4e4bc;font-size:15px;padding:10px 12px;outline:none;" autofocus />' +
             '</div>' +
-            '<div style="margin-bottom:16px;">' +
+            '<div style="margin-bottom:14px;">' +
+                '<label style="font-size:12px;color:rgba(168,162,153,.7);display:block;margin-bottom:4px;">Description / Goal</label>' +
+                '<textarea id="mc-desc" rows="3" placeholder="Describe what this mission is about..." style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.3);border:1px solid rgba(168,162,153,.3);border-radius:4px;color:#f4e4bc;font-size:13px;padding:8px 10px;outline:none;resize:none;font-family:inherit;"></textarea>' +
+            '</div>' +
+            '<div style="margin-bottom:14px;">' +
                 '<label style="font-size:12px;color:rgba(168,162,153,.7);display:block;margin-bottom:4px;">Icon</label>' +
                 '<div id="mc-icons" style="display:flex;gap:8px;flex-wrap:wrap;">' +
                     icons.map(function(ic, i) {
@@ -548,7 +562,17 @@
                     }).join('') +
                 '</div>' +
             '</div>' +
-            '<div style="margin-bottom:20px;">' +
+            '<div style="margin-bottom:14px;">' +
+                '<label style="font-size:12px;color:rgba(168,162,153,.7);display:block;margin-bottom:6px;">Assign Knights (optional)</label>' +
+                '<div id="mc-agents" style="display:flex;gap:6px;flex-wrap:wrap;">' +
+                    availableAgents.map(function(a) {
+                        return '<label class="mc-agent-pick" style="display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;border:1px solid rgba(168,162,153,.2);background:rgba(255,255,255,.03);cursor:pointer;font-size:12px;color:#f4e4bc;transition:border-color 0.15s;">' +
+                            '<input type="checkbox" value="' + a.id + '" style="accent-color:#c9a959;" />' +
+                            '<span>' + a.icon + ' ' + a.id + '</span></label>';
+                    }).join('') +
+                '</div>' +
+            '</div>' +
+            '<div style="margin-bottom:16px;">' +
                 '<label style="font-size:12px;color:rgba(168,162,153,.7);display:block;margin-bottom:4px;">First Task (optional)</label>' +
                 '<input id="mc-task" type="text" placeholder="What needs to be done first?" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.3);border:1px solid rgba(168,162,153,.3);border-radius:4px;color:#f4e4bc;font-size:13px;padding:8px 10px;outline:none;" />' +
             '</div>' +
@@ -583,9 +607,16 @@
             var name = document.getElementById('mc-name').value.trim();
             if (!name) { document.getElementById('mc-name').focus(); return; }
 
+            var desc = document.getElementById('mc-desc').value.trim();
             var task = document.getElementById('mc-task').value.trim();
             var pos = getNextPosition();
             var colorIdx = missions.length % HOUSE_COLORS.length;
+
+            // Collect selected agents
+            var selectedAgents = [];
+            document.querySelectorAll('#mc-agents input:checked').forEach(function(cb) {
+                selectedAgents.push(cb.value);
+            });
 
             var mission = {
                 id: genId(),
@@ -593,7 +624,8 @@
                 icon: selectedIcon,
                 status: 'active',
                 color: '#' + HOUSE_COLORS[colorIdx].roof.toString(16).padStart(6, '0'),
-                agents: [],
+                agents: selectedAgents,
+                description: desc,
                 tasks: task ? [{ text: task, done: false }] : [],
                 position: pos,
                 created: new Date().toISOString(),
@@ -654,20 +686,176 @@
     }
 
     // ── Public API ────────────────────────────────────────────────────
+    // ── Edit Mode (drag houses, rename, recolor, delete) ────────────
+    var editModeActive = false;
+    var editIndicator = null;
+
+    function toggleEditMode() {
+        editModeActive = !editModeActive;
+
+        if (editModeActive) {
+            // Show edit indicator
+            if (!editIndicator) {
+                editIndicator = document.createElement('div');
+                editIndicator.id = 'mission-edit-indicator';
+                editIndicator.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:200;padding:8px 20px;background:rgba(249,115,22,.9);color:#fff;font-size:13px;font-weight:600;border-radius:20px;box-shadow:0 4px 16px rgba(249,115,22,.3);display:flex;align-items:center;gap:8px;';
+                editIndicator.innerHTML = '🏗️ Edit Mode — Click a house to edit · Press 7 to exit';
+                document.body.appendChild(editIndicator);
+            }
+            editIndicator.style.display = 'flex';
+
+            // Add glow to all mission houses
+            houseGroups.forEach(function(group) {
+                group.traverse(function(c) {
+                    if (c.isMesh && c.material) {
+                        if (!c.material._origEmissive) c.material._origEmissive = c.material.emissiveIntensity || 0;
+                        c.material.emissive = c.material.emissive || new THREE.Color(0xffaa00);
+                        c.material.emissive.set(0xff8800);
+                        c.material.emissiveIntensity = 0.3;
+                    }
+                });
+            });
+        } else {
+            // Hide indicator
+            if (editIndicator) editIndicator.style.display = 'none';
+
+            // Remove glow
+            houseGroups.forEach(function(group) {
+                group.traverse(function(c) {
+                    if (c.isMesh && c.material && c.material._origEmissive !== undefined) {
+                        c.material.emissiveIntensity = c.material._origEmissive;
+                    }
+                });
+            });
+        }
+    }
+
+    function showEditDialog(missionId) {
+        var mission = missions.find(function(m) { return m.id === missionId; });
+        if (!mission) return;
+        if (activeOverlay) { activeOverlay.remove(); activeOverlay = null; }
+
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(5,10,25,0.85);opacity:0;transition:opacity 0.3s;';
+
+        var icons = ['🌐', '📱', '🎮', '🛡️', '🔮', '📦', '🎯', '⚗️', '🗂️', '🚀', '💎', '🏗️'];
+
+        var content = document.createElement('div');
+        content.style.cssText = 'width:min(450px,90vw);background:rgba(15,25,50,.92);border:1px solid rgba(201,169,89,.4);border-radius:4px;padding:24px;box-shadow:0 0 60px rgba(201,169,89,.15);';
+
+        content.innerHTML =
+            '<h2 style="font-family:Crimson Text,serif;font-size:22px;color:#c9a959;margin:0 0 16px;text-align:center;">🏗️ Edit House</h2>' +
+            '<div style="margin-bottom:12px;"><label style="font-size:12px;color:rgba(168,162,153,.7);display:block;margin-bottom:4px;">Name</label>' +
+            '<input id="me-name" type="text" value="' + esc(mission.name) + '" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.3);border:1px solid rgba(168,162,153,.3);border-radius:4px;color:#f4e4bc;font-size:14px;padding:8px 10px;outline:none;" /></div>' +
+            '<div style="margin-bottom:12px;"><label style="font-size:12px;color:rgba(168,162,153,.7);display:block;margin-bottom:4px;">Icon</label>' +
+            '<div id="me-icons" style="display:flex;gap:6px;flex-wrap:wrap;">' +
+            icons.map(function(ic) {
+                var sel = ic === mission.icon;
+                return '<span class="me-icon-pick" data-icon="' + ic + '" style="font-size:20px;cursor:pointer;padding:4px 6px;border-radius:4px;border:2px solid ' + (sel ? 'rgba(201,169,89,.6)' : 'transparent') + ';background:rgba(255,255,255,.03);">' + ic + '</span>';
+            }).join('') + '</div></div>' +
+            '<div style="margin-bottom:16px;"><label style="font-size:12px;color:rgba(168,162,153,.7);display:block;margin-bottom:4px;">Roof Color</label>' +
+            '<input id="me-color" type="color" value="' + (mission.color || '#6366f1') + '" style="width:60px;height:30px;border:none;cursor:pointer;" /></div>' +
+            '<div style="display:flex;gap:8px;justify-content:center;">' +
+            '<button id="me-cancel" style="padding:8px 16px;background:rgba(168,162,153,.1);border:1px solid rgba(168,162,153,.3);border-radius:4px;color:rgba(168,162,153,.7);font-size:13px;cursor:pointer;">Cancel</button>' +
+            '<button id="me-delete" style="padding:8px 16px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:4px;color:#f87171;font-size:13px;cursor:pointer;">🗑️ Delete</button>' +
+            '<button id="me-save" style="padding:8px 16px;background:rgba(201,169,89,.15);border:1px solid rgba(201,169,89,.5);border-radius:4px;color:#c9a959;font-size:13px;cursor:pointer;">💾 Save</button>' +
+            '</div>';
+
+        overlay.appendChild(content);
+        document.body.appendChild(overlay);
+        activeOverlay = overlay;
+        requestAnimationFrame(function() { overlay.style.opacity = '1'; });
+
+        var selectedIcon = mission.icon || '🏠';
+        content.querySelectorAll('.me-icon-pick').forEach(function(el) {
+            el.addEventListener('click', function() {
+                content.querySelectorAll('.me-icon-pick').forEach(function(e) { e.style.borderColor = 'transparent'; });
+                this.style.borderColor = 'rgba(201,169,89,.6)';
+                selectedIcon = this.dataset.icon;
+            });
+        });
+
+        document.getElementById('me-cancel').addEventListener('click', closeMissionOverlay);
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) closeMissionOverlay(); });
+        document.addEventListener('keydown', _escHandler);
+
+        document.getElementById('me-delete').addEventListener('click', function() {
+            if (!confirm('Delete ' + mission.name + '? This will demolish the house.')) return;
+            closeMissionOverlay();
+            decommissionHouse(missionId);
+        });
+
+        document.getElementById('me-save').addEventListener('click', function() {
+            var newName = document.getElementById('me-name').value.trim();
+            if (!newName) return;
+            var newColor = document.getElementById('me-color').value;
+
+            mission.name = newName;
+            mission.icon = selectedIcon;
+            mission.color = newColor;
+            mission.updated = new Date().toISOString();
+            saveMissions();
+
+            // Update 3D label
+            var label = houseLabels.get(missionId);
+            if (label) label.textContent = selectedIcon + ' ' + newName;
+
+            // Update roof color
+            var group = houseGroups.get(missionId);
+            if (group) {
+                group.userData.buildingName = '🏠 ' + newName;
+                group.traverse(function(c) {
+                    if (c.isMesh) c.userData.buildingName = '🏠 ' + newName;
+                    // Roof is the cone geometry
+                    if (c.isMesh && c.geometry && c.geometry.type === 'ConeGeometry') {
+                        c.material.color.setHex(parseInt(newColor.replace('#',''), 16));
+                    }
+                });
+            }
+
+            closeMissionOverlay();
+        });
+    }
+
+    // Override handleBuildingClick for edit mode
+    var _origHandleClick = handleBuildingClick;
+    handleBuildingClick = function(name) {
+        if (editModeActive && name && name.startsWith('🏠 ')) {
+            var missionName = name.substring(3);
+            var mission = missions.find(function(m) { return m.name === missionName; });
+            if (mission) {
+                showEditDialog(mission.id);
+                return true;
+            }
+        }
+        return _origHandleClick(name);
+    };
+
+    // ── Public API ────────────────────────────────────────────────────
     window.MissionHouses = {
         create: showCreateDialog,
         show: showMissionOverlay,
         decommission: decommissionHouse,
         handleClick: handleBuildingClick,
+        toggleEditMode: toggleEditMode,
+        isEditMode: function() { return editModeActive; },
         getMissions: function() { return missions.slice(); },
-        addMission: function(name, icon) {
+        focusHouse: function(missionId) {
+            var m = missions.find(function(mi) { return mi.id === missionId; });
+            if (m && m.position && window.castleApp && window.castleApp.focusPosition) {
+                window.castleApp.focusPosition(m.position.x, m.position.z);
+            }
+        },
+        addMission: function(name, icon, description) {
             var pos = getNextPosition();
             var colorIdx = missions.length % HOUSE_COLORS.length;
             var mission = {
                 id: genId(), name: name, icon: icon || '🏠',
                 status: 'active',
                 color: '#' + HOUSE_COLORS[colorIdx].roof.toString(16).padStart(6, '0'),
-                agents: [], tasks: [], position: pos,
+                agents: [], tasks: [],
+                description: description || '',
+                position: pos,
                 created: new Date().toISOString(),
                 updated: new Date().toISOString(),
             };
