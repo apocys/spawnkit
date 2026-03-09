@@ -353,9 +353,9 @@ function startSpawnAnimation(app, agentId) {
 
     charData.group.traverse(child => {
         if (child.isMesh && child.material) {
-            child.material = child.material.clone();
-            child.material.transparent = true;
-            child.material.opacity = 0;
+            // Replace with safe material to avoid GLTF clone/uniform crashes
+            var col = child.material.color ? child.material.color.getHex() : 0xcccccc;
+            child.material = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0 });
         }
     });
 
@@ -525,8 +525,9 @@ function playDespawnEffect(app, agentId) {
         charData.group.traverse(child => {
             if (child.isMesh && child.material) {
                 if (!child.material._cloned) {
-                    child.material = child.material.clone();
-                    child.material.transparent = true;
+                    // Replace with safe material to avoid GLTF clone/uniform crashes
+                    var col = child.material.color ? child.material.color.getHex() : 0xcccccc;
+                    child.material = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 1 });
                     child.material._cloned = true;
                 }
                 child.material.opacity = 1 - t;

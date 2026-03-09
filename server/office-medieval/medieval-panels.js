@@ -73,9 +73,10 @@
             if (grp) {
                 grp.traverse(function (mesh) {
                     if (mesh.isMesh && mesh.material) {
-                        mesh.material = mesh.material.clone();
-                        mesh.material.emissive = { r: 0.5, g: 0.4, b: 0.0 };
-                        mesh.material.emissiveIntensity = 0.6;
+                        // Save original material for restore, don't clone (avoids THREE uniform crashes with GLTF textures)
+                        if (!mesh._origMaterial) mesh._origMaterial = mesh.material;
+                        var oldColor = mesh.material.color ? mesh.material.color.getHex() : 0xcccccc;
+                        mesh.material = new THREE.MeshStandardMaterial({ color: oldColor, emissive: 0xffaa00, emissiveIntensity: 0.6 });
                     }
                 });
                 app._selectedBuilding = grp;
@@ -94,8 +95,11 @@
     function clearBuildingGlow(app) {
         if (!app._selectedBuilding) return;
         app._selectedBuilding.traverse(function (mesh) {
-            if (mesh.isMesh && mesh.material && mesh.material.emissive) {
-                mesh.material.emissiveIntensity = 0;
+            if (mesh.isMesh && mesh._origMaterial) {
+                // Dispose the temporary glow material and restore original
+                if (mesh.material && mesh.material !== mesh._origMaterial) mesh.material.dispose();
+                mesh.material = mesh._origMaterial;
+                delete mesh._origMaterial;
             }
         });
         app._selectedBuilding = null;

@@ -1256,17 +1256,23 @@ class MedievalCastle3D {
                 }
                 // Glow effect on selected building
                 if (this._selectedBuildingGroup) {
-                    this._selectedBuildingGroup.traverse(c => { if (c.isMesh && c._origEmissive !== undefined) c.material.emissiveIntensity = 0; });
+                    this._selectedBuildingGroup.traverse(c => {
+                        if (c.isMesh && c._origSceneMaterial) {
+                            if (c.material && c.material !== c._origSceneMaterial) c.material.dispose();
+                            c.material = c._origSceneMaterial;
+                            delete c._origSceneMaterial;
+                        }
+                    });
                 }
                 let bg = bHits[0].object;
                 while (bg.parent && !bg.userData.buildingName) bg = bg.parent;
                 this._selectedBuildingGroup = bg.parent || bg;
                 this._selectedBuildingGroup.traverse(c => {
-                    if (c.isMesh) {
-                        c._origEmissive = c.material.emissiveIntensity || 0;
-                        c.material.emissive = c.material.emissive || new THREE.Color(0xffaa00);
-                        c.material.emissive.set(0xffaa00);
-                        c.material.emissiveIntensity = 0.4;
+                    if (c.isMesh && c.material) {
+                        // Save original, replace with safe material (no clone — avoids GLTF uniform crashes)
+                        if (!c._origSceneMaterial) c._origSceneMaterial = c.material;
+                        var col = c.material.color ? c.material.color.getHex() : 0xcccccc;
+                        c.material = new THREE.MeshStandardMaterial({ color: col, emissive: 0xffaa00, emissiveIntensity: 0.4 });
                     }
                 });
                 return;
