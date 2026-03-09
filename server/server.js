@@ -1335,6 +1335,66 @@ ${customBlock}`;
     return;
   }
 
+  // ─── Mission Houses API ──────────────────────────────────
+  const MISSIONS_FILE = path.join(WORKSPACE, '.spawnkit-missions.json');
+
+  // GET /api/oc/missions — list all missions
+  if (req.url === '/api/oc/missions' && req.method === 'GET') {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+      const data = fs.existsSync(MISSIONS_FILE) ? JSON.parse(fs.readFileSync(MISSIONS_FILE, 'utf8')) : [];
+      res.writeHead(200);
+      res.end(JSON.stringify({ missions: data }));
+    } catch(e) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ missions: [] }));
+    }
+    return;
+  }
+
+  // POST /api/oc/missions — save all missions (full sync)
+  if (req.url === '/api/oc/missions' && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json');
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        const missions = data.missions || data;
+        if (!Array.isArray(missions)) throw new Error('missions must be an array');
+        fs.writeFileSync(MISSIONS_FILE, JSON.stringify(missions, null, 2));
+        console.log('[Missions] Saved', missions.length, 'missions');
+        res.writeHead(200);
+        res.end(JSON.stringify({ ok: true, count: missions.length }));
+      } catch(e) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
+  // DELETE /api/oc/missions/:id — archive a mission
+  const missionDeleteMatch = req.url.match(/^\/api\/oc\/missions\/([a-zA-Z0-9_]+)$/);
+  if (missionDeleteMatch && req.method === 'DELETE') {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+      const id = missionDeleteMatch[1];
+      const data = fs.existsSync(MISSIONS_FILE) ? JSON.parse(fs.readFileSync(MISSIONS_FILE, 'utf8')) : [];
+      const mission = data.find(m => m.id === id);
+      if (mission) {
+        mission.status = 'archived';
+        fs.writeFileSync(MISSIONS_FILE, JSON.stringify(data, null, 2));
+      }
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, archived: id }));
+    } catch(e) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   // GET /api/oc/chat/transcript?last=N — Sanitized transcript (text-only, no tool calls)
   if (req.url.startsWith('/api/oc/chat/transcript') && req.method === 'GET') {
     res.setHeader('Content-Type', 'application/json');

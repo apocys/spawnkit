@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+// Expose THREE globally for non-module scripts (mission-houses, integration, etc.)
+window.THREE = THREE;
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';

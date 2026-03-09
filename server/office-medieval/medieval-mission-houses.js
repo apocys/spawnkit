@@ -60,19 +60,56 @@
 
     // ── Persistence ───────────────────────────────────────────────────
     function loadMissions() {
+        // Load from localStorage first (instant)
         try {
             missions = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
             if (!Array.isArray(missions)) missions = [];
         } catch(e) { missions = []; }
         log('Loaded', missions.length, 'missions from localStorage');
+
+        // Then try backend (async merge — backend wins on conflict)
+        var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : fetch.bind(window);
+        fetcher('/api/oc/missions').then(function(r) { return r.json(); }).then(function(data) {
+            var backend = data.missions || [];
+            if (!Array.isArray(backend) || backend.length === 0) {
+                // No backend data — push localStorage to backend
+                if (missions.length > 0) saveMissions();
+                return;
+            }
+            // Merge: use backend as source of truth, add any localStorage-only missions
+            var backendIds = new Set(backend.map(function(m) { return m.id; }));
+            var localOnly = missions.filter(function(m) { return !backendIds.has(m.id); });
+            missions = backend.concat(localOnly);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(missions));
+            log('Merged from backend:', backend.length, 'backend +', localOnly.length, 'local-only =', missions.length, 'total');
+
+            // Rebuild houses if scene is ready
+            if (sceneReady) {
+                missions.forEach(function(m) {
+                    if (m.status !== 'archived' && m.position && !houseGroups.has(m.id)) {
+                        buildHouse3D(m, false);
+                    }
+                });
+            }
+        }).catch(function(e) { warn('Backend load failed (using localStorage):', e.message || e); });
+
         return missions;
     }
 
     function saveMissions() {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(missions));
-            log('Saved', missions.length, 'missions');
-        } catch(e) { err('Save failed:', e); }
+        } catch(e) { err('localStorage save failed:', e); }
+        // Sync to backend
+        var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : fetch.bind(window);
+        fetcher('/api/oc/missions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ missions: missions }),
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.ok) log('Synced', data.count, 'missions to backend');
+            else warn('Backend sync error:', data.error);
+        }).catch(function(e) { warn('Backend sync failed:', e.message || e); });
     }
 
     function genId() { return 'mission_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5); }
@@ -94,9 +131,9 @@
     }
 
     function checkScene() {
-        if (typeof THREE === 'undefined') { warn('THREE not loaded'); return false; }
-        if (!window.castleApp) { warn('castleApp not ready'); return false; }
-        if (!window.castleApp.scene) { warn('castleApp.scene not ready'); return false; }
+        if (typeof THREE === 'undefined' && !window.THREE) { return false; } // Silent — expected during load
+        if (!window.castleApp) { return false; }
+        if (!window.castleApp.scene) { return false; }
         return true;
     }
 
@@ -722,17 +759,28 @@
         var activeCount = missions.filter(function(m) { return m.status !== 'archived'; }).length;
         log('Init: ' + activeCount + ' active missions to restore');
 
+        var retries = 0;
+        var maxRetries = 60; // 30 seconds max
         function tryBuild() {
+            retries++;
             if (!checkScene()) {
-                setTimeout(tryBuild, 500);
+                if (retries <= maxRetries) {
+                    setTimeout(tryBuild, 500);
+                } else {
+                    err('Scene never became ready after ' + (maxRetries * 500 / 1000) + 's. THREE:', typeof THREE !== 'undefined' || !!window.THREE, 'castleApp:', !!window.castleApp);
+                }
                 return;
             }
             sceneReady = true;
-            log('Scene ready, building', activeCount, 'houses');
+            log('Scene ready after ' + retries + ' checks (' + (retries * 0.5) + 's). Building ' + activeCount + ' houses');
             missions.forEach(function(m) {
                 if (m.status !== 'archived' && m.position) {
                     var result = buildHouse3D(m, false);
-                    if (!result) warn('Failed to restore house:', m.name);
+                    if (result) {
+                        log('Restored house:', m.name);
+                    } else {
+                        err('Failed to restore house:', m.name);
+                    }
                 }
             });
         }
