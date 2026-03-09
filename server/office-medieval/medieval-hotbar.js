@@ -48,9 +48,9 @@
             overlay.style.display = 'flex';
             setTimeout(function() { overlay.classList.add('visible'); }, 50);
         }},
-        { key: '7', icon: '🏗️', label: 'Edit', action: function() {
-            if (window.castleApp && window.castleApp.toggleEditMode) {
-                window.castleApp.toggleEditMode();
+        { key: '7', icon: '🏗️', label: 'Build', action: function() {
+            if (window.MissionHouses && typeof window.MissionHouses.create === 'function') {
+                window.MissionHouses.create();
             }
         }},
         { key: '8', icon: '🏰', label: 'Allies', action: function() {

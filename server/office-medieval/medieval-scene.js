@@ -1247,6 +1247,8 @@ class MedievalCastle3D {
                 const name = bHits[0].object.userData.buildingName;
                 if (name === '🏰 Royal Court' && window.RoyalCourt) {
                     window.RoyalCourt.show();
+                } else if (window.MissionHouses && window.MissionHouses.handleClick(name)) {
+                    // Mission house click consumed
                 } else if (typeof window.openBuildingPanel === 'function') {
                     window.openBuildingPanel(name);
                 }
