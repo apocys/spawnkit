@@ -591,7 +591,7 @@
         // Check for new messages
         const currentMessageCount = Array.isArray(chat) ? chat.length : (chat.messages ? chat.messages.length : 0);
         if (currentMessageCount > lastChatMessageCount && lastChatMessageCount > 0) {
-            animateMedievalNewMessage();
+            animateMedievalNewMessage(chat);
         }
         lastChatMessageCount = currentMessageCount;
         
@@ -763,7 +763,7 @@
         addMedievalNotification(`🏰 Knight returned: ${session.label}`, 'info');
     }
     
-    function animateMedievalNewMessage() {
+    function animateMedievalNewMessage(chat) {
         // Animate ravens/messenger birds
         const messageElements = document.querySelectorAll('.message-icon, [data-icon="message"]');
         messageElements.forEach(el => {
