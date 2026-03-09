@@ -639,13 +639,22 @@ class MedievalCastle3D {
             model.scale.y = def.scaleY;
         }
 
-        // Enable shadows on all meshes
+        // Enable shadows on all meshes + tag Keep pieces as clickable
+        const isKeep = def.label && def.label.startsWith('Keep');
         model.traverse((child) => {
             if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
+                if (isKeep) {
+                    child.userData.buildingName = '🏰 Royal Court';
+                }
             }
         });
+        if (isKeep) {
+            model.userData.buildingName = '🏰 Royal Court';
+            this.buildingGroups = this.buildingGroups || [];
+            this.buildingGroups.push(model);
+        }
 
         this.scene.add(model);
         return model;
@@ -1236,7 +1245,9 @@ class MedievalCastle3D {
             const bHits = this.raycaster.intersectObjects(buildingMeshes, false);
             if (bHits.length > 0 && bHits[0].object.userData.buildingName) {
                 const name = bHits[0].object.userData.buildingName;
-                if (typeof window.openBuildingPanel === 'function') {
+                if (name === '🏰 Royal Court' && window.RoyalCourt) {
+                    window.RoyalCourt.show();
+                } else if (typeof window.openBuildingPanel === 'function') {
                     window.openBuildingPanel(name);
                 }
                 // Glow effect on selected building

@@ -619,7 +619,11 @@
                     var obj = hits[0].object;
                     while (obj && !obj.userData.buildingName) obj = obj.parent;
                     if (obj && obj.userData.buildingName) {
-                        window.openBuildingPanel(obj.userData.buildingName);
+                        if (obj.userData.buildingName === '🏰 Royal Court' && window.RoyalCourt) {
+                            window.RoyalCourt.show();
+                        } else {
+                            window.openBuildingPanel(obj.userData.buildingName);
+                        }
                         return; // consumed
                     }
                 }
