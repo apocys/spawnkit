@@ -15,7 +15,7 @@
 const ARENA_POS = { x: 0, y: 0, z: -18 };        // Behind the village
 const ARENA_RADIUS = 6;
 const ARENA_WALL_HEIGHT = 3.5;
-const ARENA_SEGMENTS = 32;
+const ARENA_SEGMENTS = 16;
 const GATE_WIDTH = 2.2;
 const GATE_HEIGHT = 3;
 
@@ -46,20 +46,32 @@ class MedievalArena {
         this.championA = null;
         this.championB = null;
 
-        // Build
-        this._buildFloor();
-        this._buildWalls();
-        this._buildGates();
-        this._buildPortals();
-        this._buildTorches();
-        this._buildScoreboard();
-        this._buildBanners();
-        this._buildPath();
+        // Build — wrapped in try-catch for memory safety
+        try {
+            if (typeof THREE === 'undefined' || !THREE.CircleGeometry) {
+                console.warn('[Arena] THREE.js not ready, aborting arena build');
+                return;
+            }
+            this._buildFloor();
+            this._buildWalls();
+            this._buildGates();
+            this._buildPortals();
+            this._buildTorches();
+            this._buildScoreboard();
+            this._buildBanners();
+            this._buildPath();
 
-        // UI overlay
-        this._createUI();
+            // UI overlay
+            this._createUI();
 
-        console.log('[Arena] ⚔️ Colosseum constructed');
+            console.log('[Arena] ⚔️ Colosseum constructed');
+        } catch (e) {
+            console.error('[Arena] Build failed:', e.message);
+            // Clean up partial build
+            if (this.group) {
+                this.scene.remove(this.group);
+            }
+        }
     }
 
     // ── Floor ────────────────────────────────────────
@@ -78,7 +90,7 @@ class MedievalArena {
         this.group.add(floor);
 
         // Battle circle etched in the sand
-        const ringGeo = new THREE.RingGeometry(ARENA_RADIUS * 0.55, ARENA_RADIUS * 0.58, 64);
+        const ringGeo = new THREE.RingGeometry(ARENA_RADIUS * 0.55, ARENA_RADIUS * 0.58, 32);
         const ringMat = new THREE.MeshStandardMaterial({
             color: GOLD_COLOR,
             roughness: 0.6,
