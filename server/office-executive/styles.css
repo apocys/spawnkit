@@ -39,6 +39,8 @@
 #addAgentOverlay.open,
 #activateAgentModal.open { display: block !important; }
 
+.mc-overlay.visible { display: flex !important; opacity: 1; }
+
 /* ── Z-Index Scale (single source of truth) ──────────────────────────────
    100  base panels / dropdowns
    200  side panels (cron, remote, settings, missions, chat)
