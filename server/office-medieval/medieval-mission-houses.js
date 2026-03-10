@@ -457,8 +457,8 @@
 
             // Progress
             '<div style="margin-bottom:16px;">' +
-                '<div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(168,162,153,.7);margin-bottom:4px;"><span>Progress</span><span>' + doneTasks + '/' + tasks.length + ' (' + pct + '%)</span></div>' +
-                '<div style="height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#c9a959,#f59e0b);border-radius:3px;"></div></div>' +
+                '<div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(168,162,153,.7);margin-bottom:4px;"><span>Progress</span><span data-progress-text>' + doneTasks + '/' + tasks.length + ' (' + pct + '%)</span></div>' +
+                '<div style="height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;"><div data-progress-bar style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#c9a959,#f59e0b);border-radius:3px;transition:width 0.3s;"></div></div>' +
             '</div>' +
 
             // Tasks
@@ -549,11 +549,29 @@
         overlay.addEventListener('click', function(e) { if (e.target === overlay) closeMissionOverlay(); });
         document.addEventListener('keydown', _escHandler);
 
-        // Task checkboxes
+        // Task checkboxes — FIX 4: update progress bar inline
         content.querySelectorAll('.mh-task-check').forEach(function(cb) {
             cb.addEventListener('change', function() {
                 var idx = parseInt(this.dataset.idx);
-                if (mission.tasks[idx]) { mission.tasks[idx].done = this.checked; saveMissions(); updateHouseStatus(missionId); }
+                if (mission.tasks[idx]) {
+                    mission.tasks[idx].done = this.checked;
+                    saveMissions();
+                    updateHouseStatus(missionId);
+                    // Update progress bar inline without closing overlay
+                    var done = mission.tasks.filter(function(t) { return t.done; }).length;
+                    var total = mission.tasks.length;
+                    var pct = total > 0 ? Math.round(done / total * 100) : 0;
+                    var progressText = content.querySelector('[data-progress-text]');
+                    var progressBar = content.querySelector('[data-progress-bar]');
+                    if (progressText) progressText.textContent = done + '/' + total + ' (' + pct + '%)';
+                    if (progressBar) progressBar.style.width = pct + '%';
+                    // Update task text style (strikethrough when done)
+                    var taskSpan = this.parentElement.querySelector('span');
+                    if (taskSpan) {
+                        taskSpan.style.color = this.checked ? 'rgba(168,162,153,.4)' : '#f4e4bc';
+                        taskSpan.style.textDecoration = this.checked ? 'line-through' : 'none';
+                    }
+                }
             });
         });
 
@@ -618,7 +636,7 @@
                     closeMissionOverlay(); decommissionHouse(missionId); return;
                 }
                 if (action === 'activate') {
-                    this.textContent = '⏳ Deploying...';
+                    this.textContent = '⏳ Deploying agents & generating tasks...';
                     this.disabled = true;
                     activateMission(missionId, function(data) {
                         if (data.error) {
@@ -626,6 +644,10 @@
                         } else {
                             mission.activatedAt = new Date().toISOString();
                             mission.status = 'active';
+                            // FIX 1: Pick up auto-generated tasks from backend
+                            if (data.tasks && Array.isArray(data.tasks) && data.tasks.length > 0) {
+                                mission.tasks = data.tasks;
+                            }
                             saveMissions();
                         }
                         closeMissionOverlay(); showMissionOverlay(missionId);
@@ -644,23 +666,47 @@
             var statusPollTimer = setInterval(function() {
                 if (!activeOverlay) { clearInterval(statusPollTimer); return; }
                 fetchMissionStatus(missionId, function(status) {
+                    if (!status) return;
+                    // Update live status panel
                     var el = document.getElementById('mh-live-status');
-                    if (!el || !status) return;
-                    el.style.display = 'block';
-                    var agentHtml = (status.agents || []).map(function(a) {
-                        var dot = a.status === 'working' ? '🟢' : '⚪';
-                        var actionLabel = a.action !== 'idle' ? ' — ' + a.action : '';
-                        return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;">' +
-                            '<span>' + dot + '</span>' +
-                            '<span style="color:#f4e4bc;font-size:12px;">' + esc(a.agent) + '</span>' +
-                            '<span style="color:rgba(168,162,153,.5);font-size:11px;">' + a.status + actionLabel + '</span>' +
-                            (a.sessions > 0 ? '<span style="color:rgba(201,169,89,.4);font-size:10px;">(' + a.sessions + ' session' + (a.sessions > 1 ? 's' : '') + ')</span>' : '') +
-                        '</div>';
-                    }).join('');
-                    el.innerHTML =
-                        '<div style="font-family:Crimson Text,serif;color:rgba(201,169,89,.6);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">⚡ Live Status</div>' +
-                        agentHtml +
-                        '<div style="margin-top:6px;font-size:10px;color:rgba(168,162,153,.4);">Auto-refreshing every 10s</div>';
+                    if (el) {
+                        el.style.display = 'block';
+                        var agentHtml = (status.agents || []).map(function(a) {
+                            var dot = a.status === 'working' ? '🟢' : '⚪';
+                            var actionLabel = a.action !== 'idle' ? ' — ' + a.action : '';
+                            return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;">' +
+                                '<span>' + dot + '</span>' +
+                                '<span style="color:#f4e4bc;font-size:12px;">' + esc(a.agent) + '</span>' +
+                                '<span style="color:rgba(168,162,153,.5);font-size:11px;">' + a.status + actionLabel + '</span>' +
+                                (a.sessions > 0 ? '<span style="color:rgba(201,169,89,.4);font-size:10px;">(' + a.sessions + ' session' + (a.sessions > 1 ? 's' : '') + ')</span>' : '') +
+                            '</div>';
+                        }).join('');
+                        el.innerHTML =
+                            '<div style="font-family:Crimson Text,serif;color:rgba(201,169,89,.6);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">⚡ Live Status</div>' +
+                            agentHtml +
+                            '<div style="margin-top:6px;font-size:10px;color:rgba(168,162,153,.4);">Auto-refreshing every 10s</div>';
+                    }
+                    // FIX 4: Sync progress bar from backend status
+                    if (status.progress) {
+                        var progressText = content.querySelector('[data-progress-text]');
+                        var progressBar = content.querySelector('[data-progress-bar]');
+                        if (progressText) progressText.textContent = status.progress.done + '/' + status.progress.total + ' (' + status.progress.percent + '%)';
+                        if (progressBar) progressBar.style.width = status.progress.percent + '%';
+                    }
+                    // Sync tasks from backend if they were updated (e.g., agent completed a task)
+                    if (status.tasks && Array.isArray(status.tasks) && status.tasks.length > 0) {
+                        var backendTasks = status.tasks;
+                        var localTasks = mission.tasks || [];
+                        // Only update if backend has more done tasks (agent completed something)
+                        var backendDone = backendTasks.filter(function(t) { return t.done; }).length;
+                        var localDone = localTasks.filter(function(t) { return t.done; }).length;
+                        if (backendDone > localDone || backendTasks.length !== localTasks.length) {
+                            mission.tasks = backendTasks;
+                            saveMissions();
+                            // Refresh the overlay to show updated tasks
+                            closeMissionOverlay(); showMissionOverlay(missionId);
+                        }
+                    }
                 });
             }, 10000);
             // Initial fetch

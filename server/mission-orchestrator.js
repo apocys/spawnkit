@@ -5,26 +5,27 @@
  *   create → activate → monitor → complete/fail
  *
  * When a mission is activated:
- *   1. Sends task brief to each assigned agent via OpenClaw gateway
- *   2. Creates a mission-scoped chat context
- *   3. Polls agent sessions for progress
- *   4. Logs all events (activation, messages, status changes, completion)
+ *   1. Auto-generates tasks from mission description via gateway
+ *   2. Creates a persistent session per mission for chat context
+ *   3. Sends task brief to each assigned agent
+ *   4. Polls agent sessions for progress
+ *   5. Logs all events (activation, messages, status changes, completion)
  *
  * Storage: filesystem (JSONL per mission in WORKSPACE/.spawnkit-missions/)
  *
- * Forge Review Fixes (v2):
- *   - Atomic writes (write to .tmp → rename)
- *   - activate() checks for partial failures
- *   - Fetch timeout (30s) with AbortController
- *   - Error handling on appendFile
- *   - Staggered polling on startup
- *   - Failure events distinct from messages
+ * v3 Fixes:
+ *   - Fix 1: Auto-generate tasks on activation
+ *   - Fix 2: Increased timeouts (60s activate, 45s chat)
+ *   - Fix 3: Persistent mission sessions with full context
+ *   - Fix 4: Progress tracking from task completion
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const FETCH_TIMEOUT_MS = 30000;
+const ACTIVATE_TIMEOUT_MS = 60000;
+const CHAT_TIMEOUT_MS = 45000;
+const TASK_GEN_TIMEOUT_MS = 45000;
 
 class MissionOrchestrator {
   constructor({ workspace, gatewayUrl, gatewayToken, sessionsFile }) {
@@ -35,6 +36,7 @@ class MissionOrchestrator {
     this.missionsDir = path.join(workspace, '.spawnkit-missions');
     this.missionsFile = path.join(workspace, '.spawnkit-missions.json');
     this.pollers = new Map(); // missionId → interval
+    this.missionSessions = new Map(); // missionId → sessionKey
     if (!fs.existsSync(this.missionsDir)) fs.mkdirSync(this.missionsDir, { recursive: true });
   }
 
@@ -46,7 +48,6 @@ class MissionOrchestrator {
   }
 
   saveMissions(missions) {
-    // Atomic write: write to temp file, then rename (POSIX atomic)
     const tmp = this.missionsFile + '.tmp.' + process.pid;
     fs.writeFileSync(tmp, JSON.stringify(missions, null, 2));
     fs.renameSync(tmp, this.missionsFile);
@@ -115,42 +116,183 @@ class MissionOrchestrator {
     return msg;
   }
 
-  // ── Activate mission — send briefs to agents ──────────────
+  // ── FIX 1: Auto-generate tasks from mission description ───
+  async _generateTasks(mission) {
+    const prompt = `You are a task decomposition assistant. Given a mission name and description, break it down into 3-7 concrete, actionable sub-tasks.
+
+Mission: ${mission.name}
+${mission.description ? 'Description: ' + mission.description : ''}
+${mission.agents && mission.agents.length ? 'Assigned agents: ' + mission.agents.join(', ') : ''}
+
+Respond with ONLY a JSON array of task strings, nothing else. Example:
+["Research competitors", "Design landing page wireframe", "Implement hero section"]
+
+Keep tasks specific and actionable. Each task should be completable independently.`;
+
+    try {
+      const response = await this._callGateway(prompt, TASK_GEN_TIMEOUT_MS);
+      // Parse JSON array from response — handle markdown code blocks
+      let cleaned = response.trim();
+      // Strip markdown code fences if present
+      if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+      }
+      const tasks = JSON.parse(cleaned);
+      if (Array.isArray(tasks) && tasks.length > 0) {
+        return tasks.map(t => ({ text: String(t), done: false }));
+      }
+    } catch (e) {
+      console.error('[MissionOrch] Task generation failed:', e.message);
+      // Fallback: create a single task from the mission name
+    }
+    return [{ text: `Complete: ${mission.name}`, done: false }];
+  }
+
+  // ── FIX 3: Create persistent session for a mission ────────
+  async _getOrCreateMissionSession(missionId) {
+    // Check if we already have a session for this mission
+    if (this.missionSessions.has(missionId)) {
+      return this.missionSessions.get(missionId);
+    }
+
+    // Check if session key is stored in mission data
+    const mission = this.getMission(missionId);
+    if (mission?.sessionKey) {
+      this.missionSessions.set(missionId, mission.sessionKey);
+      return mission.sessionKey;
+    }
+
+    // Create a new persistent session via gateway
+    try {
+      const taskList = (mission.tasks || []).map((t, i) =>
+        `${i + 1}. ${t.done ? '✅' : '☐'} ${t.text}`
+      ).join('\n') || '(Tasks will be generated)';
+
+      const systemPrompt = [
+        `🏰 MISSION SESSION: ${mission.name}`,
+        mission.description ? `\nDescription: ${mission.description}` : '',
+        `\nAssigned agents: ${(mission.agents || []).join(', ')}`,
+        `\nTasks:\n${taskList}`,
+        `\nYou are operating in the context of this specific mission.`,
+        `Focus ONLY on this mission's objectives.`,
+        `When a task is complete, say: [Task done: <task number>]`,
+        `Report progress clearly.`,
+      ].join('');
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), ACTIVATE_TIMEOUT_MS);
+
+      const resp = await fetch(this.gatewayUrl + '/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + this.gatewayToken,
+        },
+        body: JSON.stringify({
+          model: 'openclaw',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Mission "${mission.name}" activated. Acknowledge and confirm your understanding of the tasks.` },
+          ],
+          stream: false,
+          // Request a persistent session
+          metadata: {
+            sessionLabel: `mission-${missionId}`,
+            persistent: true,
+          },
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (!resp.ok) {
+        throw new Error(`Gateway error ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      // Try to extract session key from response headers or data
+      const sessionKey = data?.metadata?.sessionKey || data?.session_key || `mission-${missionId}`;
+      this.missionSessions.set(missionId, sessionKey);
+      this.updateMission(missionId, { sessionKey });
+
+      return sessionKey;
+    } catch (e) {
+      console.error('[MissionOrch] Failed to create mission session:', e.message);
+      return null;
+    }
+  }
+
+  // ── Build mission context string ──────────────────────────
+  _buildMissionContext(mission) {
+    const taskList = (mission.tasks || []).map((t, i) =>
+      `${i + 1}. ${t.done ? '✅' : '☐'} ${t.text}`
+    ).join('\n') || '(No tasks)';
+
+    const done = (mission.tasks || []).filter(t => t.done).length;
+    const total = (mission.tasks || []).length;
+
+    return [
+      `--- MISSION CONTEXT ---`,
+      `Name: ${mission.name}`,
+      mission.description ? `Description: ${mission.description}` : null,
+      `Agents: ${(mission.agents || []).join(', ')}`,
+      `Status: ${mission.status}`,
+      `Progress: ${done}/${total} tasks done`,
+      `Tasks:`,
+      taskList,
+      `--- END MISSION CONTEXT ---`,
+    ].filter(Boolean).join('\n');
+  }
+
+  // ── Activate mission ──────────────────────────────────────
   async activate(missionId) {
     const mission = this.getMission(missionId);
     if (!mission) throw new Error('Mission not found: ' + missionId);
     if (!mission.agents || mission.agents.length === 0) throw new Error('No agents assigned');
 
-    // Build task brief
-    const taskList = (mission.tasks || []).map((t, i) => `${i + 1}. ${t.text}`).join('\n') || '(No specific tasks defined)';
+    this.logEvent(missionId, 'activate_start', { agents: mission.agents });
+
+    // FIX 1: Auto-generate tasks if none exist
+    if (!mission.tasks || mission.tasks.length === 0) {
+      this.appendChat(missionId, 'system', '🧠 Generating tasks from mission description...');
+      const tasks = await this._generateTasks(mission);
+      this.updateMission(missionId, { tasks });
+      mission.tasks = tasks;
+      this.logEvent(missionId, 'tasks_generated', { count: tasks.length, tasks: tasks.map(t => t.text) });
+      this.appendChat(missionId, 'system', `📋 Generated ${tasks.length} tasks:\n${tasks.map((t, i) => `${i + 1}. ${t.text}`).join('\n')}`);
+    }
+
+    // Build task brief with full context
+    const context = this._buildMissionContext(mission);
     const brief = [
       `🏰 MISSION BRIEF: ${mission.name}`,
       mission.description ? `\nDescription: ${mission.description}` : '',
-      `\nTasks:\n${taskList}`,
-      `\nStatus: ${mission.status}`,
-      `\nReport progress by including [Mission: ${mission.name}] in your messages.`,
-      `\nWhen a task is complete, say: [Task done: <task number>]`,
+      `\nTasks:\n${mission.tasks.map((t, i) => `${i + 1}. ${t.text}`).join('\n')}`,
+      `\n\nYou are working on THIS mission specifically. Focus only on these tasks.`,
+      `Report progress by saying: [Task done: <task number>]`,
+      `When all tasks are complete, say: [Mission complete]`,
     ].join('');
 
-    this.logEvent(missionId, 'activate', { agents: mission.agents, brief: brief.substring(0, 200) });
+    this.logEvent(missionId, 'activate', { agents: mission.agents, taskCount: mission.tasks.length });
+
+    // FIX 3: Create persistent session for this mission
+    await this._getOrCreateMissionSession(missionId);
 
     // Send brief to each assigned agent
     const results = [];
     for (const agentName of mission.agents) {
       try {
-        const resp = await this._sendToAgent(agentName, brief);
+        const resp = await this._sendToAgent(agentName, brief, ACTIVATE_TIMEOUT_MS);
         results.push({ agent: agentName, ok: true, reply: resp });
         this.appendChat(missionId, 'system', `📜 Brief sent to ${agentName}`, agentName);
         this.logEvent(missionId, 'brief_sent', { agent: agentName });
       } catch (e) {
         results.push({ agent: agentName, ok: false, error: e.message });
         this.logEvent(missionId, 'brief_error', { agent: agentName, error: e.message });
-        // Log failure as distinct event, not as chat message
         this.appendChat(missionId, 'error', `❌ Failed to reach ${agentName}: ${e.message}`, agentName);
       }
     }
 
-    // Only set active if at least one agent was successfully briefed
     const anySuccess = results.some(r => r.ok);
     if (anySuccess) {
       this.updateMission(missionId, { status: 'active', activatedAt: new Date().toISOString() });
@@ -159,27 +301,30 @@ class MissionOrchestrator {
       this.logEvent(missionId, 'activate_failed', { reason: 'All agents unreachable' });
     }
 
-    return { ok: anySuccess, partial: anySuccess && results.some(r => !r.ok), results };
+    return { ok: anySuccess, partial: anySuccess && results.some(r => !r.ok), results, tasks: mission.tasks };
   }
 
-  // ── Send a mission-scoped chat message ────────────────────
+  // ── FIX 3: Send mission-scoped chat with persistent context ─
   async sendChat(missionId, message, targetAgent = null) {
     const mission = this.getMission(missionId);
     if (!mission) throw new Error('Mission not found');
 
-    // Store user message in mission chat
     this.appendChat(missionId, 'user', message);
 
-    // Prefix message with mission context
-    const scopedMsg = `[Mission: ${mission.name}] ${message}`;
+    // Build full context for every message
+    const context = this._buildMissionContext(mission);
+    const scopedMsg = `${context}\n\nUser message: ${message}`;
 
-    // Send to specific agent or all assigned agents
     const agents = targetAgent ? [targetAgent] : (mission.agents || []);
     const results = [];
     for (const agentName of agents) {
       try {
-        const reply = await this._sendToAgent(agentName, scopedMsg);
+        const reply = await this._sendToAgent(agentName, scopedMsg, CHAT_TIMEOUT_MS);
         this.appendChat(missionId, 'assistant', reply, agentName);
+
+        // FIX 4: Parse task completions from agent replies
+        this._parseTaskCompletions(missionId, reply);
+
         results.push({ agent: agentName, ok: true, reply });
       } catch (e) {
         this.appendChat(missionId, 'error', `❌ ${agentName} unreachable: ${e.message}`, agentName);
@@ -190,12 +335,47 @@ class MissionOrchestrator {
     return { ok: true, results };
   }
 
+  // ── FIX 4: Parse "[Task done: N]" from agent replies ──────
+  _parseTaskCompletions(missionId, reply) {
+    const matches = reply.matchAll(/\[Task done:\s*(\d+)\]/gi);
+    let updated = false;
+    const mission = this.getMission(missionId);
+    if (!mission || !mission.tasks) return;
+
+    for (const match of matches) {
+      const taskIdx = parseInt(match[1]) - 1; // 1-indexed in messages
+      if (taskIdx >= 0 && taskIdx < mission.tasks.length && !mission.tasks[taskIdx].done) {
+        mission.tasks[taskIdx].done = true;
+        updated = true;
+        this.logEvent(missionId, 'task_done', { taskIndex: taskIdx, text: mission.tasks[taskIdx].text });
+      }
+    }
+
+    // Also check for mission complete
+    if (/\[Mission complete\]/i.test(reply)) {
+      this.updateMission(missionId, { status: 'done', tasks: mission.tasks });
+      this._stopPolling(missionId);
+      this.logEvent(missionId, 'mission_complete', { source: 'agent' });
+      return;
+    }
+
+    if (updated) {
+      this.updateMission(missionId, { tasks: mission.tasks });
+      // Check if all tasks are now done
+      const allDone = mission.tasks.every(t => t.done);
+      if (allDone) {
+        this.updateMission(missionId, { status: 'done' });
+        this._stopPolling(missionId);
+        this.logEvent(missionId, 'auto_complete', { source: 'all_tasks_done' });
+      }
+    }
+  }
+
   // ── Get live mission status with session data ─────────────
   getStatus(missionId) {
     const mission = this.getMission(missionId);
     if (!mission) return null;
 
-    // Read current sessions
     const sessions = this._getSessions();
     const agentStatuses = (mission.agents || []).map(agentName => {
       const agentLower = agentName.toLowerCase();
@@ -216,7 +396,6 @@ class MissionOrchestrator {
       };
     });
 
-    // Calculate progress from tasks
     const tasks = mission.tasks || [];
     const done = tasks.filter(t => t.done).length;
     const total = tasks.length;
@@ -227,18 +406,16 @@ class MissionOrchestrator {
       status: mission.status,
       activatedAt: mission.activatedAt || null,
       agents: agentStatuses,
+      tasks: mission.tasks || [],
       progress: { done, total, percent: total > 0 ? Math.round(done / total * 100) : 0 },
       lastEvent: this.getLog(missionId, 1)[0] || null,
     };
   }
 
-  // ── Internal: send message to agent via gateway ───────────
-  async _sendToAgent(agentName, message) {
-    const prefixedMsg = `[Speaking to ${agentName}] ${message}`;
-
-    // AbortController for timeout
+  // ── Internal: call gateway (generic) ──────────────────────
+  async _callGateway(message, timeoutMs = CHAT_TIMEOUT_MS) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const resp = await fetch(this.gatewayUrl + '/v1/chat/completions', {
@@ -249,7 +426,7 @@ class MissionOrchestrator {
         },
         body: JSON.stringify({
           model: 'openclaw',
-          messages: [{ role: 'user', content: prefixedMsg }],
+          messages: [{ role: 'user', content: message }],
           stream: false,
         }),
         signal: controller.signal,
@@ -264,9 +441,15 @@ class MissionOrchestrator {
       return data?.choices?.[0]?.message?.content || '';
     } catch (e) {
       clearTimeout(timeout);
-      if (e.name === 'AbortError') throw new Error(`Gateway timeout after ${FETCH_TIMEOUT_MS / 1000}s`);
+      if (e.name === 'AbortError') throw new Error(`Gateway timeout after ${timeoutMs / 1000}s`);
       throw e;
     }
+  }
+
+  // ── Internal: send message to agent via gateway ───────────
+  async _sendToAgent(agentName, message, timeoutMs = CHAT_TIMEOUT_MS) {
+    const prefixedMsg = `[Speaking to ${agentName}] ${message}`;
+    return this._callGateway(prefixedMsg, timeoutMs);
   }
 
   // ── Internal: read sessions from file ─────────────────────
@@ -297,7 +480,6 @@ class MissionOrchestrator {
         const status = this.getStatus(missionId);
         if (!status) { this._stopPolling(missionId); return; }
 
-        // Auto-complete when all tasks done
         if (status.progress.total > 0 && status.progress.done === status.progress.total) {
           this.logEvent(missionId, 'auto_complete', { progress: status.progress });
           this.updateMission(missionId, { status: 'done' });
@@ -305,7 +487,6 @@ class MissionOrchestrator {
           return;
         }
 
-        // Log periodic status only when agents are active (avoid log spam)
         const activeAgents = status.agents.filter(a => a.status === 'working').map(a => a.agent);
         if (activeAgents.length > 0) {
           this.logEvent(missionId, 'poll', { activeAgents, progress: status.progress });
@@ -322,7 +503,6 @@ class MissionOrchestrator {
     if (interval) { clearInterval(interval); this.pollers.delete(missionId); }
   }
 
-  // ── Resume polling for active missions on startup (staggered) ──
   resumeActivePolling() {
     const missions = this.getMissions();
     let delay = 0;
@@ -330,7 +510,7 @@ class MissionOrchestrator {
       if (m.status === 'active' && m.activatedAt) {
         console.log('[MissionOrch] Resuming polling for:', m.name, '(in', delay, 'ms)');
         setTimeout(() => this._startPolling(m.id), delay);
-        delay += 2000; // Stagger by 2s to avoid thundering herd
+        delay += 2000;
       }
     });
   }
