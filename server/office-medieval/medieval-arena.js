@@ -8,7 +8,8 @@
  * @version 1.0.0
  */
 
-import * as THREE from 'three';
+/* global THREE */
+// THREE is loaded globally via importmap/CDN in index.html — do not use ES module import
 
 // ── Constants ────────────────────────────────────────────
 const ARENA_POS = { x: 0, y: 0, z: -18 };        // Behind the village
@@ -699,4 +700,5 @@ window.addEventListener('load', () => {
     setTimeout(() => waitForApp(), 2500);
 });
 
-export default MedievalArena;
+// Expose globally (non-module script — consistent with all other medieval modules)
+window.MedievalArenaClass = MedievalArena;

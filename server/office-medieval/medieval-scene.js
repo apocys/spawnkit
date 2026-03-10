@@ -404,6 +404,7 @@ class MedievalCastle3D {
                     });
                     mat.needsUpdate = true;
                 });
+            }
         });
     }
 
