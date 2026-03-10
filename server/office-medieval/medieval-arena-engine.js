@@ -444,7 +444,8 @@ class ArenaEngine {
     let totalWeight = 0;
 
     for (const dim of SCORING_DIMENSIONS) {
-      const score = Math.min(10, Math.max(0, parseFloat(rawScores[dim.id] ?? 5)));
+      const raw = parseFloat(rawScores[dim.id] ?? 5);
+      const score = Math.min(10, Math.max(0, isNaN(raw) ? 5 : raw));
       const modifier = modifiers[dim.id] || 1.0;
       const effectiveWeight = dim.weight * modifier;
       total += score * effectiveWeight;
