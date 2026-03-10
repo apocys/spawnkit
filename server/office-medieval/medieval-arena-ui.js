@@ -21,14 +21,16 @@
     ];
 
     // ── Score Dimensions ─────────────────────────────
+    // Dimensions ordered to match fleet relay arena engine output (8 dimensions)
     const DIMENSIONS = [
-        { key: 'speed',          name: 'Speed',          weight: 15, icon: '⚡' },
-        { key: 'correctness',    name: 'Correctness',    weight: 25, icon: '✅' },
-        { key: 'quality',        name: 'Quality',        weight: 20, icon: '💎' },
-        { key: 'autonomy',       name: 'Autonomy',       weight: 15, icon: '🤖' },
-        { key: 'efficiency',     name: 'Efficiency',     weight: 10, icon: '⚙️' },
+        { key: 'correctness',    name: 'Correctness',    weight: 22, icon: '🎯' },
+        { key: 'quality',        name: 'Quality',        weight: 18, icon: '💎' },
+        { key: 'speed',          name: 'Speed',          weight: 12, icon: '⚡' },
+        { key: 'autonomy',       name: 'Autonomy',       weight: 14, icon: '🧭' },
         { key: 'conciseness',    name: 'Conciseness',    weight: 10, icon: '✂️' },
-        { key: 'error_recovery', name: 'Recovery',       weight: 5,  icon: '🔄' },
+        { key: 'creativity',     name: 'Creativity',     weight: 12, icon: '✨' },
+        { key: 'efficiency',     name: 'Efficiency',     weight: 8,  icon: '🔋' },
+        { key: 'error_recovery', name: 'Recovery',       weight: 4,  icon: '🛡️' },
     ];
 
     // ── State ────────────────────────────────────────
