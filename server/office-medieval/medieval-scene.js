@@ -311,6 +311,7 @@ class MedievalCastle3D {
             { name: '🔨 Forge Workshop', color: 0x666666, x: 10, z: 20, w: 2.2, h: 1.2, d: 2 },
             { name: '🏪 Market', color: 0x33AA55, x: 6, z: 26, w: 2.5, h: 1, d: 2 },
             { name: '🏠 Chapel', color: 0xFFFFEE, x: -8, z: 26, w: 1.5, h: 2.5, d: 1.5 },
+            { name: '🏟️ Arena', color: 0xC9A959, x: 0, z: -28, w: 4, h: 0.8, d: 4, isArena: true },
         ];
 
         this.buildingLabels = [];

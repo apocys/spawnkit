@@ -11,7 +11,11 @@
         '🏪 Market':       { icon: '🏪', title: 'Skill Marketplace', render: renderMarket },
         '🏠 Chapel':       { icon: '🏠', title: 'Settings',         render: renderSettings },
         '🏰 Rookery':      { icon: '🐦‍⬛', title: 'Allied Kingdoms',  render: function(c) { if (window.renderAlliedKingdoms) window.renderAlliedKingdoms(c); else c.innerHTML = '<div class="bp-empty">Rookery module not loaded.</div>'; } },
+        '🏟️ Arena':        { icon: '🏟️', title: 'Arena Coliseum',    render: function(c) { if (window.MedievalArena) window.MedievalArena.render(c); else c.innerHTML = '<div class="bp-empty">⚔️ Arena not loaded yet.</div>'; } },
     };
+
+    // Expose panels map for runtime registration (allows dynamic modules to add panels)
+    window._buildingPanelsMap = BUILDING_PANELS;
 
     // ── Inject CSS ───────────────────────────────────────────────────────
     var style = document.createElement('style');
