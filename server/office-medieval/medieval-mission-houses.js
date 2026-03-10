@@ -353,13 +353,19 @@
     function fetchMissionChat(mission, callback) {
         var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : fetch.bind(window);
         fetcher('/api/oc/chat/transcript?last=100').then(function(r) { return r.json(); }).then(function(data) {
-            // Filter messages that mention this mission
             var messages = data.messages || data || [];
             if (!Array.isArray(messages)) messages = [];
             var missionName = mission.name.toLowerCase();
+            // Search by mission name AND assigned agent names
+            var agentNames = (mission.agents || []).map(function(a) { return a.toLowerCase(); });
             var filtered = messages.filter(function(m) {
                 var content = (m.content || m.text || '').toLowerCase();
-                return content.includes(missionName) || content.includes('[mission: ' + missionName + ']');
+                if (content.includes(missionName) || content.includes('[mission: ' + missionName + ']')) return true;
+                // Also match messages from/about assigned agents
+                for (var i = 0; i < agentNames.length; i++) {
+                    if (content.includes(agentNames[i])) return true;
+                }
+                return false;
             });
             callback(filtered);
         }).catch(function(e) {
@@ -398,7 +404,7 @@
                 '<h2 style="font-family:Crimson Text,serif;font-size:28px;color:#c9a959;margin:0 0 4px;">' + esc(mission.icon || '🏠') + ' ' + esc(mission.name) + '</h2>' +
                 '<span style="display:inline-block;padding:3px 12px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:' + (statusColors[mission.status] || '#6b7280') + ';">' + (statusLabels[mission.status] || mission.status) + '</span>' +
                 '<span style="margin-left:8px;font-size:11px;color:rgba(168,162,153,.6);">Created ' + new Date(mission.created).toLocaleDateString() + '</span>' +
-                (mission.agents && mission.agents.length ? '<div style="margin-top:6px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">' + mission.agents.map(function(a) { return '<span style="padding:2px 10px;border-radius:12px;font-size:11px;background:rgba(201,169,89,.1);color:#c9a959;border:1px solid rgba(201,169,89,.2);">⚔️ ' + esc(a) + '</span>'; }).join('') + '</div>' : '') +
+                (mission.agents && mission.agents.length ? '<div data-agent-status style="margin-top:6px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">' + mission.agents.map(function(a) { return '<span style="padding:2px 10px;border-radius:12px;font-size:11px;background:rgba(201,169,89,.1);color:#c9a959;border:1px solid rgba(201,169,89,.2);">⚔️ ' + esc(a) + '</span>'; }).join('') + '</div>' : '<div style="margin-top:6px;text-align:center;font-size:11px;color:rgba(168,162,153,.4);">No agents assigned — assign agents via Edit</div>') +
             '</div>' +
 
             // Description
@@ -457,7 +463,7 @@
             var chatEl = document.getElementById('mh-chat-history');
             if (!chatEl) return;
             if (messages.length === 0) {
-                chatEl.innerHTML = '<div style="text-align:center;color:rgba(168,162,153,.4);padding:8px;">No chat history for this mission yet</div>';
+                chatEl.innerHTML = '<div style="text-align:center;color:rgba(168,162,153,.4);padding:8px;">No messages mentioning this mission yet.<br><span style="font-size:11px;">Send a message below or use [Mission: ' + esc(mission.name) + '] in chat.</span></div>';
             } else {
                 chatEl.innerHTML = messages.slice(-20).map(function(m) {
                     var role = m.role === 'user' ? '👤' : '🤖';
@@ -467,6 +473,28 @@
                 chatEl.scrollTop = chatEl.scrollHeight;
             }
         });
+
+        // Load live agent session status for assigned agents
+        if (mission.agents && mission.agents.length > 0) {
+            var fetcher2 = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : fetch.bind(window);
+            fetcher2('/api/oc/sessions').then(function(r) { return r.json(); }).then(function(sessions) {
+                if (!Array.isArray(sessions)) sessions = [];
+                var agentBadges = mission.agents.map(function(agentName) {
+                    var agentLower = agentName.toLowerCase();
+                    var match = sessions.find(function(s) {
+                        var label = (s.label || s.key || '').toLowerCase();
+                        return label.includes(agentLower);
+                    });
+                    var isActive = match && match.status === 'active';
+                    var dot = isActive ? '🟢' : '⚪';
+                    var statusText = isActive ? 'Working' : 'Idle';
+                    return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;background:rgba(201,169,89,.08);border:1px solid rgba(201,169,89,.2);color:#c9a959;">' + dot + ' ' + esc(agentName) + ' <span style="color:rgba(168,162,153,.5);">(' + statusText + ')</span></span>';
+                });
+                // Insert after the agents section in the header
+                var agentSection = content.querySelector('[data-agent-status]');
+                if (agentSection) agentSection.innerHTML = agentBadges.join(' ');
+            }).catch(function() {});
+        }
 
         // Wire events
         document.getElementById('mh-close').addEventListener('click', closeMissionOverlay);
