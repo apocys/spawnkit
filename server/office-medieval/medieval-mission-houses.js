@@ -693,18 +693,25 @@
                         if (progressText) progressText.textContent = status.progress.done + '/' + status.progress.total + ' (' + status.progress.percent + '%)';
                         if (progressBar) progressBar.style.width = status.progress.percent + '%';
                     }
-                    // Sync tasks from backend if they were updated (e.g., agent completed a task)
+                    // Sync tasks from backend (update data without closing overlay)
                     if (status.tasks && Array.isArray(status.tasks) && status.tasks.length > 0) {
                         var backendTasks = status.tasks;
-                        var localTasks = mission.tasks || [];
-                        // Only update if backend has more done tasks (agent completed something)
                         var backendDone = backendTasks.filter(function(t) { return t.done; }).length;
-                        var localDone = localTasks.filter(function(t) { return t.done; }).length;
-                        if (backendDone > localDone || backendTasks.length !== localTasks.length) {
+                        var localDone = (mission.tasks || []).filter(function(t) { return t.done; }).length;
+                        if (backendDone > localDone) {
+                            // Agent completed tasks — update data silently
                             mission.tasks = backendTasks;
                             saveMissions();
-                            // Refresh the overlay to show updated tasks
-                            closeMissionOverlay(); showMissionOverlay(missionId);
+                            // Update task checkboxes inline without closing overlay
+                            var taskChecks = content.querySelectorAll('.mh-task-check');
+                            taskChecks.forEach(function(cb) {
+                                var idx = parseInt(cb.dataset.idx);
+                                if (backendTasks[idx] && backendTasks[idx].done && !cb.checked) {
+                                    cb.checked = true;
+                                    var span = cb.parentElement.querySelector('span');
+                                    if (span) { span.style.color = 'rgba(168,162,153,.4)'; span.style.textDecoration = 'line-through'; }
+                                }
+                            });
                         }
                     }
                 });
