@@ -513,7 +513,17 @@ const server = http.createServer(async (req, res) => {
     const ASSETS_DIR = require('path').join(process.env.HOME || '/home/apocyz_runner', 'managed-deploy');
     const assetPath = require('path').join(ASSETS_DIR, assetName);
     // Security: only serve files directly in ASSETS_DIR (no path traversal)
-    if (!assetPath.startsWith(ASSETS_DIR) || assetName.includes('..') || assetName.includes('/')) {
+    // Block dotfiles (.env, .htpasswd, etc.) and restrict to allowed extensions
+    const allowedExts = new Set(['.js', '.json', '.gz', '.tar', '.sh', '.txt', '.yaml', '.yml']);
+    const assetExt = require('path').extname(assetName);
+    if (
+      !assetPath.startsWith(ASSETS_DIR) ||
+      assetName.includes('..') ||
+      assetName.includes('/') ||
+      assetName.startsWith('.') ||
+      assetName.includes('/.') ||
+      !allowedExts.has(assetExt)
+    ) {
       res.writeHead(403, {'Content-Type':'application/json'});
       res.end(JSON.stringify({error:'forbidden'}));
       return;
