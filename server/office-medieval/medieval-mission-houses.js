@@ -352,25 +352,69 @@
     // ── Fetch chat transcript for a mission ───────────────────────────
     function fetchMissionChat(mission, callback) {
         var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : fetch.bind(window);
-        fetcher('/api/oc/chat/transcript?last=100').then(function(r) { return r.json(); }).then(function(data) {
-            var messages = data.messages || data || [];
-            if (!Array.isArray(messages)) messages = [];
-            var missionName = mission.name.toLowerCase();
-            // Search by mission name AND assigned agent names
-            var agentNames = (mission.agents || []).map(function(a) { return a.toLowerCase(); });
-            var filtered = messages.filter(function(m) {
-                var content = (m.content || m.text || '').toLowerCase();
-                if (content.includes(missionName) || content.includes('[mission: ' + missionName + ']')) return true;
-                // Also match messages from/about assigned agents
-                for (var i = 0; i < agentNames.length; i++) {
-                    if (content.includes(agentNames[i])) return true;
-                }
-                return false;
+        // Try mission-scoped chat first (from orchestrator)
+        fetcher('/api/oc/missions/' + mission.id + '/chat').then(function(r) { return r.json(); }).then(function(data) {
+            var messages = data.messages || [];
+            if (messages.length > 0) {
+                callback(messages);
+                return;
+            }
+            // Fallback: search global transcript for mission mentions
+            return fetcher('/api/oc/chat/transcript?last=100').then(function(r) { return r.json(); }).then(function(data2) {
+                var all = data2.messages || data2 || [];
+                if (!Array.isArray(all)) all = [];
+                var missionName = mission.name.toLowerCase();
+                var agentNames = (mission.agents || []).map(function(a) { return a.toLowerCase(); });
+                var filtered = all.filter(function(m) {
+                    var content = (m.content || m.text || '').toLowerCase();
+                    if (content.includes(missionName) || content.includes('[mission: ' + missionName + ']')) return true;
+                    for (var i = 0; i < agentNames.length; i++) {
+                        if (content.includes(agentNames[i])) return true;
+                    }
+                    return false;
+                });
+                callback(filtered);
             });
-            callback(filtered);
         }).catch(function(e) {
             warn('Failed to fetch chat:', e.message || e);
             callback([]);
+        });
+    }
+
+    // ── Fetch live mission status from orchestrator ───────────────────
+    function fetchMissionStatus(missionId, callback) {
+        var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : fetch.bind(window);
+        fetcher('/api/oc/missions/' + missionId + '/status').then(function(r) { return r.json(); }).then(function(data) {
+            callback(data);
+        }).catch(function(e) {
+            warn('Failed to fetch mission status:', e.message || e);
+            callback(null);
+        });
+    }
+
+    // ── Activate mission via orchestrator ─────────────────────────────
+    function activateMission(missionId, callback) {
+        var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : fetch.bind(window);
+        fetcher('/api/oc/missions/' + missionId + '/activate', { method: 'POST' }).then(function(r) { return r.json(); }).then(function(data) {
+            callback(data);
+        }).catch(function(e) {
+            warn('Failed to activate mission:', e.message || e);
+            callback({ error: e.message });
+        });
+    }
+
+    // ── Send mission-scoped chat message ──────────────────────────────
+    function sendMissionChat(missionId, message, callback) {
+        var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : fetch.bind(window);
+        fetcher('/api/oc/missions/' + missionId + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message }),
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            callback(data);
+        }).catch(function(e) {
+            warn('Failed to send mission chat:', e.message || e);
+            callback({ error: e.message });
         });
     }
 
@@ -445,8 +489,12 @@
                 '<button id="mh-chat-send" style="padding:6px 12px;background:rgba(201,169,89,.1);border:1px solid rgba(201,169,89,.3);border-radius:3px;color:#c9a959;font-size:12px;cursor:pointer;align-self:flex-end;">📜 Send</button>' +
             '</div>' +
 
+            // Live status section (populated by fetchMissionStatus)
+            '<div id="mh-live-status" style="margin-bottom:16px;padding:12px;background:rgba(0,0,0,.2);border:1px solid rgba(168,162,153,.1);border-radius:4px;display:none;"></div>' +
+
             // Actions
             '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">' +
+                (mission.agents && mission.agents.length > 0 && !mission.activatedAt ? '<button class="mh-action" data-action="activate" style="padding:8px 18px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.5);border-radius:3px;color:#34d399;font-size:13px;font-weight:600;cursor:pointer;">⚔️ Deploy Agents</button>' : '') +
                 (mission.status === 'active' ? '<button class="mh-action" data-action="pause" style="padding:6px 14px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:3px;color:#fbbf24;font-size:12px;cursor:pointer;">⏸️ Pause</button>' : '') +
                 (mission.status === 'paused' ? '<button class="mh-action" data-action="resume" style="padding:6px 14px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);border-radius:3px;color:#34d399;font-size:12px;cursor:pointer;">▶️ Resume</button>' : '') +
                 (mission.status !== 'done' && mission.status !== 'archived' ? '<button class="mh-action" data-action="done" style="padding:6px 14px;background:rgba(156,163,175,.08);border:1px solid rgba(156,163,175,.3);border-radius:3px;color:#9ca3af;font-size:12px;cursor:pointer;">✅ Complete</button>' : '') +
@@ -528,17 +576,13 @@
         });
         document.getElementById('mh-new-task').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('mh-add-task').click(); });
 
-        // Chat send
+        // Chat send — use mission-scoped API
         document.getElementById('mh-chat-send').addEventListener('click', function() {
             var input = document.getElementById('mh-chat-input');
             var text = input.value.trim();
             if (!text) return;
-            var fullMsg = '[Mission: ' + mission.name + '] ' + text;
-            if (window.ThemeChat && typeof window.ThemeChat.sendMessage === 'function') {
-                window.ThemeChat.sendMessage(fullMsg);
-            }
             input.value = '';
-            // Show feedback
+            // Show user message immediately
             var chatEl = document.getElementById('mh-chat-history');
             if (chatEl) {
                 var newMsg = document.createElement('div');
@@ -547,6 +591,22 @@
                 chatEl.appendChild(newMsg);
                 chatEl.scrollTop = chatEl.scrollHeight;
             }
+            // Send via mission-scoped API
+            sendMissionChat(missionId, text, function(data) {
+                if (data.error) { warn('Chat send failed:', data.error); return; }
+                // Show agent replies
+                if (data.results && chatEl) {
+                    data.results.forEach(function(r) {
+                        if (r.ok && r.reply) {
+                            var replyMsg = document.createElement('div');
+                            replyMsg.style.cssText = 'margin-bottom:6px;';
+                            replyMsg.innerHTML = '<span style="color:rgba(201,169,89,.6);">🤖 ' + esc(r.agent) + '</span> <span style="color:rgba(168,162,153,.8);">' + esc(r.reply.substring(0, 500)) + '</span>';
+                            chatEl.appendChild(replyMsg);
+                        }
+                    });
+                    chatEl.scrollTop = chatEl.scrollHeight;
+                }
+            });
         });
 
         // Actions
@@ -557,12 +617,71 @@
                     if (!confirm('Demolish ' + mission.name + '?')) return;
                     closeMissionOverlay(); decommissionHouse(missionId); return;
                 }
+                if (action === 'activate') {
+                    this.textContent = '⏳ Deploying...';
+                    this.disabled = true;
+                    activateMission(missionId, function(data) {
+                        if (data.error) {
+                            alert('Activation failed: ' + data.error);
+                        } else {
+                            mission.activatedAt = new Date().toISOString();
+                            mission.status = 'active';
+                            saveMissions();
+                        }
+                        closeMissionOverlay(); showMissionOverlay(missionId);
+                    });
+                    return;
+                }
                 if (action === 'pause') mission.status = 'paused';
                 else if (action === 'resume') mission.status = 'active';
                 else if (action === 'done') mission.status = 'done';
                 saveMissions(); updateHouseStatus(missionId); closeMissionOverlay(); showMissionOverlay(missionId);
             });
         });
+
+        // Live status polling (every 10s while overlay is open)
+        if (mission.activatedAt) {
+            var statusPollTimer = setInterval(function() {
+                if (!activeOverlay) { clearInterval(statusPollTimer); return; }
+                fetchMissionStatus(missionId, function(status) {
+                    var el = document.getElementById('mh-live-status');
+                    if (!el || !status) return;
+                    el.style.display = 'block';
+                    var agentHtml = (status.agents || []).map(function(a) {
+                        var dot = a.status === 'working' ? '🟢' : '⚪';
+                        var actionLabel = a.action !== 'idle' ? ' — ' + a.action : '';
+                        return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;">' +
+                            '<span>' + dot + '</span>' +
+                            '<span style="color:#f4e4bc;font-size:12px;">' + esc(a.agent) + '</span>' +
+                            '<span style="color:rgba(168,162,153,.5);font-size:11px;">' + a.status + actionLabel + '</span>' +
+                            (a.sessions > 0 ? '<span style="color:rgba(201,169,89,.4);font-size:10px;">(' + a.sessions + ' session' + (a.sessions > 1 ? 's' : '') + ')</span>' : '') +
+                        '</div>';
+                    }).join('');
+                    el.innerHTML =
+                        '<div style="font-family:Crimson Text,serif;color:rgba(201,169,89,.6);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">⚡ Live Status</div>' +
+                        agentHtml +
+                        '<div style="margin-top:6px;font-size:10px;color:rgba(168,162,153,.4);">Auto-refreshing every 10s</div>';
+                });
+            }, 10000);
+            // Initial fetch
+            fetchMissionStatus(missionId, function(status) {
+                var el = document.getElementById('mh-live-status');
+                if (!el || !status) return;
+                el.style.display = 'block';
+                var agentHtml = (status.agents || []).map(function(a) {
+                    var dot = a.status === 'working' ? '🟢' : '⚪';
+                    var actionLabel = a.action !== 'idle' ? ' — ' + a.action : '';
+                    return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;">' +
+                        '<span>' + dot + '</span>' +
+                        '<span style="color:#f4e4bc;font-size:12px;">' + esc(a.agent) + '</span>' +
+                        '<span style="color:rgba(168,162,153,.5);font-size:11px;">' + a.status + actionLabel + '</span>' +
+                    '</div>';
+                }).join('');
+                el.innerHTML =
+                    '<div style="font-family:Crimson Text,serif;color:rgba(201,169,89,.6);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">⚡ Live Status</div>' +
+                    agentHtml;
+            });
+        }
     }
 
     function _escHandler(e) { if (e.key === 'Escape' && activeOverlay) closeMissionOverlay(); }

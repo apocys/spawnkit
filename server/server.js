@@ -13,6 +13,7 @@ const WORKSPACE = process.env.WORKSPACE || process.env.HOME + '/.openclaw/worksp
 const SESSIONS_FILE = process.env.HOME + '/.openclaw/agents/main/sessions/sessions.json';
 const MISSIONS_FILE = path.join(WORKSPACE, '.spawnkit-missions.json');
 const STATIC_DIR = __dirname;
+const MissionOrchestrator = require('./mission-orchestrator');
 const VERSION_FILE = path.join(__dirname, 'version.json');
 const REPO_DIR = process.env.SPAWNKIT_REPO || path.join(process.env.HOME, 'spawnkit');
 const UPDATE_TOKEN = process.env.SK_API_TOKEN || '';
@@ -26,6 +27,15 @@ if (!OC_TOKEN) {
     OC_TOKEN = ocConfig?.gateway?.auth?.token || '';
   } catch(e) { console.warn('[server] Could not read OC gateway token from config'); }
 }
+
+// ── Mission Orchestrator ────────────────────────────────────────────────
+const missionOrch = new MissionOrchestrator({
+  workspace: WORKSPACE,
+  gatewayUrl: OC_GATEWAY,
+  gatewayToken: OC_TOKEN,
+  sessionsFile: SESSIONS_FILE,
+});
+missionOrch.resumeActivePolling();
 
 // ── Version Management ──────────────────────────────────────────────────
 function getLocalVersion() {
@@ -1408,6 +1418,70 @@ ${customBlock}`;
       res.writeHead(500);
       res.end(JSON.stringify({ error: e.message }));
     }
+    return;
+  }
+
+  // ─── Mission Orchestrator API ─────────────────────────────
+  // POST /api/oc/missions/:id/activate — activate a mission (send briefs to agents)
+  const missionActivateMatch = req.url.match(/^\/api\/oc\/missions\/([a-zA-Z0-9_-]+)\/activate$/);
+  if (missionActivateMatch && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+      const result = await missionOrch.activate(missionActivateMatch[1]);
+      res.writeHead(200);
+      res.end(JSON.stringify(result));
+    } catch(e) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // GET /api/oc/missions/:id/status — live mission status with agent sessions
+  const missionStatusMatch = req.url.match(/^\/api\/oc\/missions\/([a-zA-Z0-9_-]+)\/status$/);
+  if (missionStatusMatch && req.method === 'GET') {
+    res.setHeader('Content-Type', 'application/json');
+    const status = missionOrch.getStatus(missionStatusMatch[1]);
+    if (!status) { res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return; }
+    res.writeHead(200);
+    res.end(JSON.stringify(status));
+    return;
+  }
+
+  // POST /api/oc/missions/:id/chat — send a message in mission context
+  const missionChatMatch = req.url.match(/^\/api\/oc\/missions\/([a-zA-Z0-9_-]+)\/chat$/);
+  if (missionChatMatch && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json');
+    const body = await readBody(req);
+    if (!body?.message) { res.writeHead(400); res.end(JSON.stringify({ error: 'Missing message' })); return; }
+    try {
+      const result = await missionOrch.sendChat(missionChatMatch[1], body.message, body.agent || null);
+      res.writeHead(200);
+      res.end(JSON.stringify(result));
+    } catch(e) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // GET /api/oc/missions/:id/chat — get mission chat history
+  const missionChatGetMatch = req.url.match(/^\/api\/oc\/missions\/([a-zA-Z0-9_-]+)\/chat$/);
+  if (missionChatGetMatch && req.method === 'GET') {
+    res.setHeader('Content-Type', 'application/json');
+    const messages = missionOrch.getChatHistory(missionChatGetMatch[1]);
+    res.writeHead(200);
+    res.end(JSON.stringify({ messages }));
+    return;
+  }
+
+  // GET /api/oc/missions/:id/log — event log
+  const missionLogMatch = req.url.match(/^\/api\/oc\/missions\/([a-zA-Z0-9_-]+)\/log$/);
+  if (missionLogMatch && req.method === 'GET') {
+    res.setHeader('Content-Type', 'application/json');
+    const log = missionOrch.getLog(missionLogMatch[1]);
+    res.writeHead(200);
+    res.end(JSON.stringify({ log }));
     return;
   }
 
