@@ -603,6 +603,112 @@ class MedievalArena {
 
     // ── Public API ───────────────────────────────────
 
+    /**
+     * render(container) — called by medieval-panels.js BUILDING_PANELS map
+     * Renders live arena state into the building panel DOM container.
+     */
+    render(container) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:#c9a959;font-family:serif;">⚔️ Loading Arena…</div>';
+
+        const token = 'sk-fleet-2ad53564b03d9facbe3389bb5c461179ffc73af12e50ae00';
+        fetch('http://localhost:18790/api/arena/leaderboard', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (!res.ok) throw new Error(res.error || 'API error');
+            const { leaderboard, champions, recentBattles, totalBattles } = res.data;
+            const sy = leaderboard.sycopa || {};
+            const ap = leaderboard.apomac || {};
+            const chSy = champions.sycopa || {};
+            const chAp = champions.apomac || {};
+
+            const battleRows = (recentBattles || []).slice(0, 5).map(b => {
+                const winner = b.winner || (b.forfeitedBy ? (b.forfeitedBy === 'sycopa' ? 'apomac' : 'sycopa') : '—');
+                const scoreStr = b.scores
+                    ? `🎭 ${b.scores.sycopa?.total?.toFixed(1) ?? '—'} · 💻 ${b.scores.apomac?.total?.toFixed(1) ?? '—'}`
+                    : (b.forfeitedBy ? `🏳️ ${b.forfeitedBy} forfeited` : '—');
+                const date = new Date(b.challengedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                const winEmoji = winner === 'sycopa' ? '🎭' : winner === 'apomac' ? '💻' : '🤝';
+                return `<div class="ar-row">
+                    <span class="ar-task" title="${b.task || ''}">${b.templateMeta?.icon || '⚔️'} ${(b.task || 'Battle').substring(0,38)}${(b.task||'').length > 38 ? '…' : ''}</span>
+                    <span class="ar-score">${scoreStr}</span>
+                    <span class="ar-win">${winEmoji} ${winner}</span>
+                    <span class="ar-time">${date}</span>
+                </div>`;
+            }).join('') || '<div class="ar-empty">No battles yet — The arena awaits its first champions.</div>';
+
+            container.innerHTML = `
+            <style>
+                .ar-wrap { font-family: 'Crimson Text', 'EB Garamond', Georgia, serif; color: #e8d5a3; padding: 4px 0; }
+                .ar-champions { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; margin-bottom: 16px; }
+                .ar-champ { background: rgba(20,14,6,0.8); border-radius: 8px; padding: 12px; text-align: center; }
+                .ar-champ.sy { border: 1px solid rgba(201,169,89,0.4); }
+                .ar-champ.ap { border: 1px solid rgba(79,195,247,0.3); }
+                .ar-emoji { font-size: 28px; display: block; margin-bottom: 4px; }
+                .ar-name { font-size: 14px; font-weight: 700; }
+                .ar-name.sy { color: #c9a959; }
+                .ar-name.ap { color: #4fc3f7; }
+                .ar-title-text { font-size: 10px; color: #6b5a30; font-style: italic; margin-bottom: 8px; }
+                .ar-stats { display: flex; justify-content: space-around; font-size: 11px; }
+                .ar-stat-val { font-size: 17px; font-weight: 700; display: block; }
+                .sy .ar-stat-val { color: #c9a959; }
+                .ap .ar-stat-val { color: #4fc3f7; }
+                .ar-stat-lbl { color: #5a4a25; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
+                .ar-vs { text-align: center; color: #8a7040; }
+                .ar-vs-text { font-size: 20px; font-weight: 900; color: #c9a959; display: block; }
+                .ar-section { font-size: 10px; letter-spacing: 3px; color: #6b5a30; text-transform: uppercase; text-align: center; margin: 12px 0 8px; }
+                .ar-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px; align-items: center; padding: 6px 8px; border-bottom: 1px solid rgba(201,169,89,0.08); font-size: 11px; }
+                .ar-row:hover { background: rgba(201,169,89,0.04); }
+                .ar-task { color: #a08050; overflow: hidden; white-space: nowrap; }
+                .ar-score { color: #8a7040; white-space: nowrap; }
+                .ar-win { color: #c9a959; white-space: nowrap; }
+                .ar-time { color: #4a3a1a; white-space: nowrap; }
+                .ar-empty { text-align: center; padding: 16px; color: #4a3a1a; font-style: italic; }
+                .ar-challenge-btn { display: block; width: 100%; margin-top: 14px; padding: 9px; background: rgba(201,169,89,0.1); border: 1px solid rgba(201,169,89,0.3); border-radius: 6px; color: #c9a959; font-family: inherit; font-size: 13px; cursor: pointer; transition: background 0.2s; }
+                .ar-challenge-btn:hover { background: rgba(201,169,89,0.2); }
+            </style>
+            <div class="ar-wrap">
+                <div class="ar-champions">
+                    <div class="ar-champ sy">
+                        <span class="ar-emoji">${chSy.emoji || '🎭'}</span>
+                        <div class="ar-name sy">${chSy.name || 'Sycopa'}</div>
+                        <div class="ar-title-text">${chSy.title || ''}</div>
+                        <div class="ar-stats">
+                            <div><span class="ar-stat-val">${sy.wins ?? 0}</span><span class="ar-stat-lbl">W</span></div>
+                            <div><span class="ar-stat-val">${sy.losses ?? 0}</span><span class="ar-stat-lbl">L</span></div>
+                            <div><span class="ar-stat-val">${sy.points ?? 0}</span><span class="ar-stat-lbl">Pts</span></div>
+                        </div>
+                    </div>
+                    <div class="ar-vs">
+                        <span class="ar-vs-text">VS</span>
+                        <span style="font-size:10px;color:#4a3a1a;">${totalBattles || 0} battles</span>
+                    </div>
+                    <div class="ar-champ ap">
+                        <span class="ar-emoji">${chAp.emoji || '💻'}</span>
+                        <div class="ar-name ap">${chAp.name || 'ApoMac'}</div>
+                        <div class="ar-title-text">${chAp.title || ''}</div>
+                        <div class="ar-stats">
+                            <div><span class="ar-stat-val">${ap.wins ?? 0}</span><span class="ar-stat-lbl">W</span></div>
+                            <div><span class="ar-stat-val">${ap.losses ?? 0}</span><span class="ar-stat-lbl">L</span></div>
+                            <div><span class="ar-stat-val">${ap.points ?? 0}</span><span class="ar-stat-lbl">Pts</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ar-section">⚔ Recent Battles</div>
+                ${battleRows}
+
+                <button class="ar-challenge-btn" onclick="window.MedievalArena && window.MedievalArena.startBattle()">
+                    ⚔️ Issue a Challenge
+                </button>
+            </div>`;
+        })
+        .catch(err => {
+            container.innerHTML = `<div style="padding:16px;color:#ef4444;font-style:italic;text-align:center;">⚠️ Arena unreachable: ${err.message}</div>`;
+        });
+    }
+
     togglePanel() {
         const panel = document.getElementById('arenaPanel');
         if (panel) panel.classList.toggle('visible');
