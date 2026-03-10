@@ -47,11 +47,45 @@
         document.body.appendChild(p);
     }
 
+    // ── Global overlay dismiss — close ALL overlay systems before opening a new one ──
+    window.dismissAllOverlays = function(except) {
+        if (except !== 'buildingPanel') {
+            var bp = document.getElementById('building-panel');
+            if (bp) bp.classList.remove('panel-open');
+            // Also clear building glow
+            var app = window.castleApp;
+            if (app) clearBuildingGlow(app);
+        }
+        if (except !== 'missionOverlay' && window.MissionHouses && window.MissionHouses._closeOverlay) {
+            window.MissionHouses._closeOverlay();
+        }
+        if (except !== 'missionControl') {
+            var mc = document.querySelector('.mc-overlay');
+            if (mc && mc.classList.contains('visible')) {
+                mc.classList.remove('visible');
+                setTimeout(function() { mc.style.display = 'none'; }, 300);
+            }
+        }
+        if (except !== 'royalCourt') {
+            var rc = document.querySelector('.rc-overlay');
+            if (rc) { rc.classList.remove('rc-faded-in'); rc.classList.remove('rc-visible'); }
+        }
+        if (except !== 'summonWizard' && window.SummonWizard && window.SummonWizard.close) {
+            window.SummonWizard.close();
+        }
+        // Close persona card
+        if (window.PersonaCard && window.PersonaCard.close) window.PersonaCard.close();
+        // Close castle sidebar
+        var sidebar = document.querySelector('.castle-sidebar');
+        if (sidebar) sidebar.classList.remove('panel-open');
+    };
+
     // ── Public: open panel ──────────────────────────────────────────────
     window.openBuildingPanel = function (buildingName) {
         var cfg = BUILDING_PANELS[buildingName];
         if (!cfg) return;
 
+        window.dismissAllOverlays('buildingPanel');
         ensurePanelDOM();
         document.getElementById('building-panel-icon').textContent  = cfg.icon;
         document.getElementById('building-panel-title').textContent = cfg.title;

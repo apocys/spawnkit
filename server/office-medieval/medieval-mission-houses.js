@@ -374,6 +374,7 @@
         if (!mission) { warn('Mission not found:', missionId); return; }
 
         log('Opening overlay for:', mission.name);
+        if (window.dismissAllOverlays) window.dismissAllOverlays('missionOverlay');
         if (activeOverlay) { activeOverlay.remove(); activeOverlay = null; }
 
         var overlay = document.createElement('div');
@@ -556,6 +557,7 @@
 
     // ── Create Mission Dialog ─────────────────────────────────────────
     function showCreateDialog() {
+        if (window.dismissAllOverlays) window.dismissAllOverlays('missionOverlay');
         if (activeOverlay) { activeOverlay.remove(); activeOverlay = null; }
         var activeMissions = missions.filter(function(m) { return m.status !== 'archived'; });
         if (activeMissions.length >= MAX_HOUSES) { alert('Maximum ' + MAX_HOUSES + ' active houses.'); return; }
@@ -683,6 +685,7 @@
     function showEditDialog(missionId) {
         var mission = missions.find(function(m) { return m.id === missionId; });
         if (!mission) return;
+        if (window.dismissAllOverlays) window.dismissAllOverlays('missionOverlay');
         if (activeOverlay) { activeOverlay.remove(); activeOverlay = null; }
 
         var overlay = document.createElement('div');
@@ -802,6 +805,7 @@
     window.MissionHouses = {
         create: showCreateDialog,
         show: showMissionOverlay,
+        _closeOverlay: closeMissionOverlay,
         decommission: decommissionHouse,
         handleClick: handleBuildingClick,
         toggleEditMode: toggleEditMode,

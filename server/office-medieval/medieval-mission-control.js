@@ -28,6 +28,7 @@
 
     // Open/Close Mission Control
     window.openMissionControl = function() {
+        if (window.dismissAllOverlays) window.dismissAllOverlays('missionControl');
         if (mcRefreshTimer) { clearInterval(mcRefreshTimer); mcRefreshTimer = null; }
         mcOverlay.style.display = 'flex';
         requestAnimationFrame(function() { mcOverlay.classList.add('visible'); });

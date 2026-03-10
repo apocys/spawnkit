@@ -288,6 +288,7 @@
 
     window.SummonWizard = {
         open: function() {
+            if (window.dismissAllOverlays) window.dismissAllOverlays('summonWizard');
             injectCSS();
             if (!overlay) createWizardDOM();
             state = { step: 0, displayName: '', name: '', role: 'squire', emoji: '⚔️', traits: [], skills: [], model: 'sonnet' };

@@ -176,7 +176,7 @@
 
   window.RoyalCourt = {
     isFirstVisit: function () { try { return localStorage.getItem(STORAGE_KEY) !== 'true'; } catch (e) { return false; } },
-    show: function () { var o = getOrCreate(); o.classList.add('rc-visible'); void o.offsetWidth; o.classList.add('rc-faded-in'); },
+    show: function () { if (window.dismissAllOverlays) window.dismissAllOverlays('royalCourt'); var o = getOrCreate(); o.classList.add('rc-visible'); void o.offsetWidth; o.classList.add('rc-faded-in'); },
     hide: function () {
       var o = document.getElementById('royal-court-overlay');
       if (!o) return;
