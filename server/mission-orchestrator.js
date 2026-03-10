@@ -10,11 +10,21 @@
  *   3. Polls agent sessions for progress
  *   4. Logs all events (activation, messages, status changes, completion)
  *
- * Storage: filesystem (JSON) per mission in WORKSPACE/.spawnkit-missions/
+ * Storage: filesystem (JSONL per mission in WORKSPACE/.spawnkit-missions/)
+ *
+ * Forge Review Fixes (v2):
+ *   - Atomic writes (write to .tmp → rename)
+ *   - activate() checks for partial failures
+ *   - Fetch timeout (30s) with AbortController
+ *   - Error handling on appendFile
+ *   - Staggered polling on startup
+ *   - Failure events distinct from messages
  */
 
 const fs = require('fs');
 const path = require('path');
+
+const FETCH_TIMEOUT_MS = 30000;
 
 class MissionOrchestrator {
   constructor({ workspace, gatewayUrl, gatewayToken, sessionsFile }) {
@@ -28,7 +38,7 @@ class MissionOrchestrator {
     if (!fs.existsSync(this.missionsDir)) fs.mkdirSync(this.missionsDir, { recursive: true });
   }
 
-  // ── Read / Write missions ─────────────────────────────────
+  // ── Read / Write missions (atomic) ────────────────────────
   getMissions() {
     try {
       return JSON.parse(fs.readFileSync(this.missionsFile, 'utf8'));
@@ -36,7 +46,10 @@ class MissionOrchestrator {
   }
 
   saveMissions(missions) {
-    fs.writeFileSync(this.missionsFile, JSON.stringify(missions, null, 2));
+    // Atomic write: write to temp file, then rename (POSIX atomic)
+    const tmp = this.missionsFile + '.tmp.' + process.pid;
+    fs.writeFileSync(tmp, JSON.stringify(missions, null, 2));
+    fs.renameSync(tmp, this.missionsFile);
   }
 
   getMission(id) {
@@ -52,39 +65,53 @@ class MissionOrchestrator {
     return missions[idx];
   }
 
-  // ── Event log per mission ─────────────────────────────────
-  _logPath(missionId) {
-    return path.join(this.missionsDir, missionId + '.log.jsonl');
+  // ── File paths per mission ────────────────────────────────
+  _paths(missionId) {
+    return {
+      log: path.join(this.missionsDir, missionId + '.log.jsonl'),
+      chat: path.join(this.missionsDir, missionId + '.chat.jsonl'),
+    };
   }
 
+  // ── Event log per mission ─────────────────────────────────
   logEvent(missionId, type, data) {
     const entry = { ts: new Date().toISOString(), type, ...data };
-    fs.appendFileSync(this._logPath(missionId), JSON.stringify(entry) + '\n');
+    try {
+      fs.appendFileSync(this._paths(missionId).log, JSON.stringify(entry) + '\n');
+    } catch (e) {
+      console.error('[MissionOrch] Failed to write log for', missionId, ':', e.message);
+    }
     return entry;
   }
 
   getLog(missionId, last = 50) {
     try {
-      const lines = fs.readFileSync(this._logPath(missionId), 'utf8').trim().split('\n');
-      return lines.slice(-last).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+      const content = fs.readFileSync(this._paths(missionId).log, 'utf8').trim();
+      if (!content) return [];
+      return content.split('\n').slice(-last).map(l => {
+        try { return JSON.parse(l); } catch { return null; }
+      }).filter(Boolean);
     } catch { return []; }
   }
 
   // ── Mission chat (stored per-mission) ─────────────────────
-  _chatPath(missionId) {
-    return path.join(this.missionsDir, missionId + '.chat.jsonl');
-  }
-
   getChatHistory(missionId, last = 50) {
     try {
-      const lines = fs.readFileSync(this._chatPath(missionId), 'utf8').trim().split('\n');
-      return lines.slice(-last).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+      const content = fs.readFileSync(this._paths(missionId).chat, 'utf8').trim();
+      if (!content) return [];
+      return content.split('\n').slice(-last).map(l => {
+        try { return JSON.parse(l); } catch { return null; }
+      }).filter(Boolean);
     } catch { return []; }
   }
 
   appendChat(missionId, role, content, agent = null) {
     const msg = { ts: new Date().toISOString(), role, content, agent };
-    fs.appendFileSync(this._chatPath(missionId), JSON.stringify(msg) + '\n');
+    try {
+      fs.appendFileSync(this._paths(missionId).chat, JSON.stringify(msg) + '\n');
+    } catch (e) {
+      console.error('[MissionOrch] Failed to write chat for', missionId, ':', e.message);
+    }
     return msg;
   }
 
@@ -101,7 +128,8 @@ class MissionOrchestrator {
       mission.description ? `\nDescription: ${mission.description}` : '',
       `\nTasks:\n${taskList}`,
       `\nStatus: ${mission.status}`,
-      `\nReport progress and completion by including [Mission: ${mission.name}] in your messages.`,
+      `\nReport progress by including [Mission: ${mission.name}] in your messages.`,
+      `\nWhen a task is complete, say: [Task done: <task number>]`,
     ].join('');
 
     this.logEvent(missionId, 'activate', { agents: mission.agents, brief: brief.substring(0, 200) });
@@ -117,16 +145,21 @@ class MissionOrchestrator {
       } catch (e) {
         results.push({ agent: agentName, ok: false, error: e.message });
         this.logEvent(missionId, 'brief_error', { agent: agentName, error: e.message });
+        // Log failure as distinct event, not as chat message
+        this.appendChat(missionId, 'error', `❌ Failed to reach ${agentName}: ${e.message}`, agentName);
       }
     }
 
-    // Update mission status
-    this.updateMission(missionId, { status: 'active', activatedAt: new Date().toISOString() });
+    // Only set active if at least one agent was successfully briefed
+    const anySuccess = results.some(r => r.ok);
+    if (anySuccess) {
+      this.updateMission(missionId, { status: 'active', activatedAt: new Date().toISOString() });
+      this._startPolling(missionId);
+    } else {
+      this.logEvent(missionId, 'activate_failed', { reason: 'All agents unreachable' });
+    }
 
-    // Start polling for progress
-    this._startPolling(missionId);
-
-    return { ok: true, results };
+    return { ok: anySuccess, partial: anySuccess && results.some(r => !r.ok), results };
   }
 
   // ── Send a mission-scoped chat message ────────────────────
@@ -134,7 +167,7 @@ class MissionOrchestrator {
     const mission = this.getMission(missionId);
     if (!mission) throw new Error('Mission not found');
 
-    // Store in mission chat
+    // Store user message in mission chat
     this.appendChat(missionId, 'user', message);
 
     // Prefix message with mission context
@@ -149,6 +182,7 @@ class MissionOrchestrator {
         this.appendChat(missionId, 'assistant', reply, agentName);
         results.push({ agent: agentName, ok: true, reply });
       } catch (e) {
+        this.appendChat(missionId, 'error', `❌ ${agentName} unreachable: ${e.message}`, agentName);
         results.push({ agent: agentName, ok: false, error: e.message });
       }
     }
@@ -165,14 +199,13 @@ class MissionOrchestrator {
     const sessions = this._getSessions();
     const agentStatuses = (mission.agents || []).map(agentName => {
       const agentLower = agentName.toLowerCase();
-      // Find matching sessions (main or sub-agent)
       const matching = sessions.filter(s => {
         const label = (s.label || s.key || '').toLowerCase();
         return label.includes(agentLower);
       });
       const active = matching.some(s => s.status === 'active');
       const lastActive = matching.reduce((latest, s) => {
-        return s.lastActive > latest ? s.lastActive : latest;
+        return (s.lastActive || 0) > latest ? s.lastActive : latest;
       }, 0);
       return {
         agent: agentName,
@@ -201,41 +234,58 @@ class MissionOrchestrator {
 
   // ── Internal: send message to agent via gateway ───────────
   async _sendToAgent(agentName, message) {
-    // Try sending to main session with agent prefix
     const prefixedMsg = `[Speaking to ${agentName}] ${message}`;
-    const resp = await fetch(this.gatewayUrl + '/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + this.gatewayToken,
-      },
-      body: JSON.stringify({
-        model: 'openclaw',
-        messages: [{ role: 'user', content: prefixedMsg }],
-        stream: false,
-      }),
-    });
-    if (!resp.ok) {
-      const errText = await resp.text();
-      throw new Error(`Gateway error ${resp.status}: ${errText.substring(0, 200)}`);
+
+    // AbortController for timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    try {
+      const resp = await fetch(this.gatewayUrl + '/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + this.gatewayToken,
+        },
+        body: JSON.stringify({
+          model: 'openclaw',
+          messages: [{ role: 'user', content: prefixedMsg }],
+          stream: false,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error(`Gateway error ${resp.status}: ${errText.substring(0, 200)}`);
+      }
+      const data = await resp.json();
+      return data?.choices?.[0]?.message?.content || '';
+    } catch (e) {
+      clearTimeout(timeout);
+      if (e.name === 'AbortError') throw new Error(`Gateway timeout after ${FETCH_TIMEOUT_MS / 1000}s`);
+      throw e;
     }
-    const data = await resp.json();
-    return data?.choices?.[0]?.message?.content || '(No response)';
   }
 
   // ── Internal: read sessions from file ─────────────────────
   _getSessions() {
     try {
-      const data = JSON.parse(fs.readFileSync(this.sessionsFile, 'utf8'));
+      const raw = fs.readFileSync(this.sessionsFile, 'utf8');
+      const data = JSON.parse(raw);
       const sessions = data.sessions || data;
-      if (typeof sessions !== 'object') return [];
-      return Object.entries(sessions).map(([key, s]) => ({
-        key,
-        label: s.label || s.displayName || key.split(':').pop(),
-        status: (Date.now() - (s.updatedAt || 0)) < 300000 ? 'active' : 'idle',
-        lastActive: s.updatedAt || null,
-        action: s.task || 'idle',
-      }));
+      if (typeof sessions !== 'object' || sessions === null) return [];
+      return Object.entries(sessions).map(([key, s]) => {
+        const updatedAt = s.updatedAt || 0;
+        return {
+          key,
+          label: s.label || s.displayName || key.split(':').pop(),
+          status: updatedAt > 0 && (Date.now() - updatedAt) < 300000 ? 'active' : 'idle',
+          lastActive: updatedAt || null,
+          action: s.task || 'idle',
+        };
+      });
     } catch { return []; }
   }
 
@@ -247,25 +297,23 @@ class MissionOrchestrator {
         const status = this.getStatus(missionId);
         if (!status) { this._stopPolling(missionId); return; }
 
-        // Check if all tasks are done
+        // Auto-complete when all tasks done
         if (status.progress.total > 0 && status.progress.done === status.progress.total) {
           this.logEvent(missionId, 'auto_complete', { progress: status.progress });
           this.updateMission(missionId, { status: 'done' });
           this._stopPolling(missionId);
+          return;
         }
 
-        // Log periodic status
-        const anyActive = status.agents.some(a => a.status === 'working');
-        if (anyActive) {
-          this.logEvent(missionId, 'poll', {
-            activeAgents: status.agents.filter(a => a.status === 'working').map(a => a.agent),
-            progress: status.progress,
-          });
+        // Log periodic status only when agents are active (avoid log spam)
+        const activeAgents = status.agents.filter(a => a.status === 'working').map(a => a.agent);
+        if (activeAgents.length > 0) {
+          this.logEvent(missionId, 'poll', { activeAgents, progress: status.progress });
         }
       } catch (e) {
         console.error('[MissionOrch] Poll error for', missionId, ':', e.message);
       }
-    }, 30000); // Every 30 seconds
+    }, 30000);
     this.pollers.set(missionId, interval);
   }
 
@@ -274,13 +322,15 @@ class MissionOrchestrator {
     if (interval) { clearInterval(interval); this.pollers.delete(missionId); }
   }
 
-  // ── Resume polling for active missions on startup ─────────
+  // ── Resume polling for active missions on startup (staggered) ──
   resumeActivePolling() {
     const missions = this.getMissions();
+    let delay = 0;
     missions.forEach(m => {
       if (m.status === 'active' && m.activatedAt) {
-        console.log('[MissionOrch] Resuming polling for:', m.name);
-        this._startPolling(m.id);
+        console.log('[MissionOrch] Resuming polling for:', m.name, '(in', delay, 'ms)');
+        setTimeout(() => this._startPolling(m.id), delay);
+        delay += 2000; // Stagger by 2s to avoid thundering herd
       }
     });
   }
