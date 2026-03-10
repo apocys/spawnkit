@@ -332,13 +332,23 @@
     if (!bar) {
       bar = document.createElement('div');
       bar.id = 'game-engine-status';
-      bar.style.cssText = 'position:fixed;top:52px;right:12px;z-index:150;' +
+      // Positioned top-left, shifted right so it never overlaps the left-panel close button
+      bar.style.cssText = 'position:fixed;top:56px;left:320px;z-index:160;' +
         'background:rgba(26,26,46,0.92);border:1px solid rgba(201,169,89,0.4);' +
         'border-radius:8px;padding:8px 12px;font-family:Crimson Text,serif;' +
-        'color:#f4e4bc;font-size:11px;max-width:220px;backdrop-filter:blur(8px);' +
-        'box-shadow:0 2px 12px rgba(0,0,0,0.3);pointer-events:none;';
+        'color:#f4e4bc;font-size:11px;max-width:260px;backdrop-filter:blur(8px);' +
+        'box-shadow:0 2px 12px rgba(0,0,0,0.3);pointer-events:auto;' +
+        'transition:all 0.3s cubic-bezier(0.4,0,0.2,1);';
       document.body.appendChild(bar);
     }
+
+    // Track collapsed state on the element itself
+    if (bar._questCollapsed === undefined) bar._questCollapsed = false;
+
+    // Reposition dynamically: shift right when left sidebar is open
+    var sidebar = document.querySelector('.castle-sidebar');
+    var sidebarOpen = sidebar && sidebar.classList.contains('panel-open');
+    bar.style.left = sidebarOpen ? '320px' : '12px';
 
     var lines = [];
     agentActions.forEach(function (state, agentId) {
@@ -356,8 +366,34 @@
     });
 
     if (lines.length > 0) {
-      bar.innerHTML = '<div style="color:#c9a959;font-weight:600;margin-bottom:4px;font-size:12px;">' +
-        '⚔️ Active Quests (' + lines.length + ')</div>' + lines.join('');
+      // Collapse / expand toggle
+      var collapseIcon = bar._questCollapsed ? '▶' : '▼';
+      var collapseBtn = '<button id="game-engine-collapse" style="' +
+        'background:none;border:none;color:#c9a959;cursor:pointer;font-size:10px;' +
+        'padding:2px 4px;margin-left:6px;line-height:1;' +
+        'pointer-events:auto;opacity:0.8;" title="' + (bar._questCollapsed ? 'Expand' : 'Collapse') + '">' +
+        collapseIcon + '</button>';
+      var header = '<div style="color:#c9a959;font-weight:600;font-size:12px;' +
+        'display:flex;align-items:center;justify-content:space-between;cursor:pointer;' +
+        'user-select:none;' +
+        (bar._questCollapsed ? '' : 'margin-bottom:4px;') + '">' +
+        '<span>⚔️ Active Quests (' + lines.length + ')</span>' +
+        collapseBtn + '</div>';
+      var body = bar._questCollapsed
+        ? ''
+        : '<div id="game-engine-body">' + lines.join('') + '</div>';
+      bar.innerHTML = header + body;
+
+      // Clicking anywhere on the header toggles collapse
+      var headerEl = bar.querySelector('div');
+      if (headerEl) {
+        headerEl.addEventListener('click', function (e) {
+          e.stopPropagation();
+          bar._questCollapsed = !bar._questCollapsed;
+          updateStatusDisplay();
+        });
+      }
+
       bar.style.display = 'block';
     } else {
       // Hide completely when no active quests
