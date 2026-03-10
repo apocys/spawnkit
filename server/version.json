@@ -1,13 +1,49 @@
 {
-  "version": "2.1.0",
-  "buildDate": "2026-03-06T09:35:00Z",
+  "version": "2.2.0",
+  "buildDate": "2026-03-10T00:30:00Z",
   "channel": "main",
-  "tag": "cleanup",
+  "tag": "mission-orchestrator",
   "changes": [
-    "Route fix: / serves office-executive",
-    "SimCity theme removed",
-    "Fake buttons → real <button> elements",
-    "Dead code cleanup: 261→83 files, 180K→47K LOC",
-    "Version footer added"
+    "Mission Orchestrator: real agent-mission binding (activate, chat, status, log)",
+    "5 new API endpoints: activate, status, chat (send/get), event log",
+    "Deploy Agents button + Live Status section in mission overlay",
+    "Mission-scoped chat: messages routed to assigned agents via gateway",
+    "Global overlay manager: dismissAllOverlays() prevents stacking popups",
+    "THREE.js crash fix: _sanitizeMaterials() for GLTF cloned materials",
+    "Eliminated all material.clone() calls (4 files)",
+    "Array material support in sanitizer (multi-mat GLTF meshes)",
+    "CSRF guard on missions API (origin/referer check)",
+    "500KB body size limit on POST /api/oc/missions",
+    "MISSIONS_FILE moved to module scope",
+    "Atomic writes for mission persistence (.tmp → rename)",
+    "Fetch timeout (30s) with AbortController on gateway calls",
+    "Staggered polling startup (no thundering herd)",
+    "Forge-reviewed architecture (Sonnet 4.6)"
+  ],
+  "changelog": [
+    {
+      "version": "2.2.0",
+      "date": "2026-03-10",
+      "title": "Mission Orchestrator",
+      "items": [
+        "🏰 Real missions: agents receive briefs, chat is scoped, status is live",
+        "🔧 6 overlay systems unified — no more stacking popups",
+        "🎮 THREE.js GLTF crash eliminated (sanitize cloned materials)",
+        "🔒 CSRF + body size limits on API",
+        "⚒️ Forge-reviewed with 9/13 issues fixed"
+      ]
+    },
+    {
+      "version": "2.1.0",
+      "date": "2026-03-06",
+      "title": "Cleanup",
+      "items": [
+        "Route fix: / serves office-executive",
+        "SimCity theme removed",
+        "Fake buttons → real <button> elements",
+        "Dead code cleanup: 261→83 files, 180K→47K LOC",
+        "Version footer added"
+      ]
+    }
   ]
 }

@@ -1214,6 +1214,46 @@
     <!-- Summon Knight Wizard -->
     <script src="summon-wizard.js"></script>
     <!-- Version footer -->
-    <div id="sk-version" style="position:fixed;bottom:4px;right:8px;font-size:10px;color:rgba(201,169,89,0.3);pointer-events:none;z-index:99999;font-family:Crimson Text,serif;">v2.1.0-clean</div>
+    <div id="sk-version" style="position:fixed;bottom:4px;right:8px;font-size:10px;color:rgba(201,169,89,0.3);cursor:pointer;z-index:99999;font-family:Crimson Text,serif;" title="Click for changelog">v2.2.0</div>
+    <script>
+    // Version badge — click to show changelog
+    (function() {
+        var versionEl = document.getElementById('sk-version');
+        if (!versionEl) return;
+        // Fetch version info and update display
+        fetch('/api/oc/version').then(function(r) { return r.json(); }).then(function(v) {
+            var ver = (v && v.current && v.current.version) || (v && v.version) || null;
+            if (ver) versionEl.textContent = 'v' + ver;
+        }).catch(function() {});
+        // Click → show changelog overlay
+        versionEl.addEventListener('click', function() {
+            if (document.getElementById('sk-changelog-overlay')) { document.getElementById('sk-changelog-overlay').remove(); return; }
+            fetch('/api/oc/version').then(function(r) { return r.json(); }).then(function(v) {
+                // Support both flat (v.changelog) and nested (v.current.changelog / v.latest.changelog)
+                var changelog = (v && v.changelog) || (v && v.latest && v.latest.changelog) || (v && v.current && v.current.changelog) || null;
+                if (!changelog) return;
+                v = { changelog: changelog };
+                var overlay = document.createElement('div');
+                overlay.id = 'sk-changelog-overlay';
+                overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(5,10,25,0.85);';
+                var panel = document.createElement('div');
+                panel.style.cssText = 'width:min(500px,90vw);max-height:80vh;overflow-y:auto;background:rgba(15,25,50,.95);border:1px solid rgba(201,169,89,.4);border-radius:8px;padding:24px;color:#f4e4bc;font-family:Crimson Text,serif;';
+                var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><h2 style="margin:0;color:#c9a959;font-size:22px;">📜 Changelog</h2><button onclick="document.getElementById(\'sk-changelog-overlay\').remove()" style="background:none;border:none;color:rgba(168,162,153,.7);font-size:20px;cursor:pointer;">✕</button></div>';
+                v.changelog.forEach(function(entry) {
+                    html += '<div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid rgba(201,169,89,.15);">';
+                    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:16px;font-weight:600;color:#c9a959;">v' + entry.version + '</span><span style="font-size:11px;color:rgba(168,162,153,.5);">' + entry.date + '</span></div>';
+                    html += '<div style="font-size:14px;color:#f4e4bc;margin-bottom:8px;font-weight:600;">' + entry.title + '</div>';
+                    html += '<ul style="margin:0;padding-left:18px;font-size:13px;color:rgba(168,162,153,.8);line-height:1.6;">';
+                    entry.items.forEach(function(item) { html += '<li>' + item + '</li>'; });
+                    html += '</ul></div>';
+                });
+                panel.innerHTML = html;
+                overlay.appendChild(panel);
+                overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+                document.body.appendChild(overlay);
+            });
+        });
+    })();
+    </script>
 </body>
 </html>
