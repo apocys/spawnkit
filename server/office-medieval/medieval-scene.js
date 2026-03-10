@@ -394,14 +394,15 @@ class MedievalCastle3D {
             'specularMap','gradientMap'];
         root.traverse(child => {
             if (child.isMesh && child.material) {
-                const mat = child.material;
-                texProps.forEach(prop => {
-                    if (mat[prop] !== undefined && mat[prop] !== null && !mat[prop].image) {
-                        mat[prop] = null;
-                    }
+                const mats = Array.isArray(child.material) ? child.material : [child.material];
+                mats.forEach(mat => {
+                    texProps.forEach(prop => {
+                        if (mat[prop] !== undefined && mat[prop] !== null && !mat[prop].image) {
+                            mat[prop] = null;
+                        }
+                    });
+                    mat.needsUpdate = true;
                 });
-                mat.needsUpdate = true;
-            }
         });
     }
 

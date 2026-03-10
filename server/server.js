@@ -11,6 +11,7 @@ const { execSync } = require('child_process');
 const PORT = parseInt(process.env.PORT || '8765');
 const WORKSPACE = process.env.WORKSPACE || process.env.HOME + '/.openclaw/workspace';
 const SESSIONS_FILE = process.env.HOME + '/.openclaw/agents/main/sessions/sessions.json';
+const MISSIONS_FILE = path.join(WORKSPACE, '.spawnkit-missions.json');
 const STATIC_DIR = __dirname;
 const VERSION_FILE = path.join(__dirname, 'version.json');
 const REPO_DIR = process.env.SPAWNKIT_REPO || path.join(process.env.HOME, 'spawnkit');
@@ -1336,7 +1337,19 @@ ${customBlock}`;
   }
 
   // ─── Mission Houses API ──────────────────────────────────
-  const MISSIONS_FILE = path.join(WORKSPACE, '.spawnkit-missions.json');
+  // Auth: reject requests from external origins (CSRF protection)
+  // Accept: same-origin fetch (no Origin header), localhost, or valid Referer
+  if (req.url.startsWith('/api/oc/missions') && (req.method === 'POST' || req.method === 'DELETE')) {
+    const origin = req.headers.origin || '';
+    const referer = req.headers.referer || '';
+    const isLocal = !origin || origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('app.spawnkit.ai');
+    const refOk = !referer || referer.includes('localhost') || referer.includes('127.0.0.1') || referer.includes('app.spawnkit.ai');
+    if (!isLocal || !refOk) {
+      res.writeHead(403, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ error: 'Forbidden — invalid origin' }));
+      return;
+    }
+  }
 
   // GET /api/oc/missions — list all missions
   if (req.url === '/api/oc/missions' && req.method === 'GET') {
@@ -1356,7 +1369,10 @@ ${customBlock}`;
   if (req.url === '/api/oc/missions' && req.method === 'POST') {
     res.setHeader('Content-Type', 'application/json');
     let body = '';
-    req.on('data', c => body += c);
+    req.on('data', c => {
+      body += c;
+      if (body.length > 500_000) { req.destroy(); res.writeHead(413); res.end('Payload too large'); return; }
+    });
     req.on('end', () => {
       try {
         const data = JSON.parse(body);
