@@ -282,6 +282,34 @@ function readBody(req) {
   });
 }
 
+// Helper: full proxy (GET or POST) to a remote service — returns { ok, status, data, raw }
+async function proxyRequest(method, url, token, bodyObj) {
+  const lib = url.startsWith('https') ? require('https') : require('http');
+  const parsed = new (require('url').URL)(url);
+  const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);
+  return new Promise((resolve) => {
+    const req = lib.request({
+      hostname: parsed.hostname, port: parsed.port,
+      path: parsed.pathname + parsed.search, method,
+      headers, timeout: 12000,
+    }, (resp) => {
+      let data = '';
+      resp.on('data', c => data += c);
+      resp.on('end', () => {
+        try { resolve({ ok: resp.statusCode < 400, status: resp.statusCode, data: JSON.parse(data), raw: data }); }
+        catch(e) { resolve({ ok: false, status: resp.statusCode, data: null, raw: data }); }
+      });
+    });
+    req.on('error', (e) => resolve({ ok: false, status: 0, error: e.message }));
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false, status: 0, error: 'timeout' }); });
+    if (bodyStr) req.write(bodyStr);
+    req.end();
+  });
+}
+
 // Helper: proxy fetch to a remote gateway
 async function proxyFetch(url, token) {
   const https = url.startsWith('https') ? require('https') : require('http');
@@ -393,6 +421,21 @@ const server = http.createServer(async (req, res) => {
     } catch(e) {
       res.writeHead(502, {'Content-Type':'application/json'});
       res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // ALL /api/arena/* — proxy to fleet relay (ArenaAPI lives there)
+  if (req.url.startsWith('/api/arena')) {
+    try {
+      const body = req.method === 'POST' ? await readBody(req) : null;
+      const fr = await proxyRequest(req.method, FLEET_RELAY_URL + req.url, FLEET_RELAY_TOKEN, body);
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(fr.status || (fr.ok ? 200 : 502));
+      res.end(fr.raw || JSON.stringify({ error: 'Arena relay error' }));
+    } catch(e) {
+      res.writeHead(502, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: false, error: e.message }));
     }
     return;
   }
