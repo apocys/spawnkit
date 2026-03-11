@@ -147,46 +147,28 @@ function initWeather(app) {
         }
     }
 
-    // ── Weather badge UI ───────────────────────────────────────
-    const WEATHER_ICONS = { clear: '☀️', rain: '🌧️', snow: '❄️', fog: '🌫️', cloudy: '☁️' };
-    const badge = document.createElement('div');
-    badge.id = 'weather-badge';
-    badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,0.4);color:#fff;padding:2px 10px;border-radius:8px;font-size:11px;font-family:Crimson Text,serif;pointer-events:auto;cursor:pointer;backdrop-filter:blur(4px);border:1px solid rgba(201,169,89,0.15);margin-left:8px;';
-    // Append to header status bar instead of body (avoids popup overlap)
-    var statusBar = document.querySelector('.castle-status-bar');
-    if (statusBar) statusBar.appendChild(badge);
-    else document.body.appendChild(badge);
-
-    // Day/Night label
-    function getDayNightLabel() {
-        const state = (window.castleApp && window.castleApp._dayNightState);
-        if (state) return state.isNight ? '🌙 Night' : '☀️ Day';
-        const h = new Date().getHours();
-        return (h >= 7 && h < 20) ? '☀️ Day' : '🌙 Night';
-    }
-
-    function updateBadge() {
-        const icon = WEATHER_ICONS[currentWeather] || '☀️';
-        const dayNight = getDayNightLabel();
-        badge.textContent = icon + ' ' + currentWeather.charAt(0).toUpperCase() + currentWeather.slice(1) + '  ·  ' + dayNight;
-    }
-
-    // Click to cycle weather manually (for testing/preference)
-    let weatherOverride = null;
+    // ── Weather cycle API (no UI badge — hotbar Night button handles day/night) ──
     const weatherCycle = ['clear', 'cloudy', 'rain', 'snow', 'fog'];
-    badge.addEventListener('click', () => {
-        const idx = weatherCycle.indexOf(currentWeather);
-        const next = weatherCycle[(idx + 1) % weatherCycle.length];
-        currentWeather = next;
-        // Apply weather effects
-        if (rainSystem) rainSystem.visible = (next === 'rain');
-        if (snowSystem) snowSystem.visible = (next === 'snow');
-        if (app.scene.fog) {
-            const fogDensities = { fog: 0.015, rain: 0.009, snow: 0.008, cloudy: 0.007, clear: 0.006 };
-            app.scene.fog.density = fogDensities[next] || 0.006;
-        }
-        updateBadge();
-    });
+
+    // Expose cycling API for hotbar or external use
+    window.castleWeather = {
+        cycle: function() {
+            const idx = weatherCycle.indexOf(currentWeather);
+            const next = weatherCycle[(idx + 1) % weatherCycle.length];
+            currentWeather = next;
+            if (rainSystem) rainSystem.visible = (next === 'rain');
+            if (snowSystem) snowSystem.visible = (next === 'snow');
+            if (app.scene && app.scene.fog) {
+                const fogDensities = { fog: 0.015, rain: 0.009, snow: 0.008, cloudy: 0.007, clear: 0.006 };
+                app.scene.fog.density = fogDensities[next] || 0.006;
+            }
+            applyWeather();
+            return next;
+        },
+        get: function() { return currentWeather; }
+    };
+
+    function updateBadge() { /* no-op: badge removed */ }
 
     // ── Initialize ─────────────────────────────────────────────
     rainSystem = createRain();
