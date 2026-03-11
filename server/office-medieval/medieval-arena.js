@@ -734,11 +734,9 @@ class MedievalArena {
                 </div>
             </div>`;
 
-            // WS live refresh — subscribe once
+            // WS live refresh — use addEventListener for reconnect resilience
             if (window.castleApp && window.castleApp.ws && !this._wsSubscribed) {
-                const origOnMessage = window.castleApp.ws.onmessage;
-                window.castleApp.ws.onmessage = (evt) => {
-                    if (origOnMessage) origOnMessage.call(window.castleApp.ws, evt);
+                this._wsHandler = (evt) => {
                     try {
                         const msg = JSON.parse(evt.data);
                         if (msg.type && msg.type.startsWith('arena:') && this._lastContainer) {
@@ -746,7 +744,14 @@ class MedievalArena {
                         }
                     } catch(e) {}
                 };
+                window.castleApp.ws.addEventListener('message', this._wsHandler);
                 this._wsSubscribed = true;
+                // Re-subscribe on reconnect: listen for WS open events
+                window.castleApp.ws.addEventListener('open', () => {
+                    this._wsSubscribed = false;
+                    if (this._wsHandler) window.castleApp.ws.removeEventListener('message', this._wsHandler);
+                    this._wsHandler = null;
+                });
             }
         })
         .catch(err => {
@@ -795,10 +800,14 @@ class MedievalArena {
             </div>`;
 
         document.getElementById('ar-modal-submit').addEventListener('click', () => {
+            const btn = document.getElementById('ar-modal-submit');
+            if (btn.disabled) return;
             const template = document.getElementById('ar-modal-template').value;
             const task = (document.getElementById('ar-modal-task').value || '').trim();
             const msg = document.getElementById('ar-modal-msg');
             if (!task) { msg.style.color = '#ef4444'; msg.textContent = '⚠️ Please enter a task.'; return; }
+            btn.disabled = true;
+            btn.textContent = '⏳ Issuing challenge…';
             msg.style.color = '#c9a959'; msg.textContent = '⏳ Issuing challenge…';
             fetch(relayUrl + '/api/arena/challenge', {
                 method: 'POST',
@@ -809,9 +818,13 @@ class MedievalArena {
             .then(res => {
                 if (!res.ok) throw new Error(res.error || 'API error');
                 msg.style.color = '#4caf50'; msg.textContent = '✅ Challenge issued! Battle begins…';
+                if (btn) { btn.textContent = '✅ Issued!'; }
                 setTimeout(() => this.render(this._lastContainer), 1500);
             })
-            .catch(err => { msg.style.color = '#ef4444'; msg.textContent = '⚠️ ' + err.message; });
+            .catch(err => {
+                msg.style.color = '#ef4444'; msg.textContent = '⚠️ ' + err.message;
+                if (btn) { btn.disabled = false; btn.textContent = '⚔️ Issue Challenge'; }
+            });
         });
     }
 
