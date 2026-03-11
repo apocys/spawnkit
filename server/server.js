@@ -1490,7 +1490,7 @@ ${customBlock}`;
         color: body.color || HOUSE_COLORS[colorIdx],
         agents: body.agents || ['Sycopa'],
         description: body.description || body.name,
-        tasks: body.tasks || [],
+        tasks: Array.isArray(body.tasks) ? body.tasks : [],
         position: nextPos,
         source: body.source || 'telegram',
         created: new Date().toISOString(),

@@ -740,6 +740,7 @@ class MedievalArena {
                 this._wsOpenListenerAdded = true;
                 window.castleApp.ws.addEventListener('open', () => {
                     this._wsSubscribed = false;
+                    this._wsOpenListenerAdded = false; // allow re-registration on next reconnect
                     if (this._wsHandler) window.castleApp.ws.removeEventListener('message', this._wsHandler);
                     this._wsHandler = null;
                     if (this._lastContainer) this._subscribeWS();
