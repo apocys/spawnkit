@@ -492,17 +492,16 @@ class ArenaEngine {
   _readJudgeToken() {
     try {
       const dir = path.join(process.env.HOME || '/root', '.cli-proxy-api');
-      const files = fs.readdirSync(dir).filter(f => f.endsWith('.json') && f !== 'codex-apocys@gmail.com-plus.json');
-      // Prefer the compteapo account (not disabled)
-      const preferred = files.find(f => f.includes('compteapo')) || files[0];
-      if (!preferred) return null;
-      const data = JSON.parse(fs.readFileSync(path.join(dir, preferred), 'utf8'));
-      if (data.disabled) {
-        // Try next
-        const alt = files.find(f => f !== preferred);
-        if (alt) return JSON.parse(fs.readFileSync(path.join(dir, alt), 'utf8')).access_token || null;
-      }
-      return data.access_token || data.token || null;
+      const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+      // Parse all files, filter out disabled accounts
+      const accounts = files.map(f => {
+        try { return { file: f, ...JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) }; }
+        catch(e) { return null; }
+      }).filter(a => a && !a.disabled);
+      if (!accounts.length) return null;
+      // Prefer compteapo account
+      const preferred = accounts.find(a => a.file.includes('compteapo')) || accounts[0];
+      return preferred.access_token || preferred.token || null;
     } catch(e) {
       return null;
     }
