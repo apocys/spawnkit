@@ -1,8 +1,18 @@
 (function () {
   'use strict';
-  var ctx = null, started = false;
+  var ctx = null, started = false, masterGain = null;
 
   function isMuted() { var a = window.castleApp; return a && a.soundEnabled === false; }
+
+  // Public API — called by hotbar mute toggle
+  window.castleAudio = {
+    isMuted: isMuted,
+    setMuted: function(muted) {
+      if (window.castleApp) window.castleApp.soundEnabled = !muted;
+      if (masterGain && ctx) masterGain.gain.setTargetAtTime(muted ? 0 : 0.3, ctx.currentTime, 0.3);
+    },
+    toggle: function() { window.castleAudio.setMuted(!isMuted()); },
+  };
 
   function sunAngle() {
     var a = window.castleApp;
@@ -60,14 +70,16 @@
   function startFireCrackle(master) {
     function crackle() {
       if (!isMuted()) {
-        var dur = 0.02 + Math.random() * 0.03;
-        var g = ctx.createGain(); g.gain.setValueAtTime(0.02, ctx.currentTime);
+        var dur = 0.015 + Math.random() * 0.025;
+        var g = ctx.createGain(); g.gain.setValueAtTime(0.005, ctx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
         var bp = ctx.createBiquadFilter(); bp.type = 'bandpass';
-        bp.frequency.value = 1800 + Math.random() * 400; bp.Q.value = 0.5;
-        whiteNoise(bp); bp.connect(g); g.connect(master);
+        bp.frequency.value = 2200 + Math.random() * 600; bp.Q.value = 1.5;
+        // Extra low-pass to soften harshness
+        var lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3000;
+        whiteNoise(bp); bp.connect(lp); lp.connect(g); g.connect(master);
       }
-      setTimeout(crackle, 100 + Math.random() * 400);
+      setTimeout(crackle, 200 + Math.random() * 800);
     }
     crackle();
   }
@@ -167,9 +179,11 @@
   function initAudio() {
     if (started) return; started = true;
     ctx = new (window.AudioContext || window.webkitAudioContext)();
-    var master = ctx.createGain(); master.gain.value = 0.3; master.connect(ctx.destination);
-    startBirds(master); startRiver(master); startFireCrackle(master);
-    startWind(master); startCrickets(master); startMedievalDrone(master);
+    masterGain = ctx.createGain(); masterGain.gain.value = 0.3; masterGain.connect(ctx.destination);
+    startBirds(masterGain); startRiver(masterGain); startFireCrackle(masterGain);
+    startWind(masterGain); startCrickets(masterGain); startMedievalDrone(masterGain);
+    // Sync initial mute state
+    if (isMuted()) masterGain.gain.value = 0;
   }
 
   document.addEventListener('click', initAudio, { once: true });

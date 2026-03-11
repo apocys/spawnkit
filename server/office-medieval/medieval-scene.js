@@ -1005,6 +1005,9 @@ class MedievalCastle3D {
 
     // ── Day/Night Cycle (60s = full day) ─────────────────
     updateDayNight(elapsed) {
+        // Respect forced override from hotbar toggle
+        if (window._forcedDayNight) return;
+
         // Sync cycle to real local time (6am=dawn, 8pm=dusk, 1hr in-game loop offset by current hour)
         const now = new Date();
         const realFraction = (now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600) / 24;

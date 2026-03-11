@@ -771,12 +771,13 @@
             el.style.animation = 'ravenFly 1.2s ease-in-out';
             setTimeout(() => { el.style.animation = ''; }, 1200);
         });
-        
-        // Show actual message content in notification
+
+        // Show actual message content in notification — click reveals full text
         var lastMsg = Array.isArray(chat) ? chat[chat.length - 1] : null;
-        var msgBody = lastMsg ? (lastMsg.content || lastMsg.text || lastMsg.message || '').substring(0, 60) : '';
-        var notifText = msgBody ? '📜 ' + msgBody : '📜 New message from the realm';
-        addMedievalNotification(notifText, 'info');
+        var fullBody = lastMsg ? (lastMsg.content || lastMsg.text || lastMsg.message || '') : '';
+        var preview = fullBody.substring(0, 55) + (fullBody.length > 55 ? '…' : '');
+        var notifText = preview ? '📜 ' + preview : '📜 New message from the realm';
+        addMedievalNotification(notifText, 'info', fullBody);
     }
     
     function updateMedievalMissionControl(sessions, memory) {
@@ -788,7 +789,45 @@
         }
     }
     
-    function addMedievalNotification(message, type = 'info') {
+    function showMessagePopup(body) {
+        // Remove existing popup
+        var existing = document.getElementById('realm-msg-popup');
+        if (existing) existing.remove();
+
+        var overlay = document.createElement('div');
+        overlay.id = 'realm-msg-popup';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:9990;display:flex;align-items:center;justify-content:center;background:rgba(5,10,25,.8);backdrop-filter:blur(4px);opacity:0;transition:opacity .2s;';
+
+        // Convert light markdown to HTML
+        function mdToHtml(text) {
+            return text
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g,'<em>$1</em>')
+                .replace(/`([^`]+)`/g,'<code style="background:rgba(201,169,89,.15);padding:1px 5px;border-radius:3px;font-size:12px;">$1</code>')
+                .replace(/\n/g,'<br>');
+        }
+
+        var box = document.createElement('div');
+        box.style.cssText = 'width:min(560px,92vw);max-height:75vh;overflow-y:auto;background:rgba(15,25,50,.96);border:1px solid rgba(201,169,89,.5);border-radius:6px;padding:24px;box-shadow:0 0 50px rgba(201,169,89,.2);';
+        box.innerHTML =
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">' +
+                '<span style="font-family:Cinzel,serif;font-size:15px;color:#c9a959;letter-spacing:.05em;">📜 Message from the Realm</span>' +
+                '<button id="realm-msg-close" style="background:none;border:none;color:rgba(168,162,153,.7);font-size:20px;cursor:pointer;line-height:1;">✕</button>' +
+            '</div>' +
+            '<div style="font-family:Crimson Text,serif;font-size:14px;color:rgba(220,210,195,.9);line-height:1.7;white-space:pre-wrap;">' + mdToHtml(body) + '</div>';
+
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        requestAnimationFrame(function() { overlay.style.opacity = '1'; });
+
+        function close() { overlay.style.opacity = '0'; setTimeout(function() { overlay.remove(); }, 200); }
+        document.getElementById('realm-msg-close').addEventListener('click', close);
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) close(); });
+        document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); } });
+    }
+
+    function addMedievalNotification(message, type = 'info', fullContent = '') {
         const notification = document.createElement('div');
         notification.className = `medieval-notification medieval-notification--${type}`;
         notification.textContent = message;
@@ -807,23 +846,23 @@
             z-index: 2000;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             animation: medievalNotificationSlide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            max-width: 250px;
+            max-width: 280px;
             cursor: pointer;
         `;
 
-        // Click notification → open Royal Messenger (chat panel)
+        // Click → show full message content in a readable overlay
         notification.addEventListener('click', function() {
-            // Try to open the chat/messenger panel
-            var chatToggle = document.querySelector('.chat-toggle, [data-panel="chat"], .royal-messenger-toggle');
-            if (chatToggle) { chatToggle.click(); }
-            else {
-                // Fallback: open Mission Control which contains chat
-                var mcToggle = document.querySelector('.mc-toggle');
-                if (mcToggle) mcToggle.click();
-            }
             notification.remove();
+            if (fullContent) {
+                showMessagePopup(fullContent);
+            } else {
+                // Fallback: open chat panel
+                var chatToggle = document.querySelector('.chat-toggle, [data-panel="chat"], .royal-messenger-toggle');
+                if (chatToggle) chatToggle.click();
+                else { var mcToggle = document.querySelector('.mc-toggle'); if (mcToggle) mcToggle.click(); }
+            }
         });
-        
+
         document.body.appendChild(notification);
         
         // Auto-remove after 4 seconds

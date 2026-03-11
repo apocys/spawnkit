@@ -56,6 +56,55 @@
         { key: '8', icon: '🏰', label: 'Allies', action: function() {
             if (typeof window.openBuildingPanel === 'function') window.openBuildingPanel('🏰 Rookery');
         }},
+        { key: '9', icon: '🔊', label: 'Sound', action: function() {
+            var isMuted = window.castleApp && window.castleApp.soundEnabled === false;
+            if (window.castleAudio) {
+                window.castleAudio.setMuted(!isMuted);
+            } else {
+                // Fallback — toggle via castleApp
+                if (window.castleApp) window.castleApp.soundEnabled = isMuted;
+            }
+            // Update icon + scene toggle
+            var btn = document.getElementById('btn-toggle-sound');
+            if (btn) btn.textContent = isMuted ? '🔊' : '🔇';
+            // Update hotbar slot icon
+            var slot = hotbar.children[8];
+            if (slot) {
+                slot.querySelector('span:first-child').textContent = isMuted ? '🔊' : '🔇';
+                slot.querySelector('span:nth-child(2)').textContent = isMuted ? 'Sound' : 'Muted';
+            }
+        }},
+        { key: '0', icon: '🌙', label: 'Night', action: function() {
+            // Toggle forced day/night override
+            window._forcedDayNight = window._forcedDayNight === 'night' ? 'day' : 'night';
+            var isNight = window._forcedDayNight === 'night';
+            var slot = hotbar.children[9];
+            if (slot) {
+                slot.querySelector('span:first-child').textContent = isNight ? '☀️' : '🌙';
+                slot.querySelector('span:nth-child(2)').textContent = isNight ? 'Day' : 'Night';
+            }
+            // Apply lighting immediately
+            if (window.castleApp && window.castleApp.applyForcedDayNight) {
+                window.castleApp.applyForcedDayNight(window._forcedDayNight);
+            } else if (window.castleApp) {
+                // Direct lighting override
+                var app = window.castleApp;
+                if (app.sunLight) {
+                    app.sunLight.intensity = isNight ? 0.15 : 1.8;
+                    app.sunLight.color.setHex(isNight ? 0x334466 : 0xffe8cc);
+                }
+                if (app.ambientLight) {
+                    app.ambientLight.intensity = isNight ? 0.06 : 0.45;
+                    app.ambientLight.color.setHex(isNight ? 0x223355 : 0xfff5e0);
+                }
+                if (app.hemiLight) app.hemiLight.intensity = isNight ? 0.08 : 0.25;
+                if (app.torchLights) app.torchLights.forEach(function(t) { t.intensity = isNight ? 5 : 2; });
+                if (app.bloomPass) app.bloomPass.strength = isNight ? 0.7 : 0.25;
+                // Tint sky
+                var skyBg = document.getElementById('scene-container');
+                if (skyBg) skyBg.style.background = isNight ? 'linear-gradient(180deg,#060b1a 0%,#0d1b3a 60%,#1a2040 100%)' : '';
+            }
+        }},
     ];
     items.forEach(function(item) {
         var slot = document.createElement('div');

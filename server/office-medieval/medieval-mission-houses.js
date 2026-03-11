@@ -544,8 +544,14 @@
             } else {
                 chatEl.innerHTML = messages.slice(-20).map(function(m) {
                     var role = m.role === 'user' ? '👤' : '🤖';
-                    var text = (m.content || m.text || '').substring(0, 300);
-                    return '<div style="margin-bottom:6px;"><span style="color:rgba(201,169,89,.6);">' + role + '</span> <span style="color:rgba(168,162,153,.8);">' + esc(text) + '</span></div>';
+                    var raw = (m.content || m.text || '').substring(0, 500);
+                    // Convert light markdown → HTML for readability
+                    var html = esc(raw)
+                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                        .replace(/`([^`]+)`/g, '<code style="background:rgba(201,169,89,.1);padding:1px 4px;border-radius:3px;font-size:11px;">$1</code>')
+                        .replace(/\n/g, '<br>');
+                    return '<div style="margin-bottom:8px;padding:6px 8px;background:rgba(0,0,0,.15);border-radius:4px;border-left:2px solid rgba(201,169,89,' + (m.role === 'user' ? '.2' : '.4') + ');"><span style="color:rgba(201,169,89,.6);font-size:11px;">' + role + ' ' + (m.role === 'user' ? 'You' : 'Agent') + '</span><br><span style="color:rgba(220,210,195,.85);font-size:12px;line-height:1.5;">' + html + '</span></div>';
                 }).join('');
                 chatEl.scrollTop = chatEl.scrollHeight;
             }
