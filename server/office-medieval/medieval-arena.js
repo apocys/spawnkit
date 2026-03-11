@@ -734,29 +734,37 @@ class MedievalArena {
                 </div>
             </div>`;
 
-            // WS live refresh — use addEventListener for reconnect resilience
-            if (window.castleApp && window.castleApp.ws && !this._wsSubscribed) {
-                this._wsHandler = (evt) => {
-                    try {
-                        const msg = JSON.parse(evt.data);
-                        if (msg.type && msg.type.startsWith('arena:') && this._lastContainer) {
-                            setTimeout(() => this.render(this._lastContainer), 300);
-                        }
-                    } catch(e) {}
-                };
-                window.castleApp.ws.addEventListener('message', this._wsHandler);
-                this._wsSubscribed = true;
-                // Re-subscribe on reconnect: listen for WS open events
+            // WS live refresh — use _subscribeWS() helper (addEventListener, reconnect-safe)
+            this._subscribeWS();
+            if (!this._wsOpenListenerAdded && window.castleApp && window.castleApp.ws) {
+                this._wsOpenListenerAdded = true;
                 window.castleApp.ws.addEventListener('open', () => {
                     this._wsSubscribed = false;
                     if (this._wsHandler) window.castleApp.ws.removeEventListener('message', this._wsHandler);
                     this._wsHandler = null;
+                    if (this._lastContainer) this._subscribeWS();
                 });
             }
         })
         .catch(err => {
             container.innerHTML = `<div style="padding:16px;color:#ef4444;font-style:italic;text-align:center;">⚠️ Arena unreachable: ${err.message}</div>`;
         });
+    }
+
+    // Subscribe WS message handler — safe to call multiple times (guards internally)
+    _subscribeWS() {
+        if (!window.castleApp || !window.castleApp.ws) return;
+        if (this._wsSubscribed) return;
+        this._wsHandler = (evt) => {
+            try {
+                const msg = JSON.parse(evt.data);
+                if (msg.type && msg.type.startsWith('arena:') && this._lastContainer) {
+                    setTimeout(() => this.render(this._lastContainer), 300);
+                }
+            } catch(e) {}
+        };
+        window.castleApp.ws.addEventListener('message', this._wsHandler);
+        this._wsSubscribed = true;
     }
 
     togglePanel() {

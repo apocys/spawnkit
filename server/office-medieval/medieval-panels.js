@@ -448,7 +448,7 @@
         'openai-image-gen':'🖼️','nano-banana-pro':'🍌','skill-creator':'🛠️',
         'clawhub':'🌐','tmux':'💻','video-frames':'🎞️','large-build':'🏗️',
         'systematic-debugging':'🐛','two-stage-review':'🔍','verify-before-done':'✅',
-        'awwwards-frontend':'🎨','youtube-transcript':'📼',
+        'awwwards-frontend':'🎨',
     };
 
     function renderSkillList(container, skills) {
