@@ -1119,7 +1119,9 @@ ${customBlock}`;
     res.setHeader('Content-Type', 'application/json');
     try {
       const { spawnSync } = require('child_process');
-      const result = spawnSync('openclaw', ['agents', 'list', '--json'], { encoding: 'utf8', timeout: 10000 });
+      const ocBinList = process.env.OC_BIN || '/home/apocyz_runner/.npm-global/bin/openclaw';
+      const spawnEnvList = { ...process.env, PATH: (process.env.PATH || '') + ':/home/apocyz_runner/.npm-global/bin' };
+      const result = spawnSync(ocBinList, ['agents', 'list', '--json'], { encoding: 'utf8', timeout: 10000, env: spawnEnvList });
       const agents = JSON.parse(result.stdout || '[]');
       res.writeHead(200);
       res.end(JSON.stringify({ ok: true, agents }));
@@ -1179,31 +1181,37 @@ ${customBlock}`;
 
       // Register with OpenClaw
       const { spawnSync } = require('child_process');
-      const modelMap = { opus: 'claudemax/claude-opus-4-6', sonnet: 'claudemax2/claude-sonnet-4-20250514', codex: 'codex/codex-mini-latest' };
+      const modelMap = { opus: 'claudemax/claude-opus-4-6', sonnet: 'claudemax/claude-sonnet-4-6', codex: 'codex/codex-mini-latest' };
       const modelId = modelMap[config.model] || config.model || modelMap.sonnet;
 
-      const addResult = spawnSync('openclaw', [
+      // Ensure openclaw binary is on PATH regardless of server launch environment
+      const ocBin = process.env.OC_BIN || require('child_process').execSync('which openclaw 2>/dev/null || echo ""').toString().trim() || '/home/apocyz_runner/.npm-global/bin/openclaw';
+      const spawnEnv = { ...process.env, PATH: (process.env.PATH || '') + ':/home/apocyz_runner/.npm-global/bin' };
+
+      const addResult = spawnSync(ocBin, [
         'agents', 'add', agentId,
         '--workspace', agentDir,
         '--model', modelId,
         '--non-interactive'
-      ], { encoding: 'utf8', timeout: 15000 });
+      ], { encoding: 'utf8', timeout: 15000, env: spawnEnv });
 
-      if (addResult.status !== 0) {
+      if (addResult.error || addResult.status !== 0) {
         // Clean up on failure
         fs.rmSync(agentDir, { recursive: true, force: true });
+        const detail = (addResult.stderr || addResult.stdout || addResult.error?.message || '').slice(0, 500);
+        console.error('[agents] openclaw agents add failed:', detail, 'status:', addResult.status, 'bin:', ocBin);
         res.writeHead(500);
-        res.end(JSON.stringify({ error: 'openclaw agents add failed', detail: (addResult.stderr || addResult.stdout || '').slice(0, 500) }));
+        res.end(JSON.stringify({ error: 'openclaw agents add failed', detail }));
         return;
       }
 
       // Set identity
-      spawnSync('openclaw', [
+      spawnSync(ocBin, [
         'agents', 'set-identity',
         '--agent', agentId,
         '--from-identity',
         '--workspace', agentDir
-      ], { encoding: 'utf8', timeout: 10000 });
+      ], { encoding: 'utf8', timeout: 10000, env: spawnEnv });
 
       console.log('[SpawnKit] Agent Creation v2.1.0-medieval-agents — created agent:', agentId, 'workspace:', agentDir);
 
@@ -1229,7 +1237,9 @@ ${customBlock}`;
     }
     try {
       const { spawnSync } = require('child_process');
-      const result = spawnSync('openclaw', ['agents', 'delete', agentId, '--yes'], { encoding: 'utf8', timeout: 10000 });
+      const ocBinDel = process.env.OC_BIN || '/home/apocyz_runner/.npm-global/bin/openclaw';
+      const spawnEnvDel = { ...process.env, PATH: (process.env.PATH || '') + ':/home/apocyz_runner/.npm-global/bin' };
+      const result = spawnSync(ocBinDel, ['agents', 'delete', agentId, '--force'], { encoding: 'utf8', timeout: 10000, env: spawnEnvDel });
       // Also remove workspace
       const agentDir = path.join(AGENTS_BASE_DIR, agentId);
       if (fs.existsSync(agentDir)) fs.rmSync(agentDir, { recursive: true, force: true });

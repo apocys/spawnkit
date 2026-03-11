@@ -13,7 +13,10 @@ const path = require('path');
 const http = require('http');
 
 const API_BASE = process.env.API_BASE || 'http://127.0.0.1:8765';
-const SERVER_DIR = path.join(__dirname, '..', 'server');
+// Support both repo layouts: spawnkit/server and spawnkit-server (production)
+const SERVER_DIR = fs.existsSync(path.join(__dirname, '..', 'server', 'server.js'))
+  ? path.join(__dirname, '..', 'server')
+  : path.join('/home/apocyz_runner/spawnkit-server');
 const MEDIEVAL_DIR = path.join(SERVER_DIR, 'office-medieval');
 
 let passed = 0;
@@ -212,6 +215,49 @@ test('summon-wizard.js dispatches knight-summoned event', () => {
     if (e.code === 'ENOENT') throw new Error('summon-wizard.js not yet created');
     throw e;
   }
+});
+
+// ── Regression: PATH + model bugs (2026-03-11) ──
+console.log('\n── Regression Tests ──');
+
+test('[REG-001] openclaw PATH is set for spawnSync calls', () => {
+  // Server must not rely on system PATH alone — openclaw lives in ~/.npm-global/bin
+  assert(
+    serverSrc.includes('.npm-global/bin') || serverSrc.includes('OC_BIN') || serverSrc.includes('spawnEnv'),
+    'Should augment PATH or use OC_BIN env for openclaw binary resolution'
+  );
+});
+
+test('[REG-002] spawnSync uses env with augmented PATH', () => {
+  // spawnSync must pass env option with PATH that includes npm-global
+  assert(
+    serverSrc.includes('spawnEnv') && serverSrc.includes('npm-global'),
+    'spawnSync calls should pass augmented PATH env'
+  );
+});
+
+test('[REG-003] spawnSync error check handles null status (ENOENT)', () => {
+  // When binary not found, spawnSync sets error + status=null. Must check addResult.error too.
+  assert(
+    serverSrc.includes('addResult.error') || serverSrc.includes('|| addResult.status !== 0'),
+    'Should check addResult.error for ENOENT (binary not found), not just status !== 0'
+  );
+});
+
+test('[REG-004] sonnet model maps to claudemax (not claudemax2)', () => {
+  // Bug: was mapped to claudemax2/claude-sonnet-4-20250514 (invalid provider)
+  assert(!serverSrc.includes('claudemax2'), 'Should not reference invalid claudemax2 provider');
+  assert(
+    serverSrc.includes("sonnet: 'claudemax/claude-sonnet-4-6'") ||
+    serverSrc.includes("sonnet:'claudemax/claude-sonnet-4-6'"),
+    "sonnet should map to 'claudemax/claude-sonnet-4-6'"
+  );
+});
+
+test('[REG-005] delete endpoint uses --force not --yes', () => {
+  // openclaw agents delete uses --force, not --yes
+  assert(!serverSrc.includes("'--yes'"), "Should not use --yes flag (invalid for openclaw agents delete)");
+  assert(serverSrc.includes("'--force'"), "Should use --force flag for non-interactive delete");
 });
 
 // ── Design Doc ──
