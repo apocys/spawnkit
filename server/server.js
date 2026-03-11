@@ -1326,8 +1326,7 @@ ${customBlock}`;
       
       if (personaMatch) {
         // PERSONA CHAT — direct to LLM provider, bypassing OpenClaw gateway entirely
-        // The gateway creates sessions with SOUL.md that override our system prompt.
-        // CLIProxyAPI (port 8317) gives us clean, stateless completions.
+        // CLIProxyAPI (port 8317) gives us clean, stateless completions with full context.
         const personaName = personaMatch[1];
         const userText = personaMatch[2];
         const personaPath = path.join(__dirname, 'office-medieval', 'personalities', personaName.toLowerCase() + '.md');
@@ -1338,20 +1337,35 @@ ${customBlock}`;
           }
         } catch(e) {}
 
+        // Inject workspace memory files for Sycopa (give it real context)
+        let memoryCtx = '';
+        const isSycopa = personaName.toLowerCase() === 'sycopa';
+        if (isSycopa) {
+          try {
+            const memMain = fs.readFileSync(path.join(WORKSPACE, 'MEMORY.md'), 'utf8');
+            // Truncate to keep prompt sane
+            memoryCtx = memMain.substring(0, 3000);
+          } catch(e) {}
+        }
+
         // Fallback role descriptions if no personality file
         const KNIGHT_ROLES = {
-          sycopa: 'the Lord Commander, digital alter ego of the castle lord. Cool, direct, action-oriented.',
-          forge: 'the Master Builder, responsible for code and infrastructure. Gruff, practical, proud of craftsmanship.',
-          atlas: 'the Navigator, handles research and analysis. Scholarly, curious, loves maps and knowledge.',
-          hunter: 'the Scout, market intelligence and opportunities. Sharp-eyed, competitive, always tracking prey.',
-          echo: 'the Communicator, handles channels and messaging. Swift, reliable, carries every word faithfully.',
+          sycopa: 'the Lord Commander and digital alter ego of Kira (the castle lord). Cool, direct, action-oriented. No fluff.',
+          forge:    'the Master Builder, responsible for code and infrastructure. Gruff, practical, proud of craftsmanship.',
+          atlas:    'the Navigator, handles research and analysis. Scholarly, curious, loves maps and knowledge.',
+          hunter:   'the Scout, market intelligence and opportunities. Sharp-eyed, competitive, always tracking prey.',
+          echo:     'the Communicator, handles channels and messaging. Swift, reliable, carries every word faithfully.',
           sentinel: 'the Guardian, security and quality assurance. Vigilant, stern, trusts nothing without verification.',
         };
         const roleDesc = KNIGHT_ROLES[personaName.toLowerCase()] || 'a loyal knight of the castle';
 
-        const systemPrompt = personaCtx 
-          ? `You are ${personaName}, a knight in a medieval castle. Respond FULLY IN CHARACTER using the personality below. Stay brief (2-4 sentences), medieval-flavored. Never break character, never mention AI.\n\n${personaCtx}`
-          : `You are ${personaName}, ${roleDesc}. You serve in a medieval castle. Respond in character — brief (2-4 sentences), medieval-flavored. Never break character, never mention being an AI. Use thy/thee/ye sparingly for flavor.`;
+        let systemPrompt = personaCtx
+          ? `You are ${personaName}, a knight in a medieval castle. Respond FULLY IN CHARACTER using the personality below. Stay concise (2-5 sentences). Never break character, never mention AI.\n\n${personaCtx}`
+          : `You are ${personaName}, ${roleDesc}. You serve in a medieval castle. Respond in character — concise, never break character, never mention being an AI.`;
+
+        if (isSycopa && memoryCtx) {
+          systemPrompt += `\n\n## Your Memory (active context)\n${memoryCtx}`;
+        }
 
         console.log('[chat-persona] Direct LLM call for', personaName, '| has personality file:', !!personaCtx);
 

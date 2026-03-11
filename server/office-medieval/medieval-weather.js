@@ -151,19 +151,25 @@ function initWeather(app) {
     const weatherCycle = ['clear', 'cloudy', 'rain', 'snow', 'fog'];
 
     // Expose cycling API for hotbar or external use
+    function applyWeatherById(id) {
+        currentWeather = id;
+        if (rainSystem) rainSystem.visible = (id === 'rain');
+        if (snowSystem) snowSystem.visible = (id === 'snow');
+        if (app.scene && app.scene.fog) {
+            const fogDensities = { fog: 0.015, rain: 0.009, snow: 0.008, cloudy: 0.007, clear: 0.006 };
+            app.scene.fog.density = fogDensities[id] || 0.006;
+        }
+        applyWeather();
+        return id;
+    }
+
     window.castleWeather = {
         cycle: function() {
             const idx = weatherCycle.indexOf(currentWeather);
-            const next = weatherCycle[(idx + 1) % weatherCycle.length];
-            currentWeather = next;
-            if (rainSystem) rainSystem.visible = (next === 'rain');
-            if (snowSystem) snowSystem.visible = (next === 'snow');
-            if (app.scene && app.scene.fog) {
-                const fogDensities = { fog: 0.015, rain: 0.009, snow: 0.008, cloudy: 0.007, clear: 0.006 };
-                app.scene.fog.density = fogDensities[next] || 0.006;
-            }
-            applyWeather();
-            return next;
+            return applyWeatherById(weatherCycle[(idx + 1) % weatherCycle.length]);
+        },
+        setWeather: function(id) {
+            if (weatherCycle.includes(id)) return applyWeatherById(id);
         },
         get: function() { return currentWeather; }
     };

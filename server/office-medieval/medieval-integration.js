@@ -265,7 +265,9 @@
           }
 
           // Core agent persona chat — route with persona prefix, get response labeled as the agent
-          if (persona && persona !== 'ApoMac' && persona !== 'ceo' && persona !== 'sycopa') {
+          // Sycopa (any case) = main session = full memory. Route via origSend (falls through below).
+          if (persona && persona !== 'ApoMac' && persona !== 'ceo' &&
+              persona.toLowerCase() !== 'sycopa') {
             if (!text.trim()) return;
             var input = chatContainer.querySelector('input');
             if (input) { input.value = ''; input.focus(); }

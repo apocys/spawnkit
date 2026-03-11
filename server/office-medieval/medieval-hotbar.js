@@ -87,7 +87,6 @@
             if (window.castleApp && window.castleApp.applyForcedDayNight) {
                 window.castleApp.applyForcedDayNight(window._forcedDayNight);
             } else if (window.castleApp) {
-                // Direct lighting override
                 var app = window.castleApp;
                 if (app.sunLight) {
                     app.sunLight.intensity = isNight ? 0.15 : 1.8;
@@ -100,12 +99,53 @@
                 if (app.hemiLight) app.hemiLight.intensity = isNight ? 0.08 : 0.25;
                 if (app.torchLights) app.torchLights.forEach(function(t) { t.intensity = isNight ? 5 : 2; });
                 if (app.bloomPass) app.bloomPass.strength = isNight ? 0.7 : 0.25;
-                // Tint sky
                 var skyBg = document.getElementById('scene-container');
                 if (skyBg) skyBg.style.background = isNight ? 'linear-gradient(180deg,#060b1a 0%,#0d1b3a 60%,#1a2040 100%)' : '';
             }
         }},
     ];
+
+    // ── Weather button — appended after main items ──────────────
+    var WEATHER_CYCLE = [
+        { id: 'clear',  icon: '☀️',  label: 'Clear'  },
+        { id: 'cloudy', icon: '⛅',  label: 'Cloudy' },
+        { id: 'rain',   icon: '🌧️', label: 'Rain'   },
+        { id: 'snow',   icon: '❄️',  label: 'Snow'   },
+        { id: 'fog',    icon: '🌫️', label: 'Fog'    },
+    ];
+    var _weatherIdx = 0;
+
+    setTimeout(function() {
+        var wSlot = document.createElement('div');
+        wSlot.id = 'hotbar-weather';
+        wSlot.style.cssText = 'width:52px;height:52px;background:rgba(30,30,30,0.85);border:2px solid rgba(255,255,255,0.15);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;position:relative;';
+        wSlot.innerHTML = '<span id="hotbar-weather-icon" style="font-size:20px;line-height:1;">☀️</span>' +
+            '<span id="hotbar-weather-label" style="font-size:8px;color:rgba(255,255,255,0.5);margin-top:1px;">Weather</span>';
+        wSlot.addEventListener('mouseenter', function() { wSlot.style.borderColor = 'rgba(255,200,50,0.6)'; wSlot.style.transform = 'translateY(-2px)'; });
+        wSlot.addEventListener('mouseleave', function() { wSlot.style.borderColor = 'rgba(255,255,255,0.15)'; wSlot.style.transform = 'none'; });
+        wSlot.addEventListener('click', function() {
+            _weatherIdx = (_weatherIdx + 1) % WEATHER_CYCLE.length;
+            var w = WEATHER_CYCLE[_weatherIdx];
+            document.getElementById('hotbar-weather-icon').textContent = w.icon;
+            document.getElementById('hotbar-weather-label').textContent = w.label;
+            // Brief flash
+            wSlot.style.borderColor = 'rgba(255,200,50,0.9)';
+            setTimeout(function() { wSlot.style.borderColor = 'rgba(255,255,255,0.15)'; }, 300);
+            // Apply via castleWeather API (medieval-weather.js exposes this)
+            if (window.castleWeather && typeof window.castleWeather.setWeather === 'function') {
+                window.castleWeather.setWeather(w.id);
+            } else if (window.castleWeather && typeof window.castleWeather.cycle === 'function') {
+                // Cycle until we match the desired weather
+                var attempts = 0;
+                while (window.castleWeather.get() !== w.id && attempts < 5) {
+                    window.castleWeather.cycle();
+                    attempts++;
+                }
+            }
+        });
+        var hotbarEl = document.getElementById('roblox-hotbar');
+        if (hotbarEl) hotbarEl.appendChild(wSlot);
+    }, 2500); // after hotbar items are rendered
     items.forEach(function(item) {
         var slot = document.createElement('div');
         slot.style.cssText = 'width:52px;height:52px;background:rgba(30,30,30,0.85);border:2px solid rgba(255,255,255,0.15);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;position:relative;';
