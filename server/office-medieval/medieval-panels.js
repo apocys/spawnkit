@@ -236,26 +236,33 @@
     // ── Render: Tavern ──────────────────────────────────────────────────
     function renderTavern(container) {
         container.innerHTML = [
-            '<div class="bp-section-title">Brainstorm Room</div>',
-            '<textarea class="bp-input" rows="3" placeholder="Type a question to brainstorm…" id="bp-brainstorm-input"></textarea>',
-            '<div style="margin:6px 0 16px;text-align:right">',
-            '<button class="bp-btn" id="bp-brainstorm-send">🍺 Start Brainstorm</button>',
+            '<div class="bp-section-title">🍺 Brainstorm Room</div>',
+            '<textarea class="bp-input" rows="3" placeholder="Type a question or topic to brainstorm…" id="bp-brainstorm-input" style="resize:vertical;"></textarea>',
+            '<div style="margin:6px 0 0;display:flex;gap:8px;">',
+            '<button class="bp-btn" id="bp-brainstorm-send" style="flex:1;">🍺 Brainstorm</button>',
             '</div>',
-            '<div class="bp-section-title">Recent Brainstorms</div>',
-            '<div id="bp-brainstorm-list"><div class="bp-empty">Loading past brainstorms…</div></div>',
+            '<div id="bp-brainstorm-result" style="display:none;margin-top:12px;"></div>',
+            '<div class="bp-section-title" style="margin-top:16px;">Past Brainstorms</div>',
+            '<div id="bp-brainstorm-list"><div class="bp-empty">Loading…</div></div>',
         ].join('');
 
         loadBrainstormHistory();
 
-        document.getElementById('bp-brainstorm-send').addEventListener('click', async function () {
+        document.getElementById('bp-brainstorm-send').addEventListener('click', async function() {
             var input = document.getElementById('bp-brainstorm-input');
             var q = input.value.trim();
             if (!q) return;
+
             var btn = document.getElementById('bp-brainstorm-send');
+            var resultEl = document.getElementById('bp-brainstorm-result');
             btn.disabled = true;
             btn.textContent = '⏳ Consulting the oracle...';
-            saveBrainstorm({ q: q, ts: new Date().toISOString(), source: 'tavern' });
-            input.value = '';
+
+            // Show thinking indicator
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = '<div style="color:rgba(201,169,89,0.7);font-size:12px;font-style:italic;padding:8px 0;">🧠 The oracle deliberates...</div>';
+
+            var reply = null;
             try {
                 var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch)
                     ? ThemeAuth.fetch.bind(ThemeAuth) : window.fetch.bind(window);
@@ -265,30 +272,84 @@
                     body: JSON.stringify({ message: '/brainstorm ' + q })
                 });
                 var data = await resp.json();
-                var reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content)
-                    ? data.choices[0].message.content
-                    : (data.reply || data.text || data.response || null);
-                if (reply) {
-                    // Update the last item with the reply
-                    var hist = [];
-                    try { hist = JSON.parse(localStorage.getItem('sk_brainstorms') || '[]'); } catch(e) {}
-                    if (hist.length && hist[0].q === q) { hist[0].reply = reply; hist[0].replied = true; }
-                    localStorage.setItem('sk_brainstorms', JSON.stringify(hist));
-                }
-            } catch(e) { /* silently queue */ }
-            loadBrainstormHistory();
+                reply = data.reply || (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || null;
+            } catch(e) {
+                reply = null;
+            }
+
+            if (reply) {
+                // Save with reply attached
+                saveBrainstorm({ q: q, ts: new Date().toISOString(), source: 'tavern', reply: reply });
+                input.value = '';
+
+                // Render reply inline with CTAs
+                resultEl.innerHTML =
+                    '<div style="background:rgba(15,52,96,0.45);border:1px solid rgba(201,169,89,0.25);border-radius:6px;padding:12px;margin-bottom:10px;">' +
+                        '<div style="font-size:11px;color:rgba(201,169,89,0.7);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">🧠 Oracle's Response</div>' +
+                        '<div id="bp-brainstorm-reply-text" style="font-size:12px;color:#f4e4bc;line-height:1.6;white-space:pre-wrap;word-break:break-word;max-height:280px;overflow-y:auto;">' + esc(reply) + '</div>' +
+                    '</div>' +
+                    '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+                        '<button class="bp-btn" id="bp-bs-create-mission" style="flex:1;background:rgba(201,169,89,0.15);border-color:rgba(201,169,89,0.5);color:#c9a959;font-size:11px;">⚔️ Create Mission</button>' +
+                        '<button class="bp-btn" id="bp-bs-new" style="flex:1;font-size:11px;">🔄 New Brainstorm</button>' +
+                    '</div>';
+
+                // Wire CTA: Create Mission → spawn 3D house
+                document.getElementById('bp-bs-create-mission').addEventListener('click', async function() {
+                    var mBtn = document.getElementById('bp-bs-create-mission');
+                    mBtn.disabled = true;
+                    mBtn.textContent = '⚔️ Creating...';
+                    try {
+                        var fetcher2 = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch)
+                            ? ThemeAuth.fetch.bind(ThemeAuth) : window.fetch.bind(window);
+                        var mResp = await fetcher2('/api/oc/missions/create', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: q.substring(0, 60), description: reply.substring(0, 400), source: 'brainstorm' })
+                        });
+                        if (mResp.ok) {
+                            mBtn.textContent = '✅ Mission spawned!';
+                            mBtn.style.borderColor = 'rgba(74,222,128,0.5)';
+                            mBtn.style.color = '#4ade80';
+                            // Trigger mission houses refresh
+                            if (window.MissionHouses && typeof window.MissionHouses.refresh === 'function') {
+                                window.MissionHouses.refresh();
+                            }
+                        } else {
+                            mBtn.textContent = '⚠️ Failed';
+                            mBtn.disabled = false;
+                        }
+                    } catch(e) {
+                        mBtn.textContent = '⚠️ Error';
+                        mBtn.disabled = false;
+                    }
+                });
+
+                // Wire CTA: New Brainstorm → clear result panel
+                document.getElementById('bp-bs-new').addEventListener('click', function() {
+                    resultEl.style.display = 'none';
+                    resultEl.innerHTML = '';
+                    var inp = document.getElementById('bp-brainstorm-input');
+                    if (inp) { inp.value = ''; inp.focus(); }
+                });
+
+                loadBrainstormHistory();
+            } else {
+                resultEl.innerHTML = '<div style="color:rgba(220,100,80,0.8);font-size:12px;padding:8px 0;">⚠️ The oracle was silent. Try again.</div>';
+            }
+
             btn.disabled = false;
-            btn.textContent = '🍺 Start Brainstorm';
+            btn.textContent = '🍺 Brainstorm';
         });
     }
 
     function saveBrainstorm(item) {
         var history = [];
         try { history = JSON.parse(localStorage.getItem('sk_brainstorms') || '[]'); } catch(e) {}
-        // item can be a string (legacy) or {q, ts, source, reply}
         var entry = typeof item === 'string'
             ? { q: item, ts: new Date().toISOString(), source: 'tavern' }
             : item;
+        // Deduplicate by question text
+        history = history.filter(function(h) { return h.q !== entry.q; });
         history.unshift(entry);
         if (history.length > 50) history = history.slice(0, 50);
         localStorage.setItem('sk_brainstorms', JSON.stringify(history));
@@ -300,46 +361,37 @@
 
         var local = [];
         try { local = JSON.parse(localStorage.getItem('sk_brainstorms') || '[]'); } catch(e) {}
-
-        // Normalize legacy string entries
         local = local.map(function(item) {
             if (typeof item === 'string') return { q: item, ts: '', source: 'tavern' };
             return item;
         });
 
+        // Also pull from chat transcript
         var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : window.fetch.bind(window);
         fetcher('/api/oc/chat').then(function(r) { return r.json(); }).then(function(msgs) {
-            var arr = Array.isArray(msgs) ? msgs : [];
-
-            // Build question→reply pairs from chat history
+            var arr = (msgs && msgs.messages) ? msgs.messages : (Array.isArray(msgs) ? msgs : []);
             var pairs = [];
-            var questions = arr.filter(function(m) {
-                var text = (m.content || m.text || '');
-                return (m.role === 'user' || m.role === 'human') &&
-                    (text.startsWith('/brainstorm') || text.startsWith('/mr ') || text.startsWith('/mission') || text.startsWith('/m '));
-            });
-            questions.reverse().slice(0, 15).forEach(function(q) {
-                var qText = (q.content || q.text || '').replace(/^\/(brainstorm|mr|mission|m)\s*/i, '');
-                var qTs = q.timestamp || q.ts || '';
-                // Find the next assistant message after this question
-                var qIdx = arr.indexOf(q);
-                var replyMsg = null;
-                for (var i = qIdx + 1; i < arr.length && i < qIdx + 5; i++) {
-                    if (arr[i].role === 'assistant' || arr[i].role === 'system') {
-                        replyMsg = arr[i].content || arr[i].text || '';
-                        break;
+            arr.forEach(function(m, idx) {
+                var text = m.content || m.text || '';
+                if ((m.role === 'user' || m.role === 'human') &&
+                    /^\/(brainstorm|mr|mission|m)\s+/i.test(text)) {
+                    var qText = text.replace(/^\/(brainstorm|mr|mission|m)\s+/i, '').trim();
+                    var replyMsg = null;
+                    for (var i = idx + 1; i < arr.length && i < idx + 5; i++) {
+                        if (arr[i].role === 'assistant' || arr[i].role === 'system') {
+                            replyMsg = arr[i].content || arr[i].text || '';
+                            break;
+                        }
                     }
+                    pairs.push({ q: qText, ts: m.timestamp || '', source: 'telegram', reply: replyMsg });
                 }
-                pairs.push({ q: qText, ts: qTs, source: 'telegram', reply: replyMsg });
             });
 
-            // Merge local + API pairs, newest first, dedup by question text
             var seen = new Set();
             var merged = [];
             local.forEach(function(item) { if (!seen.has(item.q)) { seen.add(item.q); merged.push(item); } });
             pairs.forEach(function(item) { if (!seen.has(item.q)) { seen.add(item.q); merged.push(item); } });
             merged.sort(function(a, b) { return (b.ts || '').localeCompare(a.ts || ''); });
-
             renderBrainstormList(list, merged.slice(0, 20));
         }).catch(function() {
             renderBrainstormList(list, local);
@@ -348,7 +400,7 @@
 
     function renderBrainstormList(list, items) {
         if (!items.length) {
-            list.innerHTML = '<div class="bp-empty">The tavern is quiet… No brainstorms recorded yet.</div>';
+            list.innerHTML = '<div class="bp-empty">The tavern is quiet… No brainstorms yet.</div>';
             return;
         }
         list.innerHTML = '';
@@ -357,41 +409,54 @@
             card.className = 'bp-card';
             var icon = item.source === 'telegram' ? '📨' : '🍺';
             var time = item.ts ? new Date(item.ts).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-            var questionText = esc((item.q || '').substring(0, 120));
-            var hasReply = !!(item.reply);
+            var hasReply = !!(item.reply && item.reply.trim());
 
-            // Header row: icon + truncated question + expand arrow
-            var headerHTML = '<div style="display:flex;align-items:flex-start;gap:6px;">' +
-                '<span style="flex-shrink:0;font-size:13px;">' + icon + '</span>' +
-                '<div style="flex:1;min-width:0;">' +
-                    '<div style="font-size:12px;color:rgba(201,169,89,0.85);line-height:1.4;">' + questionText + '</div>' +
-                    (time ? '<div style="font-size:10px;color:rgba(168,162,153,0.4);margin-top:3px;">' + esc(time) + (item.source === 'telegram' ? ' · Telegram' : '') + (hasReply ? ' · ✓ replied' : '') + '</div>' : '') +
+            card.innerHTML =
+                '<div style="display:flex;align-items:flex-start;gap:6px;">' +
+                    '<span style="flex-shrink:0;font-size:13px;">' + icon + '</span>' +
+                    '<div style="flex:1;min-width:0;">' +
+                        '<div style="font-size:12px;color:rgba(201,169,89,0.9);line-height:1.4;">' + esc((item.q || '').substring(0, 120)) + '</div>' +
+                        (time ? '<div style="font-size:10px;color:rgba(168,162,153,0.4);margin-top:2px;">' + esc(time) + (item.source === 'telegram' ? ' · Telegram' : '') + (hasReply ? ' · ✓' : '') + '</div>' : '') +
+                    '</div>' +
+                    (hasReply ? '<span class="bp-expand-arrow" style="font-size:10px;color:rgba(201,169,89,0.5);flex-shrink:0;padding-top:2px;">▼</span>' : '') +
                 '</div>' +
-                (hasReply ? '<span style="font-size:10px;color:rgba(201,169,89,0.5);flex-shrink:0;padding-top:2px;" class="bp-expand-arrow">▼</span>' : '') +
-            '</div>';
+                (hasReply ? '<div class="bp-brainstorm-detail" style="display:none;margin-top:8px;padding:8px;background:rgba(15,52,96,0.35);border-radius:6px;border:1px solid rgba(201,169,89,0.12);">' +
+                    '<div style="font-size:11px;color:rgba(201,169,89,0.7);margin-bottom:4px;">🧠 Response</div>' +
+                    '<div style="font-size:11px;color:#f4e4bc;line-height:1.55;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow-y:auto;">' + esc(item.reply || '') + '</div>' +
+                    '<div style="margin-top:8px;">' +
+                        '<button class="bp-btn bp-bs-spawn-btn" style="font-size:10px;padding:4px 8px;width:auto;" data-q="' + esc(item.q || '') + '" data-reply="' + esc((item.reply || '').substring(0, 400)) + '">⚔️ Create Mission</button>' +
+                    '</div>' +
+                '</div>' : '');
 
-            // Detail section: full question + reply
-            var detailHTML = hasReply
-                ? '<div class="bp-brainstorm-detail">' +
-                    '<p>' + esc((item.q || '')) + '</p>' +
-                    '<div class="bp-brainstorm-reply">🧠 ' + esc((item.reply || '').substring(0, 1200)) + (item.reply && item.reply.length > 1200 ? '…' : '') + '</div>' +
-                  '</div>'
-                : '';
-
-            card.innerHTML = headerHTML + detailHTML;
-
-            // Toggle detail on click
             if (hasReply) {
                 var detail = card.querySelector('.bp-brainstorm-detail');
                 var arrow = card.querySelector('.bp-expand-arrow');
-                card.addEventListener('click', function() {
+                card.querySelector('div').addEventListener('click', function() {
                     var open = detail.style.display === 'block';
                     detail.style.display = open ? 'none' : 'block';
                     if (arrow) arrow.textContent = open ? '▼' : '▲';
-                    card.classList.toggle('bp-expanded', !open);
                 });
+                // Create Mission button in history card
+                var spawnBtn = card.querySelector('.bp-bs-spawn-btn');
+                if (spawnBtn) {
+                    spawnBtn.addEventListener('click', async function(e) {
+                        e.stopPropagation();
+                        spawnBtn.disabled = true; spawnBtn.textContent = '⚔️ Creating...';
+                        try {
+                            var f = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : window.fetch.bind(window);
+                            var r = await f('/api/oc/missions/create', {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name: spawnBtn.dataset.q.substring(0, 60), description: spawnBtn.dataset.reply, source: 'brainstorm' })
+                            });
+                            if (r.ok) {
+                                spawnBtn.textContent = '✅ Spawned!';
+                                spawnBtn.style.color = '#4ade80';
+                                if (window.MissionHouses && window.MissionHouses.refresh) window.MissionHouses.refresh();
+                            } else { spawnBtn.textContent = '⚠️ Failed'; spawnBtn.disabled = false; }
+                        } catch(e) { spawnBtn.textContent = '⚠️ Error'; spawnBtn.disabled = false; }
+                    });
+                }
             }
-
             list.appendChild(card);
         });
     }
