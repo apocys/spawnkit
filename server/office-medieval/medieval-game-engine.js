@@ -350,20 +350,30 @@
     var sidebarOpen = sidebar && sidebar.classList.contains('panel-open');
     bar.style.left = sidebarOpen ? '320px' : '12px';
 
+    // Show real missions from SpawnKit data (Option A)
+    var missions = (window.SpawnKit && window.SpawnKit.data && window.SpawnKit.data.missions) || [];
+    var activeMissions = missions.filter(function(m) { return m.status === 'in_progress' || m.status === 'active'; });
+
     var lines = [];
-    agentActions.forEach(function (state, agentId) {
-      if (state.action === 'idle') return;
-      var elapsed = Math.floor((Date.now() - state.since) / 1000);
-      var timeStr = elapsed < 60 ? elapsed + 's' : Math.floor(elapsed / 60) + 'm';
+    activeMissions.forEach(function (m) {
+      var pct = Math.round((m.progress || 0) * 100);
+      var priorityColor = m.priority === 'critical' ? '#ff6b6b' : m.priority === 'high' ? '#ffaa33' : '#4ade80';
       lines.push(
         '<div style="display:flex;align-items:center;gap:4px;margin:2px 0;">' +
-        '<span>' + state.emoji + '</span>' +
-        '<span style="color:#c9a959;font-weight:600;">' + agentId + '</span>' +
-        '<span style="opacity:0.7;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">— ' + state.label + '</span>' +
-        '<span style="color:#4ade80;font-size:9px;">' + timeStr + '</span>' +
+        '<span style="color:' + priorityColor + ';font-size:9px;">●</span>' +
+        '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (m.title || m.name) + '</span>' +
+        '<span style="color:#4ade80;font-size:9px;">' + pct + '%</span>' +
         '</div>'
       );
     });
+
+    // Make bar clickable → open Mission Control
+    bar.style.pointerEvents = 'auto';
+    bar.style.cursor = 'pointer';
+    bar.onclick = function() {
+      var mcToggle = document.querySelector('.mc-toggle');
+      if (mcToggle) mcToggle.click();
+    };
 
     if (lines.length > 0) {
       // Collapse / expand toggle
@@ -376,7 +386,7 @@
       var header = '<div style="color:#c9a959;font-weight:600;font-size:12px;' +
         'display:flex;align-items:center;justify-content:space-between;cursor:pointer;' +
         'user-select:none;' +
-        (bar._questCollapsed ? '' : 'margin-bottom:4px;') + '">' +
+        (bar._questCollapsed ? '' : 'margin-bottom:4px;') + '" title="Click to open Mission Control">' +
         '<span>⚔️ Active Quests (' + lines.length + ')</span>' +
         collapseBtn + '</div>';
       var body = bar._questCollapsed

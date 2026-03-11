@@ -808,7 +808,21 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             animation: medievalNotificationSlide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
             max-width: 250px;
+            cursor: pointer;
         `;
+
+        // Click notification → open Royal Messenger (chat panel)
+        notification.addEventListener('click', function() {
+            // Try to open the chat/messenger panel
+            var chatToggle = document.querySelector('.chat-toggle, [data-panel="chat"], .royal-messenger-toggle');
+            if (chatToggle) { chatToggle.click(); }
+            else {
+                // Fallback: open Mission Control which contains chat
+                var mcToggle = document.querySelector('.mc-toggle');
+                if (mcToggle) mcToggle.click();
+            }
+            notification.remove();
+        });
         
         document.body.appendChild(notification);
         
