@@ -619,59 +619,61 @@
     // ── Render: Settings ────────────────────────────────────────────────
     function renderSettings(container) {
         var channelDefs = [
-            ['✈️', 'Telegram', 'telegram'],
-            ['📱', 'WhatsApp', 'whatsapp'],
-            ['🎮', 'Discord', 'discord'],
-            ['🔔', 'Signal', 'signal'],
-            ['🍎', 'iMessage', 'imessage'],
-            ['💼', 'Slack', 'slack'],
+            ['✈️', 'Telegram',  'telegram'],
+            ['📱', 'WhatsApp',  'whatsapp'],
+            ['🎮', 'Discord',   'discord'],
+            ['🔔', 'Signal',    'signal'],
+            ['🍎', 'iMessage',  'imessage'],
+            ['💼', 'Slack',     'slack'],
         ];
-        var rows = channelDefs.map(function(c) {
-            var wizardConnected = window.ChannelOnboarding ? window.ChannelOnboarding.isChannelConnected(c[2]) : false;
-            var ocActive = window._ocChannelInfo ? !!(window._ocChannelInfo[c[2]]) : false;
-            var connected = wizardConnected || ocActive;
-            return '<div class="bp-conn-row" style="cursor:pointer;" onclick="' +
-                (window.ChannelOnboarding ? 'window.ChannelOnboarding.openQuickConnect(\"' + c[2] + '\")' : '') + '">' +
-                '<span>' + c[0] + ' ' + c[1] + '</span>' +
-                '<span>' + (connected ? '✅ Active' : '<span style="color:rgba(168,162,153,0.4);font-size:11px">Not configured</span>') + '</span>' +
-                '</div>';
-        }).join('');
 
-        if (!window._ocChannelFetched) {
-            window._ocChannelFetched = true;
-            (async function() {
-                try {
-                    var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : window.fetch.bind(window);
-                    var resp = await fetcher('/api/oc/health');
-                    if (resp.ok) {
-                        var data = await resp.json();
-                        var channels = data.channels || data.activeChannels || {};
-                        window._ocChannelInfo = channels;
-                        if (Object.keys(channels).length > 0) {
-                            window._ocChannelFetched = false;
-                            renderSettings(container);
-                        }
+        // Build rows using live channel data
+        function buildRows() {
+            return channelDefs.map(function(c) {
+                var ocConnected = Array.isArray(window._ocChannelList)
+                    ? window._ocChannelList.some(function(ch) { return ch.id === c[2] && ch.connected; })
+                    : false;
+                var wizConnected = window.ChannelOnboarding ? window.ChannelOnboarding.isChannelConnected(c[2]) : false;
+                var connected = ocConnected || wizConnected;
+                var statusHtml = connected
+                    ? '<span style="color:#4ade80;font-size:11px;font-weight:600;">✅ Active</span>'
+                    : '<span style="color:rgba(168,162,153,0.4);font-size:11px;">Not configured</span>';
+                return '<div class="bp-conn-row" style="cursor:pointer;" data-channel-id="' + c[2] + '">' +
+                    '<span>' + c[0] + ' ' + c[1] + '</span>' + statusHtml + '</div>';
+            }).join('');
+        }
+
+        function wireRows(root) {
+            root.querySelectorAll('[data-channel-id]').forEach(function(row) {
+                row.addEventListener('click', function() {
+                    var id = row.getAttribute('data-channel-id');
+                    if (window.ChannelOnboarding && typeof window.ChannelOnboarding.open === 'function') {
+                        window.ChannelOnboarding.open(id);
                     }
-                } catch(e) {}
-                window._ocChannelFetched = false;
-            })();
+                });
+            });
         }
 
         container.innerHTML =
             '<div class="bp-section-title">⛪ Chapel — Royal Communications</div>' +
             '<p style="font-size:12px;color:rgba(168,162,153,0.7);margin-bottom:12px;">Connect your channels to receive messages from the realm.</p>' +
-            '<div style="margin-bottom:12px;">' + rows + '</div>' +
-            '<div style="display:flex;gap:8px;margin-bottom:16px;">' +
-            '<button class="bp-btn" style="flex:1;" id="bp-open-channel-wizard">⚙️ Channel Wizard</button>' +
-            '</div>' +
+            '<div id="bp-channel-rows" style="margin-bottom:12px;">' + buildRows() + '</div>' +
+            '<button class="bp-btn" style="width:100%;margin-bottom:16px;" id="bp-open-channel-wizard">⚙️ Channel Wizard</button>' +
+            '<div class="bp-section-title">⚙️ Tools</div>' +
+            '<button class="bp-btn" style="width:100%;margin-bottom:8px;border-color:rgba(201,169,89,.4);color:rgba(201,169,89,.9);" id="bp-open-wizard">📜 Forge Agent Blueprint</button>' +
+            '<button class="bp-btn" style="width:100%;margin-bottom:16px;" id="bp-open-theme-switcher">🎨 Switch Theme / Realm</button>' +
             '<div class="bp-section-title">🗺️ Realm</div>' +
             '<button class="bp-btn" style="width:100%;margin-bottom:8px;" id="bp-open-allied">🏰 Allied Kingdoms (Rookery)</button>' +
-            '<button class="bp-btn" style="width:100%;margin-bottom:8px;border-color:rgba(201,169,89,.4);color:rgba(201,169,89,.9);" id="bp-open-wizard">📜 Forge Agent Blueprint</button>' +
-            '<button class="bp-btn" style="width:100%;margin-bottom:8px;" id="bp-open-theme-switcher">🎨 Switch Theme / Realm</button>' +
-            '<div style="font-size:11px;color:rgba(168,162,153,0.5);text-align:center;">Medieval Castle · v4.2</div>';
+            '<div style="font-size:11px;color:rgba(168,162,153,0.4);text-align:center;margin-top:12px;">Medieval Castle · v4.2</div>';
+
+        wireRows(container);
 
         var wizBtn = document.getElementById('bp-open-channel-wizard');
-        if (wizBtn) wizBtn.addEventListener('click', function() { if (window.ChannelOnboarding) window.ChannelOnboarding.open(); });
+        if (wizBtn) wizBtn.addEventListener('click', function() {
+            if (window.ChannelOnboarding && typeof window.ChannelOnboarding.openQuickConnect === 'function') {
+                window.ChannelOnboarding.openQuickConnect();
+            }
+        });
         var wizardBtn = document.getElementById('bp-open-wizard');
         if (wizardBtn) wizardBtn.addEventListener('click', function() {
             window.closeBuildingPanel();
@@ -684,9 +686,23 @@
         });
         var themeBtn = document.getElementById('bp-open-theme-switcher');
         if (themeBtn) themeBtn.addEventListener('click', function() {
+            if (window.openThemePicker) { window.openThemePicker(); return; }
             var overlay = document.getElementById('themeSwitcherOverlay');
             if (overlay) { overlay.style.display = 'flex'; setTimeout(function() { overlay.classList.add('visible'); }, 50); }
         });
+
+        // Async: load real channel status from /api/oc/channels/status
+        if (!window._ocChannelFetching) {
+            window._ocChannelFetching = true;
+            var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : window.fetch.bind(window);
+            fetcher('/api/oc/channels/status').then(function(r) { return r.ok ? r.json() : null; }).then(function(data) {
+                if (data && Array.isArray(data.channels)) {
+                    window._ocChannelList = data.channels;
+                    var rowsEl = document.getElementById('bp-channel-rows');
+                    if (rowsEl) { rowsEl.innerHTML = buildRows(); wireRows(rowsEl); }
+                }
+            }).catch(function() {}).then(function() { window._ocChannelFetching = false; });
+        }
     }
 
     // ── Utility ─────────────────────────────────────────────────────────
