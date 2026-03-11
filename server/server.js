@@ -1337,14 +1337,20 @@ ${customBlock}`;
           }
         } catch(e) {}
 
-        // Inject workspace memory files for Sycopa (give it real context)
+        // Load agent-specific memory from their workspace
         let memoryCtx = '';
         const isSycopa = personaName.toLowerCase() === 'sycopa';
         if (isSycopa) {
+          // Sycopa = main session = read main MEMORY.md
+          try { memoryCtx = fs.readFileSync(path.join(WORKSPACE, 'MEMORY.md'), 'utf8').substring(0, 3000); } catch(e) {}
+        } else {
+          // Other agents: read their own workspace MEMORY.md if it exists
+          const AGENTS_BASE = path.join(WORKSPACE, 'fleet', 'agents');
+          const agentMemPath = path.join(AGENTS_BASE, personaName.toLowerCase(), 'MEMORY.md');
           try {
-            const memMain = fs.readFileSync(path.join(WORKSPACE, 'MEMORY.md'), 'utf8');
-            // Truncate to keep prompt sane
-            memoryCtx = memMain.substring(0, 3000);
+            if (fs.existsSync(agentMemPath)) {
+              memoryCtx = fs.readFileSync(agentMemPath, 'utf8').substring(0, 2000);
+            }
           } catch(e) {}
         }
 
@@ -1363,8 +1369,8 @@ ${customBlock}`;
           ? `You are ${personaName}, a knight in a medieval castle. Respond FULLY IN CHARACTER using the personality below. Stay concise (2-5 sentences). Never break character, never mention AI.\n\n${personaCtx}`
           : `You are ${personaName}, ${roleDesc}. You serve in a medieval castle. Respond in character — concise, never break character, never mention being an AI.`;
 
-        if (isSycopa && memoryCtx) {
-          systemPrompt += `\n\n## Your Memory (active context)\n${memoryCtx}`;
+        if (memoryCtx) {
+          systemPrompt += `\n\n## Your Memory (what you know)\n${memoryCtx}`;
         }
 
         console.log('[chat-persona] Direct LLM call for', personaName, '| has personality file:', !!personaCtx);

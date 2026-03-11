@@ -889,16 +889,16 @@
             cursor: pointer;
         `;
 
-        // Click → show full message content in a readable overlay
+        // Click → show full content popup, or open Mission Control
         notification.addEventListener('click', function() {
             notification.remove();
-            if (fullContent) {
+            if (fullContent && fullContent.trim()) {
                 showMessagePopup(fullContent);
             } else {
-                // Fallback: open chat panel
-                var chatToggle = document.querySelector('.chat-toggle, [data-panel="chat"], .royal-messenger-toggle');
-                if (chatToggle) chatToggle.click();
-                else { var mcToggle = document.querySelector('.mc-toggle'); if (mcToggle) mcToggle.click(); }
+                // No content — open Mission Control
+                if (typeof window.openMissionControl === 'function') {
+                    window.openMissionControl();
+                }
             }
         });
 
