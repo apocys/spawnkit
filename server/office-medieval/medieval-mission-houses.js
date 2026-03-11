@@ -113,6 +113,16 @@
         }).catch(function(e) { warn('Backend sync failed:', e.message || e); });
     }
 
+    // Patch a single mission field to backend (fast, avoids full array write race)
+    function patchMission(missionId, updates) {
+        var fetcher = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : fetch.bind(window);
+        return fetcher('/api/oc/missions/' + missionId, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates),
+        }).then(function(r) { return r.json(); }).catch(function(e) { warn('PATCH mission failed:', e); return {}; });
+    }
+
     function genId() { return 'mission_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5); }
 
     // ── Helpers ───────────────────────────────────────────────────────
@@ -423,6 +433,25 @@
         var mission = missions.find(function(m) { return m.id === missionId; });
         if (!mission) { warn('Mission not found:', missionId); return; }
 
+        // Refresh from backend before rendering (picks up server-created tasks + status changes)
+        var fetcher2 = (typeof ThemeAuth !== 'undefined' && ThemeAuth.fetch) ? ThemeAuth.fetch.bind(ThemeAuth) : fetch.bind(window);
+        fetcher2('/api/oc/missions').then(function(r) { return r.json(); }).then(function(data) {
+            var backend = data.missions || [];
+            var fresh = backend.find(function(m) { return m.id === missionId; });
+            if (fresh) {
+                // Merge backend state into local missions array
+                var idx = missions.findIndex(function(m) { return m.id === missionId; });
+                if (idx !== -1) missions[idx] = fresh;
+                else missions.push(fresh);
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(missions)); } catch(e) {}
+                mission = fresh;
+            }
+        }).catch(function() {}).finally(function() {
+            _renderMissionOverlay(missionId, mission);
+        });
+    }
+
+    function _renderMissionOverlay(missionId, mission) {
         log('Opening overlay for:', mission.name);
         if (window.dismissAllOverlays) window.dismissAllOverlays('missionOverlay');
         if (activeOverlay) { activeOverlay.remove(); activeOverlay = null; }
@@ -555,7 +584,9 @@
                 var idx = parseInt(this.dataset.idx);
                 if (mission.tasks[idx]) {
                     mission.tasks[idx].done = this.checked;
+                    // Persist: localStorage + full backend sync + targeted PATCH
                     saveMissions();
+                    patchMission(missionId, { tasks: mission.tasks });
                     updateHouseStatus(missionId);
                     // Update progress bar inline without closing overlay
                     var done = mission.tasks.filter(function(t) { return t.done; }).length;

@@ -1508,6 +1508,30 @@ ${customBlock}`;
     return;
   }
 
+  // PATCH /api/oc/missions/:id — partial update (tasks, status, name, etc.)
+  const missionPatchMatch = req.url.match(/^\/api\/oc\/missions\/([a-zA-Z0-9_-]+)$/);
+  if (missionPatchMatch && req.method === 'PATCH') {
+    res.setHeader('Content-Type', 'application/json');
+    const body = await readBody(req);
+    try {
+      const id = missionPatchMatch[1];
+      const data = fs.existsSync(MISSIONS_FILE) ? JSON.parse(fs.readFileSync(MISSIONS_FILE, 'utf8')) : [];
+      const mission = data.find(m => m.id === id);
+      if (!mission) { res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return; }
+      // Apply partial updates — only allow safe fields
+      const allowed = ['tasks', 'status', 'name', 'description', 'agents', 'icon', 'color'];
+      allowed.forEach(k => { if (body && k in body) mission[k] = body[k]; });
+      mission.updated = new Date().toISOString();
+      fs.writeFileSync(MISSIONS_FILE, JSON.stringify(data, null, 2));
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, mission }));
+    } catch(e) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   // DELETE /api/oc/missions/:id — archive a mission
   const missionDeleteMatch = req.url.match(/^\/api\/oc\/missions\/([a-zA-Z0-9_]+)$/);
   if (missionDeleteMatch && req.method === 'DELETE') {
