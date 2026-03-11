@@ -220,6 +220,22 @@ function getChat() {
     const raw = fs.readFileSync(transcriptPath, 'utf8');
     const lines = raw.trim().split('\n').slice(-100); // Last 100 lines
     const messages = [];
+
+    // Strip OpenClaw system injection noise from user messages
+    function sanitizeContent(text) {
+      return text
+        .replace(/\[Queued messages while agent was busy\][\s\S]*?(?=\n\n|\n---|$)/gi, '')
+        .replace(/^---\s*\nQueued #\d+[\s\S]*?(?=\n---|\n\n[A-Z👑]|$)/gm, '')
+        .replace(/\[media attached.*?\]/gi, '[attachment]')
+        .replace(/\/home\/[^\s]+\.(jpg|png|jpeg|gif|webp)/gi, '[image]')
+        .replace(/Conversation info \(untrusted metadata\):[\s\S]*?```/g, '')
+        .replace(/Sender \(untrusted metadata\):[\s\S]*?```/g, '')
+        .replace(/System: \[[\d\- :UTC]+\][^\n]*/g, '')
+        .replace(/To send an image back.*?Avoid.*?\n/g, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+
     for (const line of lines) {
       try {
         const obj = JSON.parse(line);
@@ -233,6 +249,7 @@ function getChat() {
           } else if (Array.isArray(msg.content)) {
             content = msg.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
           }
+          content = sanitizeContent(content);
           if (content && content.trim().length > 0) {
             messages.push({ role, content: content.substring(0, 1000), timestamp: obj.timestamp || 0 });
           }

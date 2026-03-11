@@ -30,6 +30,7 @@
     window.openMissionControl = function() {
         if (window.dismissAllOverlays) window.dismissAllOverlays('missionControl');
         if (mcRefreshTimer) { clearInterval(mcRefreshTimer); mcRefreshTimer = null; }
+        mcTranscriptContent = null; // reset so chat reloads fresh on each open
         mcOverlay.style.display = 'flex';
         requestAnimationFrame(function() { mcOverlay.classList.add('visible'); });
         loadMissionControl();
@@ -244,11 +245,14 @@
         var events = [];
         var arr = Array.isArray(sessions) ? sessions : [];
 
-        // Extract events with medieval theming
+        // Extract events with medieval theming — cap sub-agent history at 3 days
+        var MAX_FEED_AGE = 3 * 24 * 3600 * 1000;
         arr.forEach(function(s) {
             var name = (s.label || s.displayName || s.key || 'unknown').replace(/^Cron:\s*/i, '');
 
             if (s.kind === 'subagent') {
+                var age = Date.now() - (s.lastActive || 0);
+                if (s.status !== 'active' && age > MAX_FEED_AGE) return; // skip stale completed quests
                 events.push({
                     time: s.lastActive || 0,
                     icon: s.status === 'active' ? '⚔️' : '🛡️',
@@ -301,33 +305,60 @@
         return html;
     }
 
+    function sanitizeChatContent(raw) {
+        if (!raw) return '';
+        // Strip system injection noise: queued message wrappers, sender metadata, media paths
+        return raw
+            .replace(/\[Queued messages while agent was busy\][\s\S]*?(?=\n\n|\n---|\n#|$)/gi, '[queued messages]')
+            .replace(/^---\s*\nQueued #\d+[\s\S]*?(?=\n---|\n\n[A-Z]|$)/gm, '')
+            .replace(/\[media attached.*?\]/gi, '[📎 attachment]')
+            .replace(/\/home\/[^\s]+\.(jpg|png|jpeg|gif|webp)/gi, '[image]')
+            .replace(/Conversation info \(untrusted metadata\):[\s\S]*?```/g, '')
+            .replace(/Sender \(untrusted metadata\):[\s\S]*?```/g, '')
+            .replace(/System: \[[\d\- :UTC]+\][^\n]*/g, '')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
     async function loadRawTranscript() {
         var el = document.getElementById('mcRawTranscript');
         if (!el) return;
-        if (mcTranscriptContent) { el.textContent = mcTranscriptContent; return; }
-        el.textContent = 'Scribes are transcribing the royal conversations...';
+        if (mcTranscriptContent) { el.innerHTML = mcTranscriptContent; return; }
+        el.innerHTML = '<em style="color:rgba(168,162,153,0.6)">Scribes are transcribing the royal conversations...</em>';
         try {
             var resp = await ThemeAuth.fetch(API_URL + '/api/oc/chat');
             if (resp.ok) {
                 var data = await resp.json();
                 var messages = data.messages || data || [];
                 if (Array.isArray(messages) && messages.length > 0) {
-                    var text = '';
+                    var html = '';
                     messages.slice(-50).forEach(function(m) {
-                        var role = m.role === 'user' ? '👤 Your Majesty' : '🤖 ApoMac';
-                        var content = typeof m.content === 'string' ? m.content : (m.content && m.content[0] && m.content[0].text ? m.content[0].text : '[royal decree]');
-                        text += role + ':\n' + content.substring(0, 500) + '\n\n';
+                        var isUser = m.role === 'user';
+                        var roleLabel = isUser ? '👤 Your Majesty' : '🤖 Sycopa';
+                        var raw = typeof m.content === 'string' ? m.content : (m.content && m.content[0] && m.content[0].text ? m.content[0].text : '[royal decree]');
+                        var content = sanitizeChatContent(raw).substring(0, 600);
+                        if (!content) return;
+                        // Escape HTML then apply basic markdown
+                        content = content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                        content = content
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                            .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1);padding:1px 4px;border-radius:3px;font-size:11px;">$1</code>')
+                            .replace(/\n/g, '<br>');
+                        html += '<div style="margin-bottom:14px;">';
+                        html += '<div style="font-size:10px;color:rgba(201,169,89,0.7);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;">' + roleLabel + '</div>';
+                        html += '<div style="font-size:12px;color:rgba(232,213,176,0.85);line-height:1.5;background:rgba(255,255,255,0.03);border-left:2px solid rgba(201,169,89,' + (isUser ? '0.5' : '0.2') + ');padding:6px 10px;border-radius:0 4px 4px 0;">' + content + '</div>';
+                        html += '</div>';
                     });
-                    mcTranscriptContent = text || '(The chronicle pages are blank)';
+                    mcTranscriptContent = html || '<em style="color:rgba(168,162,153,0.6)">(The chronicle pages are blank)</em>';
                 } else {
-                    mcTranscriptContent = '(No royal conversations recorded)';
+                    mcTranscriptContent = '<em style="color:rgba(168,162,153,0.6)">(No royal conversations recorded)</em>';
                 }
             } else {
-                mcTranscriptContent = '(Chronicle sealed — Royal Seal ' + resp.status + ')';
+                mcTranscriptContent = '<em style="color:rgba(168,162,153,0.6)">(Chronicle sealed — Royal Seal ' + resp.status + ')</em>';
             }
-        } catch(e) { mcTranscriptContent = '(The scribes have fled — reconnect the royal messenger)'; }
+        } catch(e) { mcTranscriptContent = '<em style="color:rgba(168,162,153,0.6)">(The scribes have fled — reconnect the royal messenger)</em>'; }
         var el2 = document.getElementById('mcRawTranscript');
-        if (el2) el2.textContent = mcTranscriptContent;
+        if (el2) el2.innerHTML = mcTranscriptContent;
     }
 
     // ═══ RIGHT COLUMN — Court Status ═══
@@ -355,21 +386,29 @@
         });
         html += '</div>';
 
-        // Royal Knights (sub-agents)
-        var subs = arr.filter(function(s) { return s.kind === 'subagent'; });
+        // Royal Knights (sub-agents) — only show recent (last 7 days)
+        var MAX_KNIGHT_AGE = 7 * 24 * 3600 * 1000; // 7 days
+        var allSubs = arr.filter(function(s) { return s.kind === 'subagent'; });
+        var subs = allSubs.filter(function(s) {
+            if (s.status === 'active') return true;
+            return (s.lastActive || 0) > Date.now() - MAX_KNIGHT_AGE;
+        });
         subs.sort(function(a, b) { return (b.lastActive || 0) - (a.lastActive || 0); });
         var activeSubs = subs.filter(function(s) { return s.status === 'active'; });
 
         html += '<div class="mc-section-title" style="margin-top:12px;">⚔️ Royal Knights (' + subs.length + ' total, ' + activeSubs.length + ' active)</div>';
 
         if (subs.length === 0) {
-            html += '<div style="font-size:12px;color:var(--castle-stone-light);padding:8px 0;">No knights deployed in the field.</div>';
+            html += '<div style="font-size:12px;color:var(--castle-stone-light);padding:8px 0;">No knights deployed recently. The realm is at peace.</div>';
         } else {
             var showSubs = activeSubs.concat(subs.filter(function(s) { return s.status !== 'active'; })).slice(0, 8);
             showSubs.forEach(function(s) {
                 var isAct = s.status === 'active';
                 var ago = Date.now() - (s.lastActive || 0);
-                var agoStr = ago < 60000 ? 'now' : ago < 3600000 ? Math.floor(ago/60000) + 'm' : Math.floor(ago/3600000) + 'h';
+                var agoStr = ago < 60000 ? 'now' :
+                    ago < 3600000 ? Math.floor(ago/60000) + 'm' :
+                    ago < 86400000 ? Math.floor(ago/3600000) + 'h' :
+                    Math.floor(ago/86400000) + 'd';
                 var label = (s.label || s.displayName || 'knight').replace(/^Cron:\s*/i, '');
 
                 html += '<div class="mc-sub-item">';
