@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpawnKit Dashboard</title>
+  <meta name="description" content="Real-time agent status, mission progress, and system metrics">
+
+  <!-- Preconnect fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Dashboard styles -->
+  <link rel="stylesheet" href="dashboard.css">
+
+  <!-- Runtime config (injected by server on /dashboard/ route, falls back to defaults) -->
+  <script>
+    window.DASHBOARD_CONFIG = {
+      apiBase:      '',           // same origin
+      gatewayUrl:   '',           // optional WS upgrade
+      gatewayToken: '',           // auto-set if served by SpawnKit server
+      pollInterval: 5000,
+    };
+  </script>
+
+  <style>
+    /* Inline critical — prevent FOUC */
+    body { opacity: 0; }
+  </style>
+</head>
+<body>
+
+<!-- ── App Shell ───────────────────────────────────────── -->
+<div id="dashboard-root">
+
+  <!-- Header -->
+  <header class="dashboard-header">
+    <a class="logo" href="/" title="Back to SpawnKit">
+      <div class="logo-icon">⚡</div>
+      <span>SpawnKit</span>
+      <span style="font-weight:400;color:var(--text-muted);margin-left:4px">/ Dashboard</span>
+    </a>
+
+    <div class="hdr-center">
+      <span id="hdr-clock"></span>
+      <div id="hdr-status">
+        <span class="status-dot"></span>
+        <span class="status-text">Connecting…</span>
+      </div>
+    </div>
+
+    <button id="hdr-refresh-btn" title="Refresh now (or wait for auto-refresh every 5s)">
+      <span class="btn-icon">↻</span>
+      <span>Refresh</span>
+    </button>
+  </header>
+
+  <!-- Main content grid -->
+  <div class="dashboard-grid">
+
+    <!-- ── Agents Panel ───────────────────────────────── -->
+    <section class="sk-panel" id="panel-agents" aria-label="Agent Status">
+      <div class="sk-panel-header">
+        <h2 class="sk-panel-title">
+          <span class="panel-icon">🤖</span>
+          Agents
+        </h2>
+        <span class="sk-panel-badge" id="agents-count">—</span>
+      </div>
+      <div class="sk-panel-body" id="agents-list" role="list" aria-live="polite">
+        <!-- Populated by panel-agents.js -->
+      </div>
+    </section>
+
+    <!-- ── Missions Panel ─────────────────────────────── -->
+    <section class="sk-panel" id="panel-missions" aria-label="Mission Progress">
+      <div class="sk-panel-header">
+        <h2 class="sk-panel-title">
+          <span class="panel-icon">🗺️</span>
+          Missions
+        </h2>
+        <span class="sk-panel-badge" id="missions-active-count">—</span>
+      </div>
+      <div class="sk-panel-body" id="missions-list" role="list" aria-live="polite">
+        <!-- Populated by panel-missions.js -->
+      </div>
+    </section>
+
+    <!-- ── Metrics Panel ──────────────────────────────── -->
+    <section class="sk-panel" id="panel-metrics" aria-label="System Metrics">
+      <div class="sk-panel-header">
+        <h2 class="sk-panel-title">
+          <span class="panel-icon">📊</span>
+          System
+        </h2>
+        <span class="sk-panel-badge" id="metrics-ts" style="font-size:10px;opacity:0.6">—</span>
+      </div>
+      <div class="sk-panel-body">
+        <!-- Populated by panel-metrics.js -->
+      </div>
+    </section>
+
+  </div><!-- /.dashboard-grid -->
+
+</div><!-- /#dashboard-root -->
+
+<!-- ── Ticker bar ──────────────────────────────────────── -->
+<div class="dashboard-ticker" aria-hidden="true">
+  <div class="ticker-label">LIVE</div>
+  <div class="ticker-track">
+    <div class="ticker-inner">
+      <div class="ticker-item"><span class="tick-dot"></span>Initializing…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast container ────────────────────────────────── -->
+<div id="toast-container" aria-live="assertive" role="status"></div>
+
+<!-- ── Scripts (order matters) ────────────────────────── -->
+<script src="data-store.js"></script>
+<script src="panel-agents.js"></script>
+<script src="panel-missions.js"></script>
+<script src="panel-metrics.js"></script>
+<script src="dashboard-init.js"></script>
+
+<!-- Timestamp updater for metrics badge -->
+<script>
+  DataStore && DataStore.on && DataStore.on('metrics', function(e) {
+    const el = document.getElementById('metrics-ts');
+    if (el && e.metrics && e.metrics.timestamp) {
+      const t = new Date(e.metrics.timestamp);
+      el.textContent = t.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+  });
+</script>
+
+</body>
+</html>

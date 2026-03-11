@@ -656,16 +656,11 @@ class MedievalArena {
      * Renders live arena state into the building panel DOM container.
      */
     render(container) {
-        this._lastContainer = container;
         container.innerHTML = '<div style="text-align:center;padding:20px;color:#c9a959;font-family:serif;">⚔️ Loading Arena…</div>';
 
-        const relayUrl = (window.OC_RELAY_URL || '').replace(/\/+$/, '');
-        if (!relayUrl) {
-            container.innerHTML = '<div style="padding:24px;text-align:center;"><div style="font-size:28px;margin-bottom:12px;">⚔️</div><div style="color:#c9a959;font-weight:600;font-size:14px;margin-bottom:8px;">The Arena</div><div style="color:rgba(244,228,188,0.5);font-size:11px;">No relay connected — Arena battles require a live fleet connection.</div></div>';
-            return;
-        }
-        fetch(relayUrl + '/api/arena/leaderboard', {
-            headers: { 'Accept': 'application/json' }
+        const token = 'sk-fleet-2ad53564b03d9facbe3389bb5c461179ffc73af12e50ae00';
+        fetch('http://localhost:18790/api/arena/leaderboard', {
+            headers: { 'Authorization': 'Bearer ' + token }
         })
         .then(r => r.json())
         .then(res => {
@@ -724,30 +719,10 @@ class MedievalArena {
                 <div class="ar-section">⚔ Recent Battles</div>
                 ${battleRows}
 
-                <div style="display:flex;gap:8px;margin-top:14px;">
-                    <button class="ar-challenge-btn" style="flex:1" onclick="window.MedievalArena && window.MedievalArena.startBattle()">
-                        ⚔️ Issue a Challenge
-                    </button>
-                    <button class="ar-challenge-btn" style="flex:1;border-color:rgba(139,92,246,0.4)" onclick="window.MedievalArena && window.MedievalArena.randomBattle()">
-                        🎲 Random Battle
-                    </button>
-                </div>
+                <button class="ar-challenge-btn" onclick="window.MedievalArena && window.MedievalArena.startBattle()">
+                    ⚔️ Issue a Challenge
+                </button>
             </div>`;
-
-            // WS live refresh — subscribe once
-            if (window.castleApp && window.castleApp.ws && !this._wsSubscribed) {
-                const origOnMessage = window.castleApp.ws.onmessage;
-                window.castleApp.ws.onmessage = (evt) => {
-                    if (origOnMessage) origOnMessage.call(window.castleApp.ws, evt);
-                    try {
-                        const msg = JSON.parse(evt.data);
-                        if (msg.type && msg.type.startsWith('arena:') && this._lastContainer) {
-                            setTimeout(() => this.render(this._lastContainer), 300);
-                        }
-                    } catch(e) {}
-                };
-                this._wsSubscribed = true;
-            }
         })
         .catch(err => {
             container.innerHTML = `<div style="padding:16px;color:#ef4444;font-style:italic;text-align:center;">⚠️ Arena unreachable: ${err.message}</div>`;
@@ -759,93 +734,47 @@ class MedievalArena {
         if (panel) panel.classList.toggle('visible');
     }
 
-    showBattleResult() {
-        if (this._lastContainer) this.render(this._lastContainer);
+    showBattleResult(result) {
+        // result: { taskName, agentA: { name, emoji, score, dimensions }, agentB: { ... }, winner }
+        const scoreA = document.getElementById('arenaScoreA');
+        const scoreB = document.getElementById('arenaScoreB');
+        const champA = document.getElementById('arenaChampionA');
+        const champB = document.getElementById('arenaChampionB');
+        const dims = document.getElementById('arenaDimensions');
+
+        if (scoreA) scoreA.textContent = result.agentA.score.toFixed(1);
+        if (scoreB) scoreB.textContent = result.agentB.score.toFixed(1);
+
+        if (champA) champA.className = 'arena-champion ' + (result.winner === 'A' ? 'winner' : 'loser');
+        if (champB) champB.className = 'arena-champion ' + (result.winner === 'B' ? 'winner' : 'loser');
+
+        // Render dimensions
+        if (dims) {
+            const dimensionNames = ['Speed', 'Correctness', 'Quality', 'Autonomy', 'Efficiency', 'Conciseness', 'Recovery'];
+            dims.innerHTML = result.agentA.dimensions.map((scoreA, i) => {
+                const sB = result.agentB.dimensions[i];
+                const winner = scoreA > sB ? '🍎' : sB > scoreA ? '🎭' : '—';
+                const maxScore = Math.max(scoreA, sB, 1);
+                return `
+                    <div class="arena-dimension-row">
+                        <span class="arena-dim-name">${dimensionNames[i]}</span>
+                        <div class="arena-dim-bar">
+                            <div class="arena-dim-fill a" style="width:${(scoreA / 10) * 100}%; position:absolute; top:0;"></div>
+                            <div class="arena-dim-fill b" style="width:${(sB / 10) * 100}%; position:absolute; bottom:0;"></div>
+                        </div>
+                        <span class="arena-dim-winner">${winner}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        this.togglePanel();
     }
 
-    startBattle() {
-        if (!this._lastContainer) return;
-        const relayUrl = (window.OC_RELAY_URL || '').replace(/\/+$/, '');
-        const TEMPLATES = [
-            { id: 'code_fix',       label: 'Bug Hunt 🐛',       desc: 'Fix broken code — speed & correctness' },
-            { id: 'feature_build',  label: 'Feature Sprint ⚙️', desc: 'Build a feature from spec' },
-            { id: 'research',       label: 'Arcane Research 📜', desc: 'Deep technical answer with citations' },
-            { id: 'creative',       label: 'Bardic Duel 🎭',    desc: 'Creative writing — creativity dominates' },
-            { id: 'strategy',       label: 'War Council ♟️',    desc: 'Architecture & strategy decisions' },
-        ];
-
-        this._lastContainer.innerHTML = `
-            <div style="padding:16px;font-family:inherit;">
-                <div style="color:#c9a959;font-size:15px;font-weight:600;margin-bottom:14px;">⚔️ Issue a Challenge</div>
-                <div style="margin-bottom:10px;">
-                    <label style="font-size:11px;color:rgba(244,228,188,0.5);text-transform:uppercase;letter-spacing:1px;">Template</label>
-                    <select id="ar-modal-template" style="width:100%;margin-top:6px;padding:8px;background:rgba(22,33,62,0.8);border:1px solid rgba(201,169,89,0.3);border-radius:6px;color:#f4e4bc;font-family:inherit;font-size:13px;">
-                        ${TEMPLATES.map(t => `<option value="${t.id}">${t.label} — ${t.desc}</option>`).join('')}
-                    </select>
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:11px;color:rgba(244,228,188,0.5);text-transform:uppercase;letter-spacing:1px;">Battle Task</label>
-                    <textarea id="ar-modal-task" placeholder="Describe the task…" rows="3" style="width:100%;margin-top:6px;padding:8px;background:rgba(22,33,62,0.8);border:1px solid rgba(201,169,89,0.3);border-radius:6px;color:#f4e4bc;font-family:inherit;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
-                </div>
-                <div style="display:flex;gap:8px;">
-                    <button id="ar-modal-submit" style="flex:1;padding:9px;background:rgba(201,169,89,0.15);border:1px solid rgba(201,169,89,0.4);border-radius:6px;color:#c9a959;font-family:inherit;font-size:13px;cursor:pointer;">⚔️ Issue Challenge</button>
-                    <button onclick="window.MedievalArena && window.MedievalArena.render(window.MedievalArena._lastContainer)" style="padding:9px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:rgba(244,228,188,0.5);font-family:inherit;font-size:13px;cursor:pointer;">✕</button>
-                </div>
-                <div id="ar-modal-msg" style="margin-top:10px;font-size:12px;min-height:16px;"></div>
-            </div>`;
-
-        document.getElementById('ar-modal-submit').addEventListener('click', () => {
-            const template = document.getElementById('ar-modal-template').value;
-            const task = (document.getElementById('ar-modal-task').value || '').trim();
-            const msg = document.getElementById('ar-modal-msg');
-            if (!task) { msg.style.color = '#ef4444'; msg.textContent = '⚠️ Please enter a task.'; return; }
-            msg.style.color = '#c9a959'; msg.textContent = '⏳ Issuing challenge…';
-            fetch(relayUrl + '/api/arena/challenge', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ challenger: 'sycopa', opponent: 'apomac', template, task }),
-            })
-            .then(r => r.json())
-            .then(res => {
-                if (!res.ok) throw new Error(res.error || 'API error');
-                msg.style.color = '#4caf50'; msg.textContent = '✅ Challenge issued! Battle begins…';
-                setTimeout(() => this.render(this._lastContainer), 1500);
-            })
-            .catch(err => { msg.style.color = '#ef4444'; msg.textContent = '⚠️ ' + err.message; });
-        });
-    }
-
-    randomBattle() {
-        if (!this._lastContainer) return;
-        const relayUrl = (window.OC_RELAY_URL || '').replace(/\/+$/, '');
-        const RANDOM_TASKS = {
-            code_fix:      ['Fix the async race condition in the WebSocket reconnect handler', 'Resolve the null pointer exception in the agent lifecycle module', 'Patch the memory leak in the event emitter loop'],
-            feature_build: ['Build a rate limiter with sliding window algorithm', 'Implement a file-based job queue with retry logic', 'Create an OAuth2 callback handler with refresh token rotation'],
-            research:      ['Explain the tradeoffs of Raft vs Paxos for distributed consensus', 'Analyze settlement risk in T+1 vs T+0 equity clearing', 'Compare tokenization mechanisms in GPT-4 vs Gemini 1.5'],
-            creative:      ['Write a medieval ballad about the fall of a cryptographic kingdom', 'Compose the founding lore scroll of the Arena Coliseum', 'Design a villain backstory for the SpawnKit dark theme'],
-            strategy:      ['Design auth architecture for a multi-tenant SaaS with row-level security', 'Plan a migration from monolith to microservices for 10k daily users', 'Structure tokenomics for a commodity-backed stablecoin'],
-        };
-        const templates = Object.keys(RANDOM_TASKS);
-        const template = templates[Math.floor(Math.random() * templates.length)];
-        const tasks = RANDOM_TASKS[template];
-        const task = tasks[Math.floor(Math.random() * tasks.length)];
-
-        this._lastContainer.innerHTML = `<div style="padding:24px;text-align:center;color:#c9a959;font-size:14px;">⚔️ Battle incoming…<br><span style="font-size:11px;color:rgba(244,228,188,0.5);margin-top:6px;display:block;">${task}</span></div>`;
-
-        fetch(relayUrl + '/api/arena/challenge', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ challenger: 'sycopa', opponent: 'apomac', template, task }),
-        })
-        .then(r => r.json())
-        .then(res => {
-            if (!res.ok) throw new Error(res.error || 'API error');
-            setTimeout(() => this.render(this._lastContainer), 1200);
-        })
-        .catch(err => {
-            this._lastContainer.innerHTML = `<div style="padding:16px;color:#ef4444;text-align:center;">⚠️ ${err.message}</div>`;
-            setTimeout(() => this.render(this._lastContainer), 2500);
-        });
+    async startBattle() {
+        // Placeholder — will integrate with sessions_spawn
+        console.log('[Arena] ⚔️ Battle requested...');
+        // TODO: POST /api/arena/battle
     }
 
     // ── Animation Loop ───────────────────────────────
@@ -880,15 +809,12 @@ window.addEventListener('load', () => {
             const arena = new MedievalArena(app);
             window.MedievalArena = arena;
 
-            // Hook into render loop — use elapsed time diff to avoid double getDelta() drift
+            // Hook into render loop
             const origAnimate = app.animate?.bind(app);
             if (origAnimate) {
                 app.animate = function() {
                     origAnimate();
-                    const now = app.clock.elapsedTime;
-                    const delta = now - (arena._lastTime || now);
-                    arena._lastTime = now;
-                    arena.update(delta);
+                    arena.update(app.clock.getDelta());
                 };
             }
 

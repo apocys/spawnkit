@@ -14,6 +14,7 @@ const SESSIONS_FILE = process.env.HOME + '/.openclaw/agents/main/sessions/sessio
 const MISSIONS_FILE = path.join(WORKSPACE, '.spawnkit-missions.json');
 const STATIC_DIR = __dirname;
 const MissionOrchestrator = require('./mission-orchestrator');
+const registerDashboardRoutes = require('./dashboard-api').registerDashboardRoutes || require('./dashboard-api');
 const VERSION_FILE = path.join(__dirname, 'version.json');
 const REPO_DIR = process.env.SPAWNKIT_REPO || path.join(process.env.HOME, 'spawnkit');
 const UPDATE_TOKEN = process.env.SK_API_TOKEN || '';
@@ -301,6 +302,17 @@ async function proxyFetch(url, token) {
 const server = http.createServer(async (req, res) => {
   cors(res);
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+  // ─── Live Dashboard API ───────────────────────────────────
+  if (req.url.startsWith('/api/dashboard/')) {
+    const handled = await registerDashboardRoutes(req, res, {
+      ocGateway: OC_GATEWAY,
+      ocToken: OC_TOKEN,
+      workspace: WORKSPACE,
+      missionsFile: MISSIONS_FILE,
+    });
+    if (handled) return;
+  }
 
   // ─── Auth validation endpoint ────────────────────────────
   if (req.url === '/api/auth/validate' && req.method === 'POST') {

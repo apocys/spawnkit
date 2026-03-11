@@ -170,6 +170,19 @@ class ArenaAPI {
       return true;
     }
 
+    if (pathname === '/api/arena/auto-judge' && method === 'POST') {
+      if (typeof this.engine.autoJudgeBattle !== 'function') {
+        err(res, 501, 'Auto-judge not available on this engine version');
+        return true;
+      }
+      const { battleId } = body;
+      if (!battleId) { err(res, 400, 'Missing battleId'); return true; }
+      this.engine.autoJudgeBattle(battleId)
+        .then(battle => json(res, 200, { ok: true, data: battle }))
+        .catch(e => err(res, 400, e.message));
+      return true;
+    }
+
     return false; // route not matched
   }
 }

@@ -15,9 +15,10 @@
 
 'use strict';
 
-const fs   = require('fs');
-const path = require('path');
+const fs     = require('fs');
+const path   = require('path');
 const crypto = require('crypto');
+const http   = require('http');
 
 // ═══════════════════════════════════════════════════════════════
 // SCORING MATRIX (Sycopa Edition — 8 dimensions)
@@ -481,6 +482,147 @@ class ArenaEngine {
       lb.apomac.points += forfeit ? 2 : 3;
       lb.apomac.bestScore = Math.max(lb.apomac.bestScore, apomacScore);
     }
+  }
+
+  // ── LLM Auto-Judge ──────────────────────────────────────────
+
+  /**
+   * Read CLIProxyAPI token from ~/.cli-proxy-api/<email>.json
+   */
+  _readJudgeToken() {
+    try {
+      const dir = path.join(process.env.HOME || '/root', '.cli-proxy-api');
+      const files = fs.readdirSync(dir).filter(f => f.endsWith('.json') && f !== 'codex-apocys@gmail.com-plus.json');
+      // Prefer the compteapo account (not disabled)
+      const preferred = files.find(f => f.includes('compteapo')) || files[0];
+      if (!preferred) return null;
+      const data = JSON.parse(fs.readFileSync(path.join(dir, preferred), 'utf8'));
+      if (data.disabled) {
+        // Try next
+        const alt = files.find(f => f !== preferred);
+        if (alt) return JSON.parse(fs.readFileSync(path.join(dir, alt), 'utf8')).access_token || null;
+      }
+      return data.access_token || data.token || null;
+    } catch(e) {
+      return null;
+    }
+  }
+
+  /**
+   * Make a POST request to CLIProxyAPI (http, not https)
+   */
+  _judgeApiCall(payload, token) {
+    return new Promise((resolve, reject) => {
+      const body = JSON.stringify(payload);
+      const req = http.request({
+        hostname: '127.0.0.1',
+        port: 8317,
+        path: '/v1/chat/completions',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          'Authorization': 'Bearer ' + (token || 'not-needed'),
+        },
+      }, (res) => {
+        let raw = '';
+        res.on('data', d => raw += d);
+        res.on('end', () => {
+          try { resolve(JSON.parse(raw)); }
+          catch(e) { reject(new Error('Judge response parse error: ' + raw.slice(0, 200))); }
+        });
+      });
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+  }
+
+  /**
+   * Auto-judge a battle using Claude via CLIProxyAPI.
+   * Scores both combatants and calls scoreBattle().
+   */
+  async autoJudgeBattle(battleId) {
+    // Find battle (active or archived)
+    let battle = this._data.activeBattle && this._data.activeBattle.id === battleId
+      ? this._data.activeBattle
+      : this._data.battles.find(b => b.id === battleId);
+
+    if (!battle) throw new Error('Battle not found: ' + battleId);
+
+    const token = this._readJudgeToken();
+    const templateMeta = BATTLE_TEMPLATES[battle.template] || {};
+
+    const DEFAULT_SCORES = { correctness: 5, quality: 5, speed: 5, autonomy: 5, conciseness: 5, creativity: 5, efficiency: 5, error_recovery: 5 };
+
+    const judgeOne = async (combatant) => {
+      const rounds = battle.rounds.filter(r => r.combatant === combatant);
+      if (rounds.length === 0) return { ...DEFAULT_SCORES, reasoning: 'No output submitted.' };
+      const output = rounds[rounds.length - 1].output || '(empty)';
+
+      const prompt = [
+        'You are a neutral AI judge evaluating an agent in a battle. Be precise and fair.',
+        '',
+        `Task: ${battle.task}`,
+        `Template: ${templateMeta.label || battle.template} — ${templateMeta.description || ''}`,
+        '',
+        `Agent: ${combatant} (${combatant === 'sycopa' ? '🎭 The Mirror Blade' : '💻 The Frontend Phantom'})`,
+        'Output:',
+        output.slice(0, 3000),
+        '',
+        'Score on each dimension (0-10). Respond ONLY with valid JSON, no commentary outside JSON:',
+        '{',
+        '  "correctness": <0-10>,',
+        '  "quality": <0-10>,',
+        '  "speed": <0-10>,',
+        '  "autonomy": <0-10>,',
+        '  "conciseness": <0-10>,',
+        '  "creativity": <0-10>,',
+        '  "efficiency": <0-10>,',
+        '  "error_recovery": <0-10>,',
+        '  "reasoning": "<2-3 sentence summary of strengths and weaknesses>"',
+        '}',
+      ].join('\n');
+
+      try {
+        const response = await this._judgeApiCall({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 500,
+          temperature: 0,
+          messages: [{ role: 'user', content: prompt }],
+        }, token);
+
+        const text = response?.choices?.[0]?.message?.content || '';
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('No JSON in judge response');
+        const scores = JSON.parse(jsonMatch[0]);
+
+        // Clamp all numeric scores to 0-10
+        const dims = ['correctness','quality','speed','autonomy','conciseness','creativity','efficiency','error_recovery'];
+        for (const d of dims) {
+          scores[d] = Math.min(10, Math.max(0, parseFloat(scores[d]) || 5));
+        }
+        return scores;
+      } catch(e) {
+        console.warn('[Arena] Judge failed for', combatant, e.message);
+        return { ...DEFAULT_SCORES, reasoning: 'Judge error: ' + e.message };
+      }
+    };
+
+    // Judge both combatants
+    const [sycopaScores, apomacScores] = await Promise.all([
+      judgeOne('sycopa'),
+      judgeOne('apomac'),
+    ]);
+
+    const notes = `Auto-judged by Claude (sonnet-4-6). Sycopa: ${sycopaScores.reasoning || '—'} ApoMac: ${apomacScores.reasoning || '—'}`;
+
+    return this.scoreBattle(battleId, {
+      sycopa: sycopaScores,
+      apomac: apomacScores,
+      judgeNotes: notes,
+      judgedBy: 'ai',
+    });
   }
 }
 
