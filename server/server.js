@@ -1465,6 +1465,49 @@ ${customBlock}`;
     return;
   }
 
+  // POST /api/oc/missions/create — append a single new mission (used by /mission Telegram command)
+  if (req.url === '/api/oc/missions/create' && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+      const body = await readBody(req);
+      if (!body || !body.name) throw new Error('Missing required field: name');
+      const HOUSE_COLORS = ['#6366f1','#10b981','#f43f5e','#f59e0b','#0ea5e9','#a855f7','#f97316','#14b8a6','#ec4899','#84cc16','#06b6d4','#ef4444'];
+      const HOUSE_POSITIONS = [
+        {x:12,z:18},{x:-12,z:18},{x:14,z:22},{x:-14,z:22},{x:10,z:24},{x:-10,z:24},
+        {x:16,z:20},{x:-16,z:20},{x:12,z:26},{x:-12,z:26},{x:16,z:26},{x:-16,z:26},
+      ];
+      const existing = fs.existsSync(MISSIONS_FILE) ? JSON.parse(fs.readFileSync(MISSIONS_FILE, 'utf8')) : [];
+      const active = existing.filter(m => m.status !== 'archived');
+      const usedPositions = active.map(m => m.position).filter(Boolean);
+      const nextPos = HOUSE_POSITIONS.find(p => !usedPositions.some(u => u.x === p.x && u.z === p.z)) || HOUSE_POSITIONS[active.length % HOUSE_POSITIONS.length];
+      const colorIdx = existing.length % HOUSE_COLORS.length;
+      const ICONS = ['🌐','📱','🎮','🛡️','🔮','📦','🎯','⚗️','🗂️','🚀','💎','🏗️'];
+      const mission = {
+        id: 'mission_' + Math.random().toString(36).slice(2, 15),
+        name: body.name,
+        icon: body.icon || ICONS[existing.length % ICONS.length],
+        status: body.status || 'active',
+        color: body.color || HOUSE_COLORS[colorIdx],
+        agents: body.agents || ['Sycopa'],
+        description: body.description || body.name,
+        tasks: body.tasks || [],
+        position: nextPos,
+        source: body.source || 'telegram',
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+      };
+      existing.push(mission);
+      fs.writeFileSync(MISSIONS_FILE, JSON.stringify(existing, null, 2));
+      console.log('[Missions] Created:', mission.id, mission.name);
+      res.writeHead(201);
+      res.end(JSON.stringify({ ok: true, mission }));
+    } catch(e) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   // DELETE /api/oc/missions/:id — archive a mission
   const missionDeleteMatch = req.url.match(/^\/api\/oc\/missions\/([a-zA-Z0-9_]+)$/);
   if (missionDeleteMatch && req.method === 'DELETE') {
