@@ -831,6 +831,74 @@ window.openDailyBriefPanel = function() {
 };
 
 function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// FIX 5: Today's Tasks Homepage Panel
+(function() {
+  function renderTodayTasks(data) {
+    var container = document.getElementById('missionDeskTasks');
+    if (!container) return;
+    
+    var todoRaw = data.todo || '';
+    if (!todoRaw && !localStorage.getItem('spawnkit-token') && !window.__skDemoMode) {
+      container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-secondary);font-size:13px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:12px;">Connect to see your tasks</div>';
+      return;
+    }
+
+    var tasks = [];
+    if (todoRaw) {
+      var lines = todoRaw.split('\n');
+      var inActive = false;
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (/^## /.test(line) && /Active|To Do|Tasks/i.test(line)) { inActive = true; continue; }
+        if (/^## /.test(line) && inActive) break;
+        if (inActive && /^\s*[-*]/.test(line)) {
+          var isDone = line.indexOf('\u2705') >= 0;
+          var text = line.replace(/^\s*[-*]\s*/, '').replace(/[\u2705\u2B1C]/g, '').replace(/\*\*/g, '').trim();
+          if (text && text.length > 2) tasks.push({done: isDone, text: text});
+        }
+      }
+    }
+
+    // Default demo tasks if empty in demo mode
+    if (tasks.length === 0 && window.__skDemoMode) {
+      tasks = [
+        { done: true, text: 'Set up SpawnKit office' },
+        { done: false, text: 'Review new product designs' },
+        { done: false, text: 'Check website analytics' }
+      ];
+    }
+
+    if (tasks.length === 0) {
+      container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-secondary);font-size:13px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:12px;">No active tasks today. You\'re all caught up! ✨</div>';
+      return;
+    }
+
+    var html = '<div style="background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:14px;overflow:hidden;">';
+    tasks.slice(0, 5).forEach(function(t) {
+      var cls = t.done ? 'md-task-item md-task-done' : 'md-task-item';
+      var check = t.done ? '✅' : '⬜️';
+      html += '<div class="' + cls + '">';
+      html += '<div class="md-task-check">' + check + '</div>';
+      html += '<div class="md-task-text">' + _esc(t.text) + '</div>';
+      html += '</div>';
+    });
+    if (tasks.length > 5) {
+      html += '<div style="padding:10px 14px;font-size:12px;color:var(--text-secondary);text-align:center;border-top:1px solid var(--border-subtle);cursor:pointer;" onclick="if(window.MissionDesk)window.MissionDesk.openPanel(\'missions\')">View ' + (tasks.length - 5) + ' more tasks...</div>';
+    }
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
+  // Subscribe to OcStore
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.OcStore) window.OcStore.subscribe(renderTodayTasks);
+    });
+  } else {
+    if (window.OcStore) window.OcStore.subscribe(renderTodayTasks);
+  }
+})();
 function _timeAgo(ts) {
   var d = new Date(ts); var now = Date.now(); var diff = Math.floor((now - d) / 1000);
   if (diff < 60) return 'just now'; if (diff < 3600) return Math.floor(diff/60) + 'm ago';

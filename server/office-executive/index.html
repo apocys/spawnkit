@@ -326,6 +326,17 @@
             <div class="md-section-label">Your Team</div>
             <div class="md-team" id="missionDeskTeam"></div>
 
+            <!-- Today's Tasks -->
+            <div class="md-section-label" style="display:flex;align-items:center;justify-content:space-between;">
+              <span>Today's Tasks</span>
+              <button id="mdAddTaskBtn" style="background:none;border:none;color:var(--exec-blue);font-size:12px;font-weight:600;cursor:pointer;">+ Add Task</button>
+            </div>
+            <div class="md-tasks" id="missionDeskTasks" style="margin-bottom:24px;">
+              <div style="padding:16px;text-align:center;color:var(--text-secondary);font-size:13px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:12px;">
+                Loading tasks...
+              </div>
+            </div>
+
             <!-- Quick Actions -->
             <div class="md-section-label">Quick Actions</div>
             <div class="md-actions" id="missionDeskActions">

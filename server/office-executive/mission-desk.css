@@ -228,6 +228,32 @@
   .md-actions { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* ── 6.5 Today's Tasks ───────────────────────────────────── */
+.md-task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+  transition: background 0.2s;
+  color: var(--text-primary);
+}
+.md-task-item:last-child { border-bottom: none; }
+.md-task-item:hover { background: rgba(255,255,255,0.02); }
+.md-task-item.md-task-done { opacity: 0.5; }
+.md-task-item.md-task-done .md-task-text { text-decoration: line-through; }
+.md-task-check {
+  font-size: 16px;
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.2;
+}
+.md-task-text {
+  flex: 1;
+  line-height: 1.4;
+}
+
 .md-action {
   display: flex;
   flex-direction: column;
