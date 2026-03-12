@@ -533,9 +533,9 @@ window.__skOnboardingV2 = true;
     // Beat 1: Welcome
     var b1 = makeBeat(1, `
       <div class="sk-ob-card sk-ob-welcome">
-        <div class="sk-ob-logo">🏢</div>
-        <h1 class="sk-ob-welcome-title">Welcome to Your AI Office</h1>
-        <p class="sk-ob-welcome-sub">SpawnKit gives you a living command center<br>powered by a full AI executive team.</p>
+        <div class="sk-ob-logo">✨</div>
+        <h1 class="sk-ob-welcome-title">Welcome to SpawnKit</h1>
+        <p class="sk-ob-welcome-sub">Your personal AI assistant — ready in minutes.<br>No technical skills needed.</p>
         <div class="sk-ob-progress-bar">
           <div class="sk-ob-progress-fill" id="skObProgressFill"></div>
         </div>
@@ -554,15 +554,15 @@ window.__skOnboardingV2 = true;
           <div class="sk-ob-stepdot"></div>
         </div>
         <p class="sk-ob-section-label">Quick Setup</p>
-        <h2 class="sk-ob-card-title">Make it yours</h2>
-        <p class="sk-ob-card-sub">Personalize your office in seconds.</p>
+        <h2 class="sk-ob-card-title">Let's get to know you</h2>
+        <p class="sk-ob-card-sub">Just two quick things and you're all set.</p>
         <div class="sk-ob-field">
-          <label for="skObYourName">What should we call you?</label>
-          <input class="sk-ob-input" id="skObYourName" type="text" placeholder="Your name" autocomplete="off" />
+          <label for="skObYourName">What's your first name?</label>
+          <input class="sk-ob-input" id="skObYourName" type="text" placeholder="e.g. Marie" autocomplete="off" />
         </div>
         <div class="sk-ob-field">
-          <label for="skObCeoName">Name your CEO agent</label>
-          <input class="sk-ob-input" id="skObCeoName" type="text" placeholder="e.g. Atlas, Commander" autocomplete="off" />
+          <label for="skObCeoName">Give your assistant a name</label>
+          <input class="sk-ob-input" id="skObCeoName" type="text" placeholder="e.g. Luna, Max, Assisty" autocomplete="off" />
         </div>
         <div class="sk-ob-actions">
           <button class="sk-ob-btn-skip" id="skObSkipSetup">Skip setup →</button>
@@ -715,40 +715,40 @@ window.__skOnboardingV2 = true;
           <div class="sk-ob-stepdot sk-ob-stepdot-active"></div>
           <div class="sk-ob-stepdot"></div>
         </div>
-        <p class="sk-ob-section-label">First Mission</p>
-        <h2 class="sk-ob-card-title">Let's try your first mission</h2>
-        <p class="sk-ob-card-sub">Send a message to your AI team. Edit or send as-is.</p>
+        <p class="sk-ob-section-label">Try it out</p>
+        <h2 class="sk-ob-card-title">Send your first message</h2>
+        <p class="sk-ob-card-sub">Ask anything — or try one of these ideas:</p>
         <div class="sk-ob-chat-bubble">
-          <p>💡 Suggested mission:</p>
+          <p>💡 Try asking:</p>
         </div>
-        <textarea class="sk-ob-mission-input" id="skObMissionText" rows="2">What are our top priorities this week?</textarea>
+        <textarea class="sk-ob-mission-input" id="skObMissionText" rows="2">What's the weather like today?</textarea>
         <div class="sk-ob-actions" style="margin-top:16px;">
-          <span style="font-size:12px;color:rgba(255,255,255,0.3);">Your CEO agent will respond</span>
+          <span style="font-size:12px;color:rgba(255,255,255,0.3);">Your assistant will respond</span>
           <button class="sk-ob-btn-primary" id="skObSendMission">Send →</button>
         </div>
         <div id="skObTypingWrap" style="display:none;margin-top:12px;">
           <div class="sk-ob-typing">
             <span></span><span></span><span></span>
-            <span class="sk-ob-typing-label">CEO is thinking…</span>
+            <span class="sk-ob-typing-label">Thinking…</span>
           </div>
         </div>
         <div id="skObSuccessWrap" style="display:none;">
           <div class="sk-ob-success">
             <span class="sk-ob-success-emoji">🎉</span>
-            <p class="sk-ob-success-title">First Mission Complete!</p>
-            <p class="sk-ob-success-sub">Your team is now working on it.</p>
+            <p class="sk-ob-success-title">You're all set!</p>
+            <p class="sk-ob-success-sub">Your assistant is ready to help.</p>
           </div>
-          <button class="sk-ob-btn-primary" id="skObMissionDone" style="width:100%;">Continue →</button>
+          <button class="sk-ob-btn-primary" id="skObMissionDone" style="width:100%;">Let's go! →</button>
         </div>
       </div>
     `);
 
     // Beat 4: Feature Discovery
     var features = [
-      { icon: '📋', title: 'Mission Center', desc: 'Assign tasks to your team' },
-      { icon: '🧠', title: 'Boardroom',      desc: 'Brainstorm with all agents' },
-      { icon: '⚙️', title: 'Skills',          desc: 'Customize agent capabilities' },
-      { icon: '⌨️', title: 'Command Palette', desc: 'Press Q to access anything' }
+      { icon: '🎯', title: 'Missions', desc: 'Give your assistant a task to complete' },
+      { icon: '🧠', title: 'Brainstorm', desc: 'Think through ideas together' },
+      { icon: '📅', title: 'Scheduled Tasks', desc: 'Morning briefings, reminders, and more' },
+      { icon: '📬', title: 'Connect', desc: 'Chat via Telegram, WhatsApp, or SMS' }
     ];
     var featureHTML = features.map(function(f, i) {
       return `<div class="sk-ob-feature-card" data-idx="${i}">
