@@ -8,6 +8,8 @@ description: "Strategic AI agent with structured brainstorming, code reviews, mo
 icon: 🏰
 version: 1.0.0
 author: SpawnKit Team
+order: 2
+badge: "⚙️ For developers"
 
 # What this blueprint includes
 features:

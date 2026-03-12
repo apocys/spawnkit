@@ -8,6 +8,8 @@ description: "Your friendly AI assistant that handles daily tasks, reminders, ne
 icon: ✨
 version: 1.0.0
 author: SpawnKit Team
+order: 1
+badge: "🟢 For everyone"
 
 # What this blueprint includes
 features:

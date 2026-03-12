@@ -659,10 +659,38 @@ window.__skOnboardingV2 = true;
         <!-- Mini-wizards for each channel -->
         <div class="sk-ob-mini-wizard" id="skObWizardTelegram">
           <h4 class="sk-ob-wizard-title">💬 Connect Telegram</h4>
-          <p class="sk-ob-wizard-desc">Add our bot to your group or start a private chat</p>
-          <div class="sk-ob-wizard-actions">
-            <button class="sk-ob-copy-btn" data-copy="@SpawnKit_bot">@SpawnKit_bot</button>
-            <button class="sk-ob-oauth-btn" onclick="connectChannel('telegram')">Add Bot</button>
+          
+          <!-- Step 1: Open bot -->
+          <div class="sk-ob-tg-step" id="skObTgStep1">
+            <p class="sk-ob-wizard-desc">Open your assistant's bot in Telegram:</p>
+            <div style="display:flex;gap:8px;justify-content:center;margin:12px 0;">
+              <a href="https://t.me/SpawnKit_bot?start=connect" target="_blank" class="sk-ob-btn-primary" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;padding:10px 20px;">
+                📱 Open in Telegram
+              </a>
+            </div>
+            <p style="font-size:11px;color:rgba(255,255,255,0.4);text-align:center;">Or search @SpawnKit_bot in Telegram</p>
+            <button class="sk-ob-btn-primary" id="skObTgNext1" style="margin-top:8px;width:100%;">I opened it →</button>
+          </div>
+          
+          <!-- Step 2: Press Start -->
+          <div class="sk-ob-tg-step" id="skObTgStep2" style="display:none;">
+            <p class="sk-ob-wizard-desc">Press <strong>Start</strong> in the Telegram chat to connect:</p>
+            <div style="text-align:center;margin:16px 0;">
+              <div style="font-size:48px;">👆</div>
+              <p style="font-size:12px;color:rgba(255,255,255,0.5);">Tap the START button in Telegram</p>
+            </div>
+            <div id="skObTgWaiting" style="display:flex;align-items:center;gap:8px;justify-content:center;color:rgba(255,255,255,0.5);font-size:12px;">
+              <span class="sk-ob-spinner"></span> Waiting for connection...
+            </div>
+          </div>
+          
+          <!-- Step 3: Connected! -->
+          <div class="sk-ob-tg-step" id="skObTgStep3" style="display:none;">
+            <div style="text-align:center;padding:16px 0;">
+              <div style="font-size:48px;">✅</div>
+              <p style="font-size:14px;font-weight:600;color:#30D158;margin-top:8px;">Telegram connected!</p>
+              <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:4px;">You can now chat with your assistant via Telegram</p>
+            </div>
           </div>
         </div>
         
@@ -1027,6 +1055,34 @@ window.__skOnboardingV2 = true;
         markCardConnected(channel);
       }
     };
+
+    // Telegram 3-step flow logic
+    var tgNext1 = document.getElementById('skObTgNext1');
+    if (tgNext1) {
+      tgNext1.addEventListener('click', function() {
+        document.getElementById('skObTgStep1').style.display = 'none';
+        document.getElementById('skObTgStep2').style.display = 'block';
+        
+        var dots = 0;
+        var tgTimer = setInterval(function() {
+          dots = (dots + 1) % 4;
+          var waitEl = document.getElementById('skObTgWaiting');
+          if (waitEl) waitEl.innerHTML = '<span class="sk-ob-spinner"></span> Waiting for connection' + '.'.repeat(dots);
+        }, 500);
+        
+        // Mock successful connection after 4 seconds
+        setTimeout(function() {
+          clearInterval(tgTimer);
+          document.getElementById('skObTgStep2').style.display = 'none';
+          document.getElementById('skObTgStep3').style.display = 'block';
+          markCardConnected('telegram');
+          
+          setTimeout(function() {
+            if (currentBeat === 25) goToBeat(3);
+          }, 2000);
+        }, 4000);
+      });
+    }
   }
 
   // ── Beat 3: First Mission logic ────────────────────────────────────────────

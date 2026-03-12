@@ -32,8 +32,22 @@
     async function renderSettings() {
         var html = '';
 
-        // API Keys section (NEW #3)
-        html += '<div class="cron-group"><div class="cron-group-title">\u{1F511} API Keys</div>';
+        // AI Provider section
+        html += '<div class="cron-group"><div class="cron-group-title">🤖 AI Provider</div>';
+        html += '<div class="cron-item" style="background:rgba(10,132,255,0.08);border:1px solid rgba(10,132,255,0.2);border-radius:10px;padding:12px;">';
+        html += '<div class="cron-item-info" style="flex:1;">';
+        html += '<div class="cron-item-name">✨ Recommended (automatic)</div>';
+        html += '<div class="cron-item-schedule" style="color:rgba(255,255,255,0.5);">Best AI model, automatically configured — just works</div>';
+        html += '</div>';
+        html += '<button id="useRecommendedBtn" style="padding:6px 14px;border-radius:8px;border:none;background:var(--exec-blue);color:#fff;font-size:12px;cursor:pointer;font-weight:600;">Use Recommended</button>';
+        html += '</div>';
+        html += '<div style="margin:8px 0 4px;text-align:center;">';
+        html += '<button id="toggleAdvancedProviders" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:11px;cursor:pointer;text-decoration:underline;">Advanced: choose provider manually ▾</button>';
+        html += '</div>';
+        html += '<div id="advancedProvidersSection" style="display:none;">';
+
+        // API Keys section
+        html += '<div class="cron-group-title" style="margin-top:8px;">\u{1F511} API Keys</div>';
 
         var providers = ['anthropic', 'openai', 'elevenlabs', 'google'];
         var providerLabels = { anthropic: 'Anthropic', openai: 'OpenAI', elevenlabs: 'ElevenLabs', google: 'Google' };
@@ -64,7 +78,8 @@
             html += '</div>';
             html += '</div>';
         });
-        html += '</div>';
+        html += '</div>'; // close advancedProvidersSection
+        html += '</div>'; // close cron-group
 
         // Skills section
         var skillsList = [
@@ -116,6 +131,45 @@
             cpBtn.addEventListener('click', function() {
                 closeSettingsPanel();
                 window.openCreatorProfile();
+            });
+        }
+
+        // Wire recommended provider button
+        var recBtn = document.getElementById('useRecommendedBtn');
+        if (recBtn) {
+            recBtn.addEventListener('click', async function() {
+                recBtn.disabled = true;
+                recBtn.textContent = 'Setting up...';
+                try {
+                    var resp = await (window.skFetch || fetch)('/api/wizard/providers/setup', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ providerId: 'recommended', modelId: 'claude-sonnet-4-6', modelName: 'Claude Sonnet 4.6' })
+                    });
+                    if (resp.ok) {
+                        showToast('✨ Recommended provider configured!');
+                        recBtn.textContent = '✅ Active';
+                    } else {
+                        showToast('⚠️ Setup failed — try advanced options');
+                        recBtn.disabled = false;
+                        recBtn.textContent = 'Use Recommended';
+                    }
+                } catch(e) {
+                    showToast('⚠️ Connection error');
+                    recBtn.disabled = false;
+                    recBtn.textContent = 'Use Recommended';
+                }
+            });
+        }
+
+        // Wire advanced toggle
+        var toggleBtn = document.getElementById('toggleAdvancedProviders');
+        var advSection = document.getElementById('advancedProvidersSection');
+        if (toggleBtn && advSection) {
+            toggleBtn.addEventListener('click', function() {
+                var visible = advSection.style.display !== 'none';
+                advSection.style.display = visible ? 'none' : 'block';
+                toggleBtn.textContent = visible ? 'Advanced: choose provider manually ▾' : 'Hide advanced ▴';
             });
         }
 

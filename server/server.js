@@ -1463,9 +1463,20 @@ ${customBlock}`;
   if (req.url === '/api/wizard/providers' && req.method === 'GET') {
     const providers = [
       {
+        id: 'recommended', name: '✨ Recommended', icon: '✨',
+        description: 'Best AI model, automatically configured — just works',
+        authType: 'auto', badge: 'Best for most users',
+        models: [
+          { id: 'claude-sonnet-4-6', name: 'Smart & Fast', recommended: true }
+        ],
+        config: { baseUrl: 'https://api.anthropic.com/v1', api: 'anthropic' },
+        autoConfig: true
+      },
+      {
         id: 'anthropic', name: 'Anthropic', icon: '🟣', description: 'Claude models (Opus, Sonnet, Haiku)',
         authType: 'api_key', keyPlaceholder: 'sk-ant-...',
         keyUrl: 'https://console.anthropic.com/settings/keys',
+        advanced: true,
         models: [
           { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5', recommended: true },
           { id: 'claude-opus-4-5', name: 'Claude Opus 4.5' },
@@ -1475,7 +1486,7 @@ ${customBlock}`;
       },
       {
         id: 'openai', name: 'OpenAI', icon: '🟢', description: 'GPT models (GPT-5, GPT-4o)',
-        authType: 'api_key', keyPlaceholder: 'sk-...',
+        authType: 'api_key', keyPlaceholder: 'sk-...', advanced: true,
         keyUrl: 'https://platform.openai.com/api-keys',
         models: [
           { id: 'gpt-5.1-codex', name: 'GPT-5.1 Codex', recommended: true },
@@ -1486,7 +1497,7 @@ ${customBlock}`;
       },
       {
         id: 'cliproxy', name: 'CLIProxyAPI', icon: '🔵', description: 'Claude via CLI Proxy — uses your Max/Pro subscription, no API costs',
-        authType: 'oauth', oauthUrl: '/api/wizard/providers/cliproxy/auth',
+        authType: 'oauth', oauthUrl: '/api/wizard/providers/cliproxy/auth', advanced: true,
         models: [
           { id: 'claude-opus-4-6', name: 'Claude Opus 4.6 (Max)', recommended: true },
           { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6 (Max)' },
@@ -1496,7 +1507,7 @@ ${customBlock}`;
       },
       {
         id: 'ollama', name: 'Ollama (Local)', icon: '🦙', description: 'Run models locally — free, private, no API key needed',
-        authType: 'none',
+        authType: 'none', advanced: true,
         models: [
           { id: 'llama3.3', name: 'Llama 3.3 70B', recommended: true },
           { id: 'qwen2.5', name: 'Qwen 2.5 72B' },
@@ -1526,6 +1537,11 @@ ${customBlock}`;
       
       // Provider presets
       const presets = {
+        recommended: {
+          config: { api: 'anthropic' },
+          baseUrl: 'https://api.anthropic.com/v1',
+          authProfile: 'anthropic:default'
+        },
         anthropic: {
           config: { api: 'anthropic' },
           baseUrl: 'https://api.anthropic.com/v1',
@@ -1706,11 +1722,14 @@ ${customBlock}`;
           const desc = (yaml.match(/^description:\s*"?(.+?)"?\s*$/m) || [])[1] || '';
           const icon = (yaml.match(/^icon:\s*(.+)$/m) || [])[1] || '📦';
           const version = (yaml.match(/^version:\s*(.+)$/m) || [])[1] || '1.0.0';
+          const order = parseInt((yaml.match(/^order:\s*(\d+)$/m) || [])[1]) || 99;
+          const badge = (yaml.match(/^badge:\s*"?(.+?)"?\s*$/m) || [])[1] || '';
           const featuresRaw = yaml.match(/features:\n((?:\s+-\s+.+\n?)+)/);
           const features = featuresRaw ? featuresRaw[1].split('\n').filter(l => l.trim().startsWith('-')).map(l => l.replace(/^\s*-\s*/, '').trim()) : [];
-          return { id: d, name: name.trim(), description: desc.trim(), icon: icon.trim(), version, features };
+          return { id: d, name: name.trim(), description: desc.trim(), icon: icon.trim(), version, features, order, badge: badge.trim() };
         } catch(e) { return { id: d, name: d, description: '', icon: '📦', version: '1.0.0', features: [] }; }
       });
+      blueprints.sort((a, b) => (a.order || 99) - (b.order || 99));
       res.setHeader('Content-Type', 'application/json');
       res.writeHead(200);
       res.end(JSON.stringify({ ok: true, blueprints }));
