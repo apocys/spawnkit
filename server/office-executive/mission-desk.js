@@ -726,7 +726,12 @@ window.openChannelStatusPanel = function(channelId, displayName) {
   } else {
     setTimeout(attachChannelClicks, 1000);
   }
-  new MutationObserver(function() { attachChannelClicks(); }).observe(document.body, { childList: true, subtree: true });
+  // Debounced observer — avoid mutation storm from setting dataset/style in handler
+  var _channelObTimer = null;
+  new MutationObserver(function() {
+    if (_channelObTimer) return;
+    _channelObTimer = setTimeout(function() { _channelObTimer = null; attachChannelClicks(); }, 500);
+  }).observe(document.getElementById('missionDeskChannels') || document.body, { childList: true, subtree: false });
 })();
 
 // FIX 4: Daily Brief Panel — wired to live data

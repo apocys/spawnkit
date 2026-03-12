@@ -116,29 +116,32 @@
     /* ── MutationObserver for dynamic agent elements ─────────── */
     function startObserver() {
         if (_observer) return;
+        var _ringTimer = null;
         _observer = new MutationObserver(function () {
-            applyRings();
+            if (_ringTimer) return;
+            _ringTimer = setTimeout(function() { _ringTimer = null; applyRings(); }, 300);
         });
-        _observer.observe(document.body, { childList: true, subtree: true });
+        // Scope to agent containers, not entire body
+        var agentContainer = document.getElementById('missionDeskTeam') || document.querySelector('.md-team') || document.body;
+        _observer.observe(agentContainer, { childList: true, subtree: true });
     }
 
     /* ── Bootstrap ───────────────────────────────────────────── */
     function init() {
-        if (document.body.classList.contains('sk-auth-pending')) {
-            setTimeout(init, 500);
-            return;
-        }
-
         pollStatus();
         setInterval(pollStatus, 15000);
         startObserver();
-
         console.log('[AgentPulse] ✅ Real-time status rings ready');
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
+    // Wait for auth to resolve before starting (avoid mutation storm during wizard)
+    window.addEventListener('skAuthResolved', function() { init(); }, { once: true });
+    // Fallback for demo mode or already-resolved auth
+    if (window.__skDemoMode || localStorage.getItem('spawnkit-token')) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     }
 })();
