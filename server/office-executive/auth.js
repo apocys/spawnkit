@@ -104,10 +104,14 @@
   function showOverlay() {
     // Use Deploy Wizard instead of old auth popup if available
     if (window.DeployWizard) {
+      // Remove auth-pending so deploy wizard is visible (body was hidden)
+      document.body.classList.remove('sk-auth-pending');
       window.DeployWizard.open();
       return;
     }
     if (document.getElementById('sk-auth-overlay')) return;
+    // Remove auth-pending so overlay is visible
+    document.body.classList.remove('sk-auth-pending');
     var overlay = createOverlay();
     document.body.appendChild(overlay);
 
