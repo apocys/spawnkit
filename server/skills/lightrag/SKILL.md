@@ -19,6 +19,8 @@ Build a knowledge graph from documents and query it with graph intelligence — 
 - Entity/relationship extraction from unstructured text
 - Building a persistent knowledge base from a document set
 
+**vs deep-research:** Use `lightrag` when you have a document corpus to index OR when the query involves regulatory/compliance structures where entity/relationship graphs add value. Use `deep-research` for open-ended web research without a pre-existing document set.
+
 ❌ **DON'T USE when:**
 - Single-document Q&A (use `web_fetch` or direct read)
 - Real-time data queries (use `web_search`)

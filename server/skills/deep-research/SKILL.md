@@ -17,6 +17,8 @@ Perform comprehensive multi-phase web research and produce a structured report w
 - "Write a research report on [topic]"
 - Competitive analysis, market research, technology assessment
 
+**vs LightRAG:** Use `deep-research` for open-ended research on new topics. Use `lightrag` when the query is about a known regulatory framework, compliance structure, or domain where entity/relationship mapping matters (e.g. "how does X regulation affect Y party under Z condition").
+
 ❌ **DON'T USE when:**
 - Simple factual questions ("What's the capital of France?")
 - Real-time data (stock prices, weather — use specific tools)
