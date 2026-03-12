@@ -285,7 +285,7 @@
                 // Render reply inline with CTAs
                 resultEl.innerHTML =
                     '<div style="background:rgba(15,52,96,0.45);border:1px solid rgba(201,169,89,0.25);border-radius:6px;padding:12px;margin-bottom:10px;">' +
-                        '<div style="font-size:11px;color:rgba(201,169,89,0.7);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">🧠 Oracle's Response</div>' +
+                        '<div style="font-size:11px;color:rgba(201,169,89,0.7);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">🧠 Oracle\'s Response</div>' +
                         '<div id="bp-brainstorm-reply-text" style="font-size:12px;color:#f4e4bc;line-height:1.6;white-space:pre-wrap;word-break:break-word;max-height:280px;overflow-y:auto;">' + esc(reply) + '</div>' +
                     '</div>' +
                     '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +

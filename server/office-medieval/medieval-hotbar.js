@@ -1,6 +1,9 @@
 (function() {
     const hotbar = document.getElementById('roblox-hotbar');
     if (!hotbar) return;
+    // Guard: only run once (prevents duplicate slots on script re-injection)
+    if (hotbar._hotbarInited) return;
+    hotbar._hotbarInited = true;
     const items = [
         { key: '1', icon: '🗡️', label: 'Missions', action: function() {
             if (typeof window.openBuildingPanel === 'function') window.openBuildingPanel('⚔️ Mission Hall');
@@ -67,8 +70,8 @@
             // Update icon + scene toggle
             var btn = document.getElementById('btn-toggle-sound');
             if (btn) btn.textContent = isMuted ? '🔊' : '🔇';
-            // Update hotbar slot icon
-            var slot = hotbar.children[8];
+            // Update hotbar slot icon (Weather is children[0], items start at children[1])
+            var slot = hotbar.children[9]; // items[8] = Sound = children[9]
             if (slot) {
                 slot.querySelector('span:first-child').textContent = isMuted ? '🔊' : '🔇';
                 slot.querySelector('span:nth-child(2)').textContent = isMuted ? 'Sound' : 'Muted';
@@ -78,7 +81,8 @@
             // Toggle forced day/night override
             window._forcedDayNight = window._forcedDayNight === 'night' ? 'day' : 'night';
             var isNight = window._forcedDayNight === 'night';
-            var slot = hotbar.children[9];
+            // Weather is children[0], items start at children[1], Night is items[9] = children[10]
+            var slot = hotbar.children[10];
             if (slot) {
                 slot.querySelector('span:first-child').textContent = isNight ? '☀️' : '🌙';
                 slot.querySelector('span:nth-child(2)').textContent = isNight ? 'Day' : 'Night';
