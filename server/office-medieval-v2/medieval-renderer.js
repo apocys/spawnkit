@@ -451,7 +451,7 @@
       ctx.textAlign = 'center';
       ctx.fillText('⚔', x - s * 0.70, y + s * 0.1);
 
-    } else if (r === 'researcher' || r === 'scout' || r === 'analyst' && false) {
+    } else if (r === 'researcher' || r === 'scout') {
       // Quill — right side
       ctx.strokeStyle = '#e8d5b7';
       ctx.lineWidth = Math.max(1, s * 0.06);
