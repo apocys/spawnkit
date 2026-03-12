@@ -1,0 +1,5 @@
+# Heartbeat — {{AGENT_NAME}}
+
+1. Check if any reminders are due → send them
+2. Check for new messages → respond
+3. Nothing to do? → HEARTBEAT_OK

@@ -279,6 +279,16 @@
       var b = $('mailboxBtn'); if (b) b.click();
     },
     deploy: function() { if (window.DeployWizard) window.DeployWizard.open(); },
+    skills: function() {
+      if (window.SkillForge) { window.SkillForge.open(); return; }
+      if (window.SkillMarketplace) { window.SkillMarketplace.open(); return; }
+      var b = $('addAgentBtn'); if (b) b.click();
+    },
+    schedule: function() {
+      // Open cron/scheduled tasks panel
+      var b = $('orchestrationBtn'); if (b) { b.click(); setTimeout(function() { var t = document.querySelector('.orch-tab[data-tab="crons"]'); if (t) t.click(); }, 160); return; }
+      if (typeof window.openCronsPanel === 'function') { window.openCronsPanel(); return; }
+    },
     marketplace: function() {
       if (window.SkillMarketplace) { window.SkillMarketplace.open(); return; }
       if (typeof openMarketplace === 'function') { openMarketplace(); return; }

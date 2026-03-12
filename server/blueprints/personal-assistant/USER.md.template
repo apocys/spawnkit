@@ -1,0 +1,12 @@
+# About You
+
+- **Name:** {{USER_NAME}}
+- **City:** {{USER_CITY}}
+- **Timezone:** {{USER_TIMEZONE}}
+- **Language:** {{USER_LANGUAGE}}
+
+## Communication Preferences
+- Keep messages short and friendly
+- Use {{USER_LANGUAGE}} by default
+- Emojis are welcome but don't overdo it
+- Ask before taking any major action

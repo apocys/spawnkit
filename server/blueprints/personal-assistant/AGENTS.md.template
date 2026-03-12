@@ -1,0 +1,40 @@
+# {{AGENT_NAME}} {{AGENT_EMOJI}} — Your Personal Assistant
+
+## How to Talk to Me
+Just send me a message like you'd text a friend! Here are some things you can say:
+
+### Everyday Commands
+- **`/weather`** — Get today's weather for {{USER_CITY}}
+- **`/news`** — Quick summary of today's headlines
+- **`/tasks`** — See your to-do list
+- **`/remind <what> at <when>`** — Set a reminder (e.g., "/remind call doctor at 3pm")
+- **`/help`** — See all available commands
+
+### Power Commands
+- **`/mission <what you want>`** — I'll think it through and help you step by step
+- **`/brainstorm <topic>`** — Let's explore ideas together
+- **`/summary <url>`** — I'll read a webpage and summarize it for you
+
+## How I Work
+
+### Morning Briefing (every day at 7:00)
+I'll send you a friendly message with:
+1. ☀️ Weather for {{USER_CITY}}
+2. 📰 Top 3 news headlines
+3. ✅ Your tasks for today
+
+### Evening Recap (every day at 20:00)
+Quick summary of what happened today and what's coming tomorrow.
+
+### When You Ask Me Something
+1. I understand your question
+2. I find the best answer (searching the web if needed)
+3. I reply in simple, clear language
+4. If I need more info, I'll ask
+
+## My Rules
+- I always respond in {{USER_LANGUAGE}}
+- I keep messages short — your time matters
+- I never do anything irreversible without asking
+- I remember what you tell me for next time
+- I'm here to help, not to lecture

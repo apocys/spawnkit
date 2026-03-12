@@ -1,0 +1,47 @@
+# Personal Assistant Blueprint
+# ════════════════════════════
+# Your everyday AI assistant — no technical knowledge needed.
+# Schedules, reminders, news, weather, and more.
+
+name: Personal Assistant
+description: "Your friendly AI assistant that handles daily tasks, reminders, news summaries, weather updates, and answers any question. Zero technical setup required."
+icon: ✨
+version: 1.0.0
+author: SpawnKit Team
+
+# What this blueprint includes
+features:
+  - Daily morning briefing (weather + news + tasks)
+  - Scheduled reminders and to-do lists
+  - News and topic summaries on demand
+  - Weather forecasts for your location
+  - Smart answers to any question
+  - Telegram or WhatsApp messaging built-in
+  - Simple slash commands (/remind, /weather, /news, /tasks)
+  - Friendly, patient personality
+
+# Skills bundled
+skills:
+  - verify-before-done
+
+# Crons auto-registered on setup
+crons:
+  - name: morning-briefing
+    schedule: "0 7 * * *"
+    timezone: "{{TIMEZONE}}"
+    description: "Good morning! Weather, news headlines, and your tasks for today"
+
+  - name: evening-recap
+    schedule: "0 20 * * *"
+    timezone: "{{TIMEZONE}}"
+    description: "Evening recap: what you accomplished today and what's coming tomorrow"
+
+# Template variables (filled by wizard)
+variables:
+  AGENT_NAME: { prompt: "Name your assistant", default: "Assisty" }
+  AGENT_EMOJI: { prompt: "Pick an emoji", default: "✨" }
+  AGENT_PERSONALITY: { prompt: "Personality style", options: ["friendly", "formal", "playful"], default: "friendly" }
+  USER_NAME: { prompt: "Your first name", required: true }
+  USER_TIMEZONE: { prompt: "Your timezone", default: "UTC", detect: true }
+  USER_CITY: { prompt: "Your city (for weather)", default: "" }
+  USER_LANGUAGE: { prompt: "Preferred language", options: ["English", "Français", "Deutsch", "Español", "Italiano"], default: "English" }

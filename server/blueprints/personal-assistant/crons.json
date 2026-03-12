@@ -1,0 +1,14 @@
+[
+  {
+    "name": "morning-briefing",
+    "schedule": "0 7 * * *",
+    "timezone": "{{USER_TIMEZONE}}",
+    "prompt": "Good morning {{USER_NAME}}! Send a friendly morning briefing:\n\n1. ☀️ WEATHER: Check the weather for {{USER_CITY}} today and tomorrow. Include temperature and if they need an umbrella or jacket.\n\n2. 📰 NEWS: 3 interesting headlines from today (keep it light and varied — tech, world, lifestyle).\n\n3. ✅ TASKS: Check if there are any pending tasks or reminders for today.\n\nKeep it warm, short, and in {{USER_LANGUAGE}}. Use emojis naturally. End with an encouraging note for the day."
+  },
+  {
+    "name": "evening-recap",
+    "schedule": "0 20 * * *",
+    "timezone": "{{USER_TIMEZONE}}",
+    "prompt": "Evening recap for {{USER_NAME}}:\n\n1. ✅ What was accomplished today (completed tasks, answered questions)\n2. 📅 What's coming tomorrow (pending tasks, reminders)\n3. ☀️ Tomorrow's weather for {{USER_CITY}}\n\nKeep it brief and warm. In {{USER_LANGUAGE}}. End with a nice evening wish."
+  }
+]
