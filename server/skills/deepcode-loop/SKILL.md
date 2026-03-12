@@ -4,6 +4,11 @@ description: "Build features or apps using the DeepCode user-in-loop methodology
 metadata: { "openclaw": { "emoji": "🔄", "source": "deepcode", "category": "dev" } }
 ---
 
+## 🏆 Arena Validated
+
+Battle-tested vs `large-build` (2026-03-12): **60/70 vs 43/70**. 
+Recommended as the default build skill for SpawnKit agents.
+
 # DeepCode Loop — User-in-Loop Build Methodology
 
 Understand first. Build second. Verify always.
