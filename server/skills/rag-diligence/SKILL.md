@@ -38,14 +38,22 @@ Accept file paths, URLs, or pasted text. Categorize and process.
 import os, asyncio, glob
 from rag_anything import RAGAnything, QueryParam
 
+# CLIProxyAPI — OpenAI-compatible proxy at localhost:8317/v1
+# Routes to claude-sonnet, gpt-4o, local models etc. No direct OpenAI key needed.
+PROXY_BASE_URL = os.environ.get("CLIPROXY_BASE_URL", "http://localhost:8317/v1")
+PROXY_API_KEY = os.environ.get("CLIPROXY_API_KEY", "cliproxy")
+
 rag = RAGAnything(
     working_dir="./dd_rag_index",
-    llm_model_name="gpt-4o-mini",
-    llm_model_api_key=os.environ["OPENAI_API_KEY"],
-    vlm_model_name="gpt-4o",
-    vlm_model_api_key=os.environ["OPENAI_API_KEY"],
-    embedding_model_name="text-embedding-3-small",
-    embedding_model_api_key=os.environ["OPENAI_API_KEY"],
+    llm_model_name=os.environ.get("DD_LLM_MODEL", "gpt-4o-mini"),
+    llm_model_api_key=PROXY_API_KEY,
+    llm_model_base_url=PROXY_BASE_URL,
+    vlm_model_name=os.environ.get("DD_VLM_MODEL", "gpt-4o"),
+    vlm_model_api_key=PROXY_API_KEY,
+    vlm_model_base_url=PROXY_BASE_URL,
+    embedding_model_name=os.environ.get("DD_EMBED_MODEL", "text-embedding-3-small"),
+    embedding_model_api_key=PROXY_API_KEY,
+    embedding_model_base_url=PROXY_BASE_URL,
 )
 
 # Index all documents
@@ -180,7 +188,7 @@ For multi-turn follow-ups on the same DD package, reuse `working_dir` to avoid r
 ## Limitations
 
 - **Heavy dependencies** — RAG-Anything + MinerU ≈ 2-4GB disk; first install takes minutes
-- **VLM required for visual content** — Without a VLM API key, charts/images/scanned pages are silently skipped. Configure `vlm_model_name` or accept text-only analysis.
+- **VLM required for visual content** — Without a VLM model configured, charts/images/scanned pages are silently skipped. CLIProxyAPI handles routing — no direct OpenAI key needed; set `DD_VLM_MODEL` env var to enable visual analysis.
 - **Slow first index** — 10-50 documents can take 5-30 minutes on first processing. Subsequent queries are fast.
 - **LLM cost** — VLM calls for each image/chart add up on visual-heavy documents. Budget accordingly.
 - **Not real-time** — Index is a snapshot. Won't reflect document changes after indexing.

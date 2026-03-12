@@ -445,6 +445,249 @@
             }
         });
 
+        /* ═══════════════════════════════════════════════
+           Agent Detail Panel
+           ═══════════════════════════════════════════════ */
+
+        function ensureAgentDetailPanel() {
+            var panel = document.getElementById('agent-detail-panel');
+            if (!panel) {
+                panel = document.createElement('div');
+                panel.id = 'agent-detail-panel';
+                panel.style.cssText = [
+                    'position:fixed', 'top:60px', 'right:0', 'width:300px', 'height:calc(100vh - 60px)',
+                    'background:rgba(15,15,20,0.96)', 'border-left:1px solid rgba(255,255,255,0.08)',
+                    'backdrop-filter:blur(20px)', 'z-index:900', 'display:none',
+                    'flex-direction:column', 'overflow:hidden', 'transition:transform 0.25s ease'
+                ].join(';');
+                document.body.appendChild(panel);
+            }
+            return panel;
+        }
+
+        window.showAgentDetail = function showAgentDetail(agentId) {
+            var panel = ensureAgentDetailPanel();
+            var agent = AGENTS[agentId] || { name: agentId, role: 'Agent', color: '#888', status: 'unknown', task: '' };
+            var liveData = (window.Exec.LIVE_AGENT_DATA || {})[agentId] || {};
+            var skills = liveData.skills && liveData.skills.length ? liveData.skills : (DEFAULT_SKILLS[agentId] || []);
+            var messages = (window.Exec.LIVE_MESSAGES || []).filter(function(m) {
+                return (m.sender || '').toLowerCase() === (agent.name || '').toLowerCase();
+            }).slice(0, 3);
+
+            var skillsHtml = skills.slice(0, 6).map(function(s) {
+                var name = typeof s === 'string' ? s : (s.name || 'Skill');
+                return '<span style="display:inline-block;padding:2px 8px;margin:2px;background:rgba(255,255,255,0.07);border-radius:12px;font-size:11px;color:#aaa">' + esc(name) + '</span>';
+            }).join('');
+
+            var messagesHtml = messages.length
+                ? messages.map(function(m) {
+                    return '<div style="padding:8px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:6px;font-size:12px;color:#ccc;line-height:1.4">' +
+                        '<span style="color:#666;font-size:10px">' + esc(m.time || '') + '</span><br>' +
+                        esc((m.text || '').substring(0, 120)) + (m.text && m.text.length > 120 ? '…' : '') +
+                        '</div>';
+                  }).join('')
+                : '<div style="color:#555;font-size:12px;font-style:italic">No recent messages</div>';
+
+            panel.innerHTML = '<div style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:12px">' +
+                '<div style="width:44px;height:44px;border-radius:50%;background:' + esc(agent.color) + '22;border:2px solid ' + esc(agent.color) + ';display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:' + esc(agent.color) + '">' + esc((agent.name||'?')[0]) + '</div>' +
+                '<div style="flex:1"><div style="font-weight:700;font-size:15px;color:#fff">' + esc(agent.name) + '</div>' +
+                '<div style="font-size:12px;color:#666">' + esc(agent.role) + '</div></div>' +
+                '<button onclick="window.closeAgentDetail()" style="background:none;border:none;color:#555;font-size:18px;cursor:pointer;padding:4px 8px">&times;</button>' +
+                '</div>' +
+                '<div style="padding:16px;overflow-y:auto;flex:1">' +
+                '<div style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">Current Task</div>' +
+                '<div style="font-size:13px;color:#ddd;margin-bottom:18px;line-height:1.5">' + esc(liveData.currentTask || agent.task || 'Standby') + '</div>' +
+                '<div style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">Skills</div>' +
+                '<div style="margin-bottom:18px">' + (skillsHtml || '<span style="color:#555;font-size:12px">No skills loaded</span>') + '</div>' +
+                '<div style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">Recent Messages</div>' +
+                messagesHtml +
+                '</div>';
+
+            panel.style.display = 'flex';
+            requestAnimationFrame(function() { panel.style.transform = 'translateX(0)'; });
+        };
+
+        window.closeAgentDetail = function closeAgentDetail() {
+            var panel = document.getElementById('agent-detail-panel');
+            if (panel) panel.style.display = 'none';
+        };
+
+        // Wire agent card clicks to detail panel
+        document.addEventListener('click', function(e) {
+            var card = e.target.closest('[data-agent]');
+            if (card) {
+                var agentId = card.getAttribute('data-agent');
+                if (agentId && AGENTS[agentId]) {
+                    window.showAgentDetail(agentId);
+                }
+            }
+        });
+
+        /* ═══════════════════════════════════════════════
+           Mission Hover Tooltip
+           ═══════════════════════════════════════════════ */
+
+        var _tooltipEl = null;
+        var _tooltipTimer = null;
+
+        function ensureTooltip() {
+            if (!_tooltipEl) {
+                _tooltipEl = document.createElement('div');
+                _tooltipEl.id = 'mission-tooltip';
+                _tooltipEl.style.cssText = [
+                    'position:fixed', 'z-index:9999', 'pointer-events:none',
+                    'background:rgba(10,10,18,0.95)', 'border:1px solid rgba(255,255,255,0.1)',
+                    'border-radius:10px', 'padding:10px 14px', 'max-width:240px',
+                    'backdrop-filter:blur(16px)', 'display:none',
+                    'box-shadow:0 8px 32px rgba(0,0,0,0.5)', 'font-size:12px', 'line-height:1.5'
+                ].join(';');
+                document.body.appendChild(_tooltipEl);
+            }
+            return _tooltipEl;
+        }
+
+        window.showMissionTooltip = function showMissionTooltip(missionId, x, y) {
+            var tt = ensureTooltip();
+            // Pull mission data from live store or fallback
+            var missionData = null;
+            if (window.Exec.sessionData && window.Exec.sessionData.missions) {
+                missionData = window.Exec.sessionData.missions.find(function(m) { return m.id === missionId; });
+            }
+            var name = missionData ? (missionData.name || missionId) : missionId;
+            var progress = missionData ? (missionData.progress || 0) : 0;
+            var agentCount = missionData ? (missionData.agents ? missionData.agents.length : 0) : 0;
+            var eta = missionData && missionData.eta ? missionData.eta : null;
+
+            tt.innerHTML = '<div style="font-weight:700;color:#fff;margin-bottom:6px">' + esc(name) + '</div>' +
+                '<div style="margin-bottom:4px"><div style="height:3px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">' +
+                '<div style="height:100%;width:' + progress + '%;background:linear-gradient(90deg,#0A84FF,#BF5AF2);transition:width 0.3s"></div></div>' +
+                '<span style="color:#666;font-size:11px">' + progress + '% complete</span></div>' +
+                '<div style="color:#888">' + agentCount + ' agent' + (agentCount !== 1 ? 's' : '') + ' assigned</div>' +
+                (eta ? '<div style="color:#666;margin-top:4px">ETA: ' + esc(eta) + '</div>' : '');
+
+            var margin = 12;
+            var px = Math.min(x + margin, window.innerWidth - 260);
+            var py = Math.min(y + margin, window.innerHeight - 120);
+            tt.style.left = px + 'px';
+            tt.style.top = py + 'px';
+            tt.style.display = 'block';
+        };
+
+        window.hideMissionTooltip = function hideMissionTooltip() {
+            clearTimeout(_tooltipTimer);
+            if (_tooltipEl) _tooltipEl.style.display = 'none';
+        };
+
+        // Wire mission card hovers
+        document.addEventListener('mouseover', function(e) {
+            var card = e.target.closest('[data-mission]');
+            if (!card) return;
+            var missionId = card.getAttribute('data-mission');
+            if (!missionId) return;
+            var rect = card.getBoundingClientRect();
+            clearTimeout(_tooltipTimer);
+            _tooltipTimer = setTimeout(function() {
+                window.showMissionTooltip(missionId, rect.right, rect.top);
+            }, 300);
+        });
+
+        document.addEventListener('mouseout', function(e) {
+            if (e.target.closest && e.target.closest('[data-mission]')) {
+                window.hideMissionTooltip();
+            }
+        });
+
+        /* ═══════════════════════════════════════════════
+           Drag-to-Assign: Agents → Missions
+           ═══════════════════════════════════════════════ */
+
+        var _drag = { active: false, agentId: null, el: null, x: 0, y: 0 };
+
+        function assignAgentToMission(agentId, missionId) {
+            var url = '/api/missions/' + encodeURIComponent(missionId) + '/assign';
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ agentId: agentId })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                showToast('✅ ' + (AGENTS[agentId] ? AGENTS[agentId].name : agentId) + ' assigned to mission');
+            }).catch(function(err) {
+                showToast('⚠️ Could not assign agent — ' + (err.message || 'network error'));
+            });
+        }
+
+        function createDragGhost(agentId) {
+            var agent = AGENTS[agentId] || {};
+            var ghost = document.createElement('div');
+            ghost.id = 'drag-ghost';
+            ghost.style.cssText = [
+                'position:fixed', 'z-index:10000', 'pointer-events:none',
+                'padding:6px 12px', 'border-radius:20px', 'font-size:12px', 'font-weight:600',
+                'background:' + (agent.color || '#888') + '33',
+                'border:1px solid ' + (agent.color || '#888'),
+                'color:' + (agent.color || '#888'),
+                'backdrop-filter:blur(8px)', 'opacity:0.9', 'transform:scale(1.05)'
+            ].join(';');
+            ghost.textContent = (agent.name || agentId) + ' →';
+            document.body.appendChild(ghost);
+            return ghost;
+        }
+
+        document.addEventListener('mousedown', function(e) {
+            var card = e.target.closest('[data-agent][draggable="true"], [data-agent].draggable');
+            if (!card) return;
+            var agentId = card.getAttribute('data-agent');
+            if (!agentId || !AGENTS[agentId]) return;
+
+            _drag.active = false; // wait for movement threshold
+            _drag.agentId = agentId;
+            _drag.startX = e.clientX;
+            _drag.startY = e.clientY;
+            _drag.el = null;
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!_drag.agentId) return;
+            var dx = e.clientX - (_drag.startX || 0);
+            var dy = e.clientY - (_drag.startY || 0);
+            if (!_drag.active && Math.sqrt(dx*dx + dy*dy) > 6) {
+                _drag.active = true;
+                _drag.el = createDragGhost(_drag.agentId);
+            }
+            if (_drag.active && _drag.el) {
+                _drag.el.style.left = (e.clientX + 12) + 'px';
+                _drag.el.style.top = (e.clientY - 16) + 'px';
+                // Highlight mission targets under cursor
+                document.querySelectorAll('[data-mission].drag-over').forEach(function(el) { el.classList.remove('drag-over'); });
+                var under = document.elementFromPoint(e.clientX, e.clientY);
+                var missionCard = under && under.closest('[data-mission]');
+                if (missionCard) missionCard.classList.add('drag-over');
+            }
+        });
+
+        document.addEventListener('mouseup', function(e) {
+            if (!_drag.active) { _drag.agentId = null; return; }
+            // Remove ghost
+            if (_drag.el) { _drag.el.remove(); _drag.el = null; }
+            document.querySelectorAll('[data-mission].drag-over').forEach(function(el) { el.classList.remove('drag-over'); });
+            // Check drop target
+            var under = document.elementFromPoint(e.clientX, e.clientY);
+            var missionCard = under && under.closest('[data-mission]');
+            if (missionCard && _drag.agentId) {
+                var missionId = missionCard.getAttribute('data-mission');
+                if (missionId) assignAgentToMission(_drag.agentId, missionId);
+            }
+            _drag.active = false;
+            _drag.agentId = null;
+        });
+
+        // Inject drag-over highlight style
+        (function() {
+            var st = document.createElement('style');
+            st.textContent = '[data-mission].drag-over{outline:2px solid #0A84FF !important;box-shadow:0 0 16px rgba(10,132,255,0.3) !important;transition:box-shadow 0.1s}';
+            document.head.appendChild(st);
+        })();
+
         } catch(e) {
             console.error('SpawnKit Executive initialization error:', e);
             var errorMsg = e.message ? String(e.message).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : 'Unknown error';
