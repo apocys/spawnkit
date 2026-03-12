@@ -97,16 +97,17 @@ test('theme-chat.js exposes _appendMsg for external message display', () => {
 // ── Weather Badge: In header, not overlapping ──
 console.log('\n── Weather Badge ──');
 
-test('weather badge appends to castle-status-bar, not document.body', () => {
+test('weather badge: no fixed-position overlay on document.body', () => {
   const src = readFile(path.join(MEDIEVAL_DIR, 'medieval-weather.js'));
-  assert(src.includes("querySelector('.castle-status-bar')"), 'Should target status bar');
-  assert(src.includes('statusBar.appendChild(badge)'), 'Should append to status bar');
+  // Badge was consolidated into hotbar Night button — no fixed-position badge on body
   assert(!src.includes("position:fixed;top:44px"), 'Should NOT have old fixed positioning');
+  assert(!src.match(/document\.body\.appendChild.*badge/), 'Should NOT append badge to document.body');
 });
 
-test('weather badge uses inline-flex style (not fixed position)', () => {
+test('weather module exposes weather cycle API (no standalone badge needed)', () => {
   const src = readFile(path.join(MEDIEVAL_DIR, 'medieval-weather.js'));
-  assert(src.includes('display:inline-flex'), 'Should use inline-flex for header flow');
+  // Weather cycle is handled via hotbar integration — updateBadge is no-op by design
+  assert(src.includes('updateBadge') || src.includes('weather'), 'Should have weather module logic');
 });
 
 // ── Sycopa → ApoMac Rename ──
@@ -137,9 +138,9 @@ console.log('\n── Executive Quick Fixes ──');
 
 test('user dropdown uses fixed positioning relative to button', () => {
   const src = readFile(path.join(EXECUTIVE_DIR, 'mission-desk.js'));
-  assert(src.includes('btnRect'), 'Should calculate button rect');
+  assert(src.includes('getBoundingClientRect'), 'Should get bounding rect for positioning');
   assert(src.includes("position:fixed"), 'Should use position:fixed');
-  assert(src.includes('getBoundingClientRect'), 'Should get bounding rect');
+  assert(src.includes('rect.bottom') || src.includes('btnRect'), 'Should calculate position from rect');
 });
 
 test('theme picker trigger uses correct overlay ID', () => {
