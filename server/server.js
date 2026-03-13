@@ -1981,6 +1981,7 @@ const { generateSOUL, generateIDENTITY, generateAGENTS } = require('./agent-temp
   // POST /api/spawn-subagent — Spawn sub-agent for arena battles
   if (req.url === '/api/spawn-subagent' && req.method === 'POST') {
     if (cors(req, res)) return;
+    if (!token) { res.writeHead(401); res.end(JSON.stringify({error:'unauthorized'})); return; }
     const body = await readBody(req);
     try {
       const data = JSON.parse(body);
@@ -1996,6 +1997,7 @@ const { generateSOUL, generateIDENTITY, generateAGENTS } = require('./agent-temp
   // POST /api/subagent-status — Get sub-agent status
   if (req.url === '/api/subagent-status' && req.method === 'POST') {
     if (cors(req, res)) return;
+    if (!token) { res.writeHead(401); res.end(JSON.stringify({error:'unauthorized'})); return; }
     const body = await readBody(req);
     try {
       const data = JSON.parse(body);
