@@ -21,52 +21,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Validate JSON files
-        run: |
-          echo "🔍 Validating JSON files..."
-          FAILED=0
-          for f in $(find . -name "*.json" -not -path "./.git/*" -not -path "*/node_modules/*"); do
-            if node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" 2>/dev/null; then
-              echo "  ✅ $f"
-            else
-              echo "  ❌ $f — invalid JSON"
-              FAILED=1
-            fi
-          done
-          if [ "$FAILED" -eq 1 ]; then
-            echo "One or more JSON files failed validation."
-            exit 1
-          fi
-          echo "All JSON files are valid."
-
-      - name: Check JS syntax (src/ + server/)
-        run: |
-          echo "🔍 Checking JS syntax..."
-          FAILED=0
-          for DIR in src server; do
-            JS_FILES=$(find $DIR/ -name "*.js" -not -path "*/node_modules/*" 2>/dev/null)
-            if [ -z "$JS_FILES" ]; then
-              echo "  No .js files found in $DIR/ — skipping."
-              continue
-            fi
-            for f in $JS_FILES; do
-              if node --check "$f" 2>/dev/null; then
-                echo "  ✅ $f"
-              else
-                echo "  ❌ $f — syntax error"
-                node --check "$f" || true
-                FAILED=1
-              fi
-            done
-          done
-          if [ "$FAILED" -eq 1 ]; then
-            echo "One or more JS files have syntax errors."
-            exit 1
-          fi
-          echo "All JS files passed syntax check."
+      - name: Lint JS + JSON
+        run: node scripts/lint.js
 
       - name: Run unit tests
-        run: npm test
+        run: npm run test:unit
 
   # ──────────────────────────────────────────────
   # Job 2: Binary bloat detection

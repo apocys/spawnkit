@@ -13,8 +13,7 @@ jobs:
   deploy:
     name: 🚀 Deploy to VPS
     runs-on: ubuntu-latest
-    # Only deploy if tests pass
-    needs: []
+    if: ${{ secrets.HETZNER_HOST != '' }}
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
