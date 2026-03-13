@@ -387,7 +387,14 @@
                 return s.label && s.label.toLowerCase().indexOf(id) >= 0 && s.kind === 'subagent';
             });
             var isActive = liveSession ? liveSession.status === 'active' : false;
-            var dotColor = isActive ? '#4ade80' : '#64748b';
+            
+            // Show idle agents even without sessions (demo mode)
+            if (!isActive && arr.length === 0) {
+                // Demo mode - show all agents as idle
+                dotColor = '#64748b';
+            } else {
+                dotColor = isActive ? '#4ade80' : '#64748b';
+            }
 
             html += '<div class="mc-fleet-pill" data-agent="' + escMc(id) + '">';
             html += '<div class="mc-fleet-pill-dot" style="background:' + dotColor + ';' + (isActive ? 'animation:statusPulse 2.5s infinite;' : '') + '"></div>';

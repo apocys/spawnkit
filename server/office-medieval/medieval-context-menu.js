@@ -61,9 +61,12 @@
 
   function handleRightClick(event) {
     event.preventDefault();
+    
+    if (!mouse) return; // null guard as suggested by Sycopa
 
     // Calculate mouse position
     var rect = event.target.getBoundingClientRect();
+    if (!rect) return; // rect safety guard
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
