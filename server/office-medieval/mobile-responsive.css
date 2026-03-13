@@ -1,0 +1,249 @@
+/* Medieval Mobile Responsive Styles */
+
+/* Tablet breakpoint */
+@media (max-width: 1024px) {
+  .castle-sidebar {
+    width: 280px;
+  }
+  
+  .castle-main {
+    margin-left: 280px;
+  }
+}
+
+/* Mobile landscape breakpoint */
+@media (max-width: 768px) {
+  /* Collapsible sidebar */
+  .castle-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+  
+  .castle-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  
+  .castle-main {
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  /* Mobile hamburger menu */
+  .mobile-menu-toggle {
+    display: block !important;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 1001;
+    background: rgba(20, 12, 5, 0.9);
+    border: 1px solid var(--castle-gold);
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--castle-gold);
+    font-size: 18px;
+    backdrop-filter: blur(4px);
+  }
+  
+  /* Backdrop when sidebar open */
+  .mobile-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+  
+  .mobile-backdrop.active {
+    display: block;
+  }
+  
+  /* Hotbar compact mode */
+  .hotbar {
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px;
+    gap: 4px;
+    flex-wrap: wrap;
+    max-width: 90vw;
+  }
+  
+  .hotbar-item {
+    min-width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+  
+  /* Minimap smaller */
+  #minimap-overlay {
+    width: 100px !important;
+    height: 100px !important;
+    top: 16px !important;
+    right: 16px !important;
+  }
+  
+  /* Agent detail panel smaller */
+  .agent-detail-panel {
+    padding: 16px;
+    max-width: 90vw;
+    margin: 16px;
+  }
+  
+  /* Chat panel full width */
+  #medievalChat {
+    right: 8px !important;
+    left: 8px !important;
+    bottom: 60px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+  
+  /* Canvas touch controls */
+  .castle-main canvas {
+    touch-action: pan-x pan-y;
+  }
+}
+
+/* Mobile portrait breakpoint */
+@media (max-width: 480px) {
+  /* Full mobile mode */
+  .castle-sidebar {
+    width: 100vw;
+  }
+  
+  .mobile-menu-toggle {
+    top: 12px;
+    left: 12px;
+    padding: 6px;
+    font-size: 16px;
+  }
+  
+  /* Hotbar extra compact */
+  .hotbar {
+    bottom: 4px;
+    padding: 2px;
+    gap: 2px;
+  }
+  
+  .hotbar-item {
+    min-width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+  
+  /* Minimap even smaller */
+  #minimap-overlay {
+    width: 80px !important;
+    height: 80px !important;
+    top: 12px !important;
+    right: 12px !important;
+  }
+  
+  /* Onboarding overlay adjustments */
+  .sk-med-ob-overlay {
+    padding-bottom: 60px;
+  }
+  
+  .sk-med-ob-herald-wrap {
+    padding: 20px 16px;
+    margin: 0 8px;
+  }
+  
+  /* Panel overlays full screen */
+  .agent-detail-panel,
+  .customize-overlay .customize-panel {
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    padding: 16px;
+  }
+  
+  /* Chat full screen when open */
+  #medievalChat {
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    border-radius: 0 !important;
+    height: 100vh !important;
+  }
+  
+  .sk-chat-header {
+    padding: 12px 16px;
+  }
+  
+  .sk-chat-messages {
+    padding: 0 16px;
+  }
+  
+  .sk-chat-input-bar {
+    padding: 12px 16px;
+  }
+  
+  /* Map editor palette compact */
+  .map-editor-palette {
+    bottom: 50px !important;
+    left: 8px !important;
+    right: 8px !important;
+    padding: 8px !important;
+    flex-wrap: wrap;
+  }
+  
+  .map-editor-item {
+    min-width: 60px;
+    padding: 8px;
+    font-size: 10px;
+  }
+}
+
+/* Landscape phone adjustments */
+@media (max-width: 896px) and (max-height: 414px) and (orientation: landscape) {
+  .hotbar {
+    right: 16px;
+    left: auto;
+    transform: none;
+    flex-direction: column;
+    bottom: 50%;
+    transform: translateY(50%);
+  }
+  
+  .mobile-menu-toggle {
+    top: 8px;
+    left: 8px;
+  }
+  
+  #minimap-overlay {
+    top: 8px !important;
+    right: 80px !important;
+  }
+}
+
+/* Hide mobile menu toggle on desktop */
+.mobile-menu-toggle {
+  display: none;
+}
+
+/* Touch-friendly adjustments */
+@media (pointer: coarse) {
+  .hotbar-item {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .castle-sidebar .stats .stat-item {
+    padding: 8px;
+  }
+  
+  button,
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
