@@ -389,6 +389,7 @@
             var isActive = liveSession ? liveSession.status === 'active' : false;
             
             // Show idle agents even without sessions (demo mode)
+            var dotColor;
             if (!isActive && arr.length === 0) {
                 // Demo mode - show all agents as idle
                 dotColor = '#64748b';
