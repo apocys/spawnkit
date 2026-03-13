@@ -293,7 +293,7 @@
                 var sess = window.OcStore.sessions[si];
                 if (agentLower === 'sycopa' || agentLower === 'ceo') {
                     if (sess.key && sess.key.startsWith('agent:main')) { sessionKey = sess.key; break; }
-                } else if (sess.kind === 'subagent' && sess.label && sess.label.toLowerCase().indexOf(agentLower) >= 0) {
+                } else if (sess.kind === 'subagent' && sess.label && (sess.label.toLowerCase() === agentLower || sess.label.toLowerCase().startsWith(agentLower + '-') || sess.label.toLowerCase().startsWith(agentLower + '_'))) {
                     sessionKey = sess.key; break;
                 }
             }

@@ -1037,8 +1037,7 @@ ${customBlock}`;
 
   // ═══ END AGENT CREATION SYSTEM ═══════════════════════════════════════
 
-  // POST /api/brainstorm — Brainstorm question → CEO analysis via gateway chat
-  // ── MCP Server Management ────────────────────────────────────────────
+    // ── MCP Server Management ────────────────────────────────────────────
   const OC_CONFIG_PATH = path.join(process.env.HOME || '', '.openclaw', 'openclaw.json');
 
   function readOcConfig() {
@@ -1117,16 +1116,18 @@ ${customBlock}`;
   }
 
   // ── Agent Configuration ───────────────────────────────────────────────
-  if (req.url === '/api/oc/agents/config' && req.method === 'GET') {
+  if (req.url.replace(/\?.*/, '') === '/api/oc/agents/config' && req.method === 'GET') {
     res.setHeader('Content-Type', 'application/json');
     try {
       const config = readOcConfig();
       const agentsConfig = config.agents || {};
-      // Also read per-agent files from fleet/agents/
+      const queryAgentId = new URL(req.url, 'http://localhost').searchParams.get('agentId');
+      // Read per-agent files from fleet/agents/
       const agentsDir = path.join(WORKSPACE, 'fleet', 'agents');
       const agentFiles = {};
       if (fs.existsSync(agentsDir)) {
-        fs.readdirSync(agentsDir).forEach(function(dir) {
+        const dirs = queryAgentId ? [queryAgentId] : fs.readdirSync(agentsDir);
+        dirs.forEach(function(dir) {
           const configPath = path.join(agentsDir, dir, 'config.json');
           if (fs.existsSync(configPath)) {
             try { agentFiles[dir] = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch(e) {}
@@ -1134,7 +1135,7 @@ ${customBlock}`;
         });
       }
       res.writeHead(200);
-      res.end(JSON.stringify({ ok: true, global: agentsConfig, agents: agentFiles }));
+      res.end(JSON.stringify({ ok: true, global: queryAgentId ? undefined : agentsConfig, agents: agentFiles }));
     } catch(e) {
       res.writeHead(500);
       res.end(JSON.stringify({ error: e.message }));

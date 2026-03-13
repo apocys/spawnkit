@@ -622,6 +622,22 @@
             var stored = {};
             try { stored = JSON.parse(localStorage.getItem('spawnkit-config') || '{}'); } catch(e) {}
 
+            // Hydrate MCP list from server (merge server→localStorage)
+            var fetcher = window.skFetch || fetch;
+            fetcher('/api/oc/mcp').then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok && data.servers) {
+                    var serverList = Object.keys(data.servers).map(function(name) {
+                        var s = data.servers[name];
+                        return { name: name, transport: s.transport || 'stdio', command: s.command, url: s.url, env: s.env };
+                    });
+                    // Merge: server is source of truth
+                    var config = {}; try { config = JSON.parse(localStorage.getItem('spawnkit-config') || '{}'); } catch(e) { config = {}; }
+                    config.mcpServers = serverList;
+                    localStorage.setItem('spawnkit-config', JSON.stringify(config));
+                }
+            }).catch(function() { /* server offline, use localStorage */ });
+
             var html = '';
             html += '<div style="font-size:11px;text-transform:uppercase;font-weight:600;color:var(--text-tertiary);letter-spacing:0.5px;margin-bottom:12px;">Connection Settings</div>';
             
