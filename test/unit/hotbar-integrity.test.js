@@ -30,36 +30,18 @@ describe('hotbar-integrity', () => {
     assert.ok(content.trimStart().startsWith('(function'), 'starts with IIFE');
   });
 
-  test('has exactly 10 hotbar items (keys 1-9 and 0)', () => {
+  test('has exactly 8 hotbar items (consolidated: keys 1-8)', () => {
     if (!content) content = fs.readFileSync(HOTBAR_FILE, 'utf8');
     const keyMatches = content.match(/\{ key: '[0-9]'/g);
     assert.ok(keyMatches, 'has key entries');
-    assert.equal(keyMatches.length, 10, `expected 10 items, got ${keyMatches.length}`);
+    assert.equal(keyMatches.length, 8, `expected 8 items, got ${keyMatches.length}`);
   });
 
-  test('has key 1', () => {
+  test('has keys 1-8', () => {
     if (!content) content = fs.readFileSync(HOTBAR_FILE, 'utf8');
-    assert.ok(content.includes("key: '1'"), 'has key 1');
-  });
-
-  test('has key 2', () => {
-    if (!content) content = fs.readFileSync(HOTBAR_FILE, 'utf8');
-    assert.ok(content.includes("key: '2'"), 'has key 2');
-  });
-
-  test('has key 3', () => {
-    if (!content) content = fs.readFileSync(HOTBAR_FILE, 'utf8');
-    assert.ok(content.includes("key: '3'"), 'has key 3');
-  });
-
-  test('has key 9', () => {
-    if (!content) content = fs.readFileSync(HOTBAR_FILE, 'utf8');
-    assert.ok(content.includes("key: '9'"), 'has key 9');
-  });
-
-  test('has key 0', () => {
-    if (!content) content = fs.readFileSync(HOTBAR_FILE, 'utf8');
-    assert.ok(content.includes("key: '0'"), 'has key 0');
+    for (var i = 1; i <= 8; i++) {
+      assert.ok(content.includes("key: '" + i + "'"), 'has key ' + i);
+    }
   });
 
   test('no duplicate keys', () => {
@@ -74,40 +56,38 @@ describe('hotbar-integrity', () => {
     assert.equal(keys.length, uniqueKeys.size, `duplicate keys found: ${keys}`);
   });
 
-  test('each item has icon property (at least 10)', () => {
+  test('each item has icon, label, action properties', () => {
     if (!content) content = fs.readFileSync(HOTBAR_FILE, 'utf8');
-    // Count icon: appearances — should be at least 10
     const iconMatches = content.match(/icon: '/g);
-    assert.ok(iconMatches, 'has icon entries');
-    assert.ok(iconMatches.length >= 10, `expected at least 10 icon entries, got ${iconMatches.length}`);
-  });
-
-  test('each item has label property (at least 10)', () => {
-    if (!content) content = fs.readFileSync(HOTBAR_FILE, 'utf8');
     const labelMatches = content.match(/label: '/g);
-    assert.ok(labelMatches, 'has label entries');
-    assert.ok(labelMatches.length >= 10, `expected at least 10 label entries, got ${labelMatches.length}`);
-  });
-
-  test('each item has action property', () => {
-    if (!content) content = fs.readFileSync(HOTBAR_FILE, 'utf8');
     const actionMatches = content.match(/action: function/g);
-    assert.ok(actionMatches, 'has action entries');
-    assert.equal(actionMatches.length, 10, `expected 10 action entries, got ${actionMatches.length}`);
+    assert.ok(iconMatches && iconMatches.length >= 8, `expected >=8 icon entries, got ${iconMatches ? iconMatches.length : 0}`);
+    assert.ok(labelMatches && labelMatches.length >= 8, `expected >=8 label entries, got ${labelMatches ? labelMatches.length : 0}`);
+    assert.ok(actionMatches && actionMatches.length >= 8, `expected >=8 action entries, got ${actionMatches ? actionMatches.length : 0}`);
   });
 
-  test('item 1 label is Missions', () => {
+  test('core items present: Missions, Chat, Skills, Map, Arena, Summon, Allies, More', () => {
     if (!content) content = fs.readFileSync(HOTBAR_FILE, 'utf8');
-    assert.ok(content.includes("label: 'Missions'"), 'item 1 label is Missions');
+    ['Missions', 'Chat', 'Skills', 'Map', 'Arena', 'Summon', 'Allies', 'More'].forEach(function(label) {
+      assert.ok(content.includes("label: '" + label + "'"), 'has ' + label);
+    });
   });
 
-  test('item 2 label is Chat', () => {
+  test('More menu has secondary items (Settings, Edit Mode, Audio, Themes)', () => {
     if (!content) content = fs.readFileSync(HOTBAR_FILE, 'utf8');
-    assert.ok(content.includes("label: 'Chat'"), 'item 2 label is Chat');
+    assert.ok(content.includes("'Settings'"), 'More menu has Settings');
+    assert.ok(content.includes("'Edit Mode'"), 'More menu has Edit Mode');
+    assert.ok(content.includes("'Audio'"), 'More menu has Audio');
+    assert.ok(content.includes("'Themes'"), 'More menu has Themes');
   });
 
   test('hotbar items array is defined', () => {
     if (!content) content = fs.readFileSync(HOTBAR_FILE, 'utf8');
-    assert.ok(content.includes('const items = ['), 'items array is defined');
+    assert.ok(content.includes('var items = ['), 'items array is defined');
+  });
+
+  test('hotbar.innerHTML cleared to prevent duplicates', () => {
+    if (!content) content = fs.readFileSync(HOTBAR_FILE, 'utf8');
+    assert.ok(content.includes("hotbar.innerHTML = ''"), 'clears innerHTML before building');
   });
 });
