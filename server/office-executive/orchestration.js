@@ -790,7 +790,7 @@
                 });
         };
 
-        // ── MCP Server Management ──
+        // ── MCP Server Management (API-backed) ──
         window.showAddMcpForm = function() {
             var form = document.getElementById('mcpAddForm');
             if (form) form.style.display = 'block';
@@ -806,17 +806,57 @@
             envText.split('\n').forEach(function(line) {
                 var parts = line.split('='); if (parts.length >= 2) env[parts[0].trim()] = parts.slice(1).join('=').trim();
             });
-            var config = {}; try { config = JSON.parse(localStorage.getItem('spawnkit-config') || '{}'); } catch(e) { config = {}; }
-            if (!Array.isArray(config.mcpServers)) config.mcpServers = [];
-            config.mcpServers.push({ name: name, transport: transport, command: transport === 'stdio' ? command : undefined, url: transport === 'sse' ? command : undefined, env: Object.keys(env).length ? env : undefined });
-            localStorage.setItem('spawnkit-config', JSON.stringify(config));
-            loadOrchSetup();
+            var btn = document.querySelector('#mcpAddForm button[onclick*="saveMcpServer"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+            var fetcher = window.skFetch || fetch;
+            fetcher('/api/oc/mcp', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    name: name,
+                    transport: transport,
+                    command: transport === 'stdio' ? command : undefined,
+                    url: transport === 'sse' ? command : undefined,
+                    env: Object.keys(env).length ? env : undefined
+                })
+            }).then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok) {
+                    if (typeof showToast === 'function') showToast('✅ MCP server "' + name + '" added to OpenClaw config');
+                    // Also sync to localStorage for UI display
+                    var config = {}; try { config = JSON.parse(localStorage.getItem('spawnkit-config') || '{}'); } catch(e) { config = {}; }
+                    if (!Array.isArray(config.mcpServers)) config.mcpServers = [];
+                    config.mcpServers.push({ name: name, transport: transport, command: transport === 'stdio' ? command : undefined, url: transport === 'sse' ? command : undefined, env: Object.keys(env).length ? env : undefined });
+                    localStorage.setItem('spawnkit-config', JSON.stringify(config));
+                    loadOrchSetup();
+                } else {
+                    alert('Error saving MCP server: ' + (data.error || 'Unknown'));
+                }
+            }).catch(function(e) {
+                alert('Failed to save MCP server: ' + e.message);
+            }).finally(function() {
+                if (btn) { btn.disabled = false; btn.textContent = 'Save Server'; }
+            });
         };
 
         window.removeMcpServer = function(index) {
             if (!confirm('Remove this MCP server?')) return;
             var config = {}; try { config = JSON.parse(localStorage.getItem('spawnkit-config') || '{}'); } catch(e) { config = {}; }
-            if (Array.isArray(config.mcpServers)) { config.mcpServers.splice(index, 1); localStorage.setItem('spawnkit-config', JSON.stringify(config)); }
+            var serverName = '';
+            if (Array.isArray(config.mcpServers) && config.mcpServers[index]) {
+                serverName = config.mcpServers[index].name;
+                config.mcpServers.splice(index, 1);
+                localStorage.setItem('spawnkit-config', JSON.stringify(config));
+            }
+            // Also remove from OpenClaw config
+            if (serverName) {
+                var fetcher = window.skFetch || fetch;
+                fetcher('/api/oc/mcp/' + encodeURIComponent(serverName), { method: 'DELETE' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.ok && typeof showToast === 'function') showToast('🗑️ MCP server "' + serverName + '" removed');
+                }).catch(function() {});
+            }
             loadOrchSetup();
         };
 

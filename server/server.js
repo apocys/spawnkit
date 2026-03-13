@@ -1037,6 +1037,192 @@ ${customBlock}`;
 
   // ═══ END AGENT CREATION SYSTEM ═══════════════════════════════════════
 
+  // POST /api/brainstorm — Brainstorm question → CEO analysis via gateway chat
+  // ── MCP Server Management ────────────────────────────────────────────
+  const OC_CONFIG_PATH = path.join(process.env.HOME || '', '.openclaw', 'openclaw.json');
+
+  function readOcConfig() {
+    try { return JSON.parse(fs.readFileSync(OC_CONFIG_PATH, 'utf8')); } catch(e) { return {}; }
+  }
+  function writeOcConfig(config) {
+    fs.writeFileSync(OC_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
+  }
+
+  if (req.url === '/api/oc/mcp' && req.method === 'GET') {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+      const config = readOcConfig();
+      // MCP servers can live under tools.mcpServers (OpenClaw convention)
+      const mcpServers = config.tools?.mcpServers || {};
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, servers: mcpServers }));
+    } catch(e) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  if (req.url === '/api/oc/mcp' && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json');
+    const body = await readBody(req);
+    const { name, transport, command, url: mcpUrl, env: mcpEnv } = body || {};
+    if (!name) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: 'Missing server name' }));
+      return;
+    }
+    try {
+      const config = readOcConfig();
+      if (!config.tools) config.tools = {};
+      if (!config.tools.mcpServers) config.tools.mcpServers = {};
+      const entry = { transport: transport || 'stdio' };
+      if (transport === 'sse' && mcpUrl) entry.url = mcpUrl;
+      else if (command) entry.command = command;
+      if (mcpEnv && typeof mcpEnv === 'object' && Object.keys(mcpEnv).length > 0) entry.env = mcpEnv;
+      config.tools.mcpServers[name] = entry;
+      writeOcConfig(config);
+      console.log('[mcp] Added MCP server:', name);
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, server: name }));
+    } catch(e) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  if (req.url.startsWith('/api/oc/mcp/') && req.method === 'DELETE') {
+    res.setHeader('Content-Type', 'application/json');
+    const serverName = decodeURIComponent(req.url.replace('/api/oc/mcp/', '').split('?')[0]);
+    if (!serverName) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: 'Missing server name' }));
+      return;
+    }
+    try {
+      const config = readOcConfig();
+      if (config.tools?.mcpServers?.[serverName]) {
+        delete config.tools.mcpServers[serverName];
+        writeOcConfig(config);
+        console.log('[mcp] Removed MCP server:', serverName);
+      }
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, removed: serverName }));
+    } catch(e) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // ── Agent Configuration ───────────────────────────────────────────────
+  if (req.url === '/api/oc/agents/config' && req.method === 'GET') {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+      const config = readOcConfig();
+      const agentsConfig = config.agents || {};
+      // Also read per-agent files from fleet/agents/
+      const agentsDir = path.join(WORKSPACE, 'fleet', 'agents');
+      const agentFiles = {};
+      if (fs.existsSync(agentsDir)) {
+        fs.readdirSync(agentsDir).forEach(function(dir) {
+          const configPath = path.join(agentsDir, dir, 'config.json');
+          if (fs.existsSync(configPath)) {
+            try { agentFiles[dir] = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch(e) {}
+          }
+        });
+      }
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, global: agentsConfig, agents: agentFiles }));
+    } catch(e) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  if (req.url === '/api/oc/agents/config' && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json');
+    const body = await readBody(req);
+    const { agentId, model, skills, traits, name: agentName } = body || {};
+    if (!agentId) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: 'Missing agentId' }));
+      return;
+    }
+    try {
+      // Persist to fleet/agents/<agentId>/config.json
+      const agentsDir = path.join(WORKSPACE, 'fleet', 'agents');
+      const agentDir = path.join(agentsDir, agentId);
+      if (!fs.existsSync(agentDir)) fs.mkdirSync(agentDir, { recursive: true });
+      const configPath = path.join(agentDir, 'config.json');
+      let existing = {};
+      if (fs.existsSync(configPath)) {
+        try { existing = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch(e) {}
+      }
+      if (model) existing.model = model;
+      if (skills) existing.skills = skills;
+      if (traits) existing.traits = traits;
+      if (agentName) existing.name = agentName;
+      existing.updatedAt = new Date().toISOString();
+      fs.writeFileSync(configPath, JSON.stringify(existing, null, 2), 'utf8');
+      console.log('[agents] Updated config for:', agentId);
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, agentId, config: existing }));
+    } catch(e) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  if (req.url.replace(/\?.*/, '') === '/api/brainstorm' && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json');
+    const body = await readBody(req);
+    const question = body?.question;
+    const complexity = body?.complexity || 'quick';
+    console.log('[brainstorm] question:', (question||'').substring(0, 80), '| complexity:', complexity);
+    if (!question || typeof question !== 'string') {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: 'Missing question field' }));
+      return;
+    }
+    try {
+      // Route brainstorm to the main agent via gateway chat completions
+      const brainstormPrompt = question;
+      const resp = await fetch(OC_GATEWAY + '/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + OC_TOKEN,
+        },
+        body: JSON.stringify({
+          model: 'openclaw:main',
+          messages: [{ role: 'user', content: brainstormPrompt }],
+          stream: false,
+        }),
+      });
+      if (!resp.ok) {
+        const errText = await resp.text();
+        console.error('[brainstorm] Gateway error:', resp.status, errText.substring(0, 200));
+        res.writeHead(502);
+        res.end(JSON.stringify({ error: 'Gateway error', status: resp.status }));
+        return;
+      }
+      const data = await resp.json();
+      const answer = data?.choices?.[0]?.message?.content || '(No response from agent)';
+      console.log('[brainstorm] Answer received:', answer.substring(0, 80));
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, answer, complexity }));
+    } catch (e) {
+      console.error('[brainstorm] Error:', e.message);
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: 'Brainstorm failed', detail: e.message }));
+    }
+    return;
+  }
+
   // POST /api/oc/chat — Send message to OpenClaw agent via gateway
   if (req.url.replace(/\?.*/, '') === '/api/oc/chat' && req.method === 'POST') {
     res.setHeader('Content-Type', 'application/json');

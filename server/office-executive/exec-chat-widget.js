@@ -285,10 +285,24 @@
         // Prefix with agent persona if not the default
         var prefix = _activeAgent.id !== 'sycopa' ? '[Speaking to ' + _activeAgent.name + '] ' : '';
 
+        // Try to find an active sessionKey for this agent from OcStore
+        var sessionKey = null;
+        if (window.OcStore && window.OcStore.sessions) {
+            var agentLower = (_activeAgent.id || '').toLowerCase();
+            for (var si = 0; si < window.OcStore.sessions.length; si++) {
+                var sess = window.OcStore.sessions[si];
+                if (agentLower === 'sycopa' || agentLower === 'ceo') {
+                    if (sess.key && sess.key.startsWith('agent:main')) { sessionKey = sess.key; break; }
+                } else if (sess.kind === 'subagent' && sess.label && sess.label.toLowerCase().indexOf(agentLower) >= 0) {
+                    sessionKey = sess.key; break;
+                }
+            }
+        }
+
         skFetch(API_URL + '/api/oc/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: prefix + text, persona: _activeAgent.id }),
+            body: JSON.stringify({ message: prefix + text, persona: _activeAgent.id, sessionKey: sessionKey }),
         }).then(function (r) { return r.json(); }).then(function (data) {
             var reply = '';
             if (data.choices && data.choices[0] && data.choices[0].message) {

@@ -838,7 +838,7 @@ function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;
     var container = document.getElementById('missionDeskTasks');
     if (!container) return;
     
-    var todoRaw = data.todo || '';
+    var todoRaw = data.todo || (data.memory && data.memory.todo) || '';
     if (!todoRaw && !localStorage.getItem('spawnkit-token') && !window.__skDemoMode) {
       container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-secondary);font-size:13px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:12px;">Connect to see your tasks</div>';
       return;
@@ -859,6 +859,14 @@ function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;
         }
       }
     }
+
+    // Include locally-added tasks
+    try {
+      var extraTasks = JSON.parse(localStorage.getItem('spawnkit-extra-tasks') || '[]');
+      extraTasks.forEach(function(t) {
+        if (t.text) tasks.unshift({ done: !!t.done, text: t.text });
+      });
+    } catch(e) {}
 
     // Default demo tasks if empty in demo mode
     if (tasks.length === 0 && window.__skDemoMode) {
@@ -888,6 +896,42 @@ function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;
     }
     html += '</div>';
     container.innerHTML = html;
+  }
+
+  // Add Task button handler
+  var addTaskBtn = document.getElementById('mdAddTaskBtn');
+  if (addTaskBtn) {
+    addTaskBtn.addEventListener('click', function() {
+      var container = document.getElementById('missionDeskTasks');
+      if (!container) return;
+      // Check if form already exists
+      if (document.getElementById('mdAddTaskForm')) return;
+      var form = document.createElement('div');
+      form.id = 'mdAddTaskForm';
+      form.style.cssText = 'display:flex;gap:8px;padding:10px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:12px;margin-bottom:8px;';
+      form.innerHTML = '<input id="mdAddTaskInput" type="text" placeholder="New task..." style="flex:1;padding:8px 12px;border:1px solid var(--border-medium);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg-primary);color:var(--text-primary);" />'
+        + '<button id="mdAddTaskConfirm" style="padding:8px 14px;border-radius:8px;border:none;background:var(--exec-blue);color:white;font-size:12px;font-weight:600;cursor:pointer;">Add</button>';
+      container.insertBefore(form, container.firstChild);
+      var input = document.getElementById('mdAddTaskInput');
+      input.focus();
+      input.addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('mdAddTaskConfirm').click(); });
+      document.getElementById('mdAddTaskConfirm').addEventListener('click', function() {
+        var text = input.value.trim();
+        if (!text) return;
+        // Save to localStorage
+        var tasks = [];
+        try { tasks = JSON.parse(localStorage.getItem('spawnkit-extra-tasks') || '[]'); } catch(e) {}
+        tasks.push({ text: text, done: false, created: Date.now() });
+        localStorage.setItem('spawnkit-extra-tasks', JSON.stringify(tasks));
+        form.remove();
+        // Trigger re-render
+        if (window.OcStore) {
+          var data = { sessions: window.OcStore.sessions, memory: window.OcStore.memory, chat: window.OcStore.chat, crons: window.OcStore.crons };
+          renderTodayTasks(data);
+        }
+        if (window.Exec && window.Exec.showToast) window.Exec.showToast('✅ Task added!');
+      });
+    });
   }
 
   // Subscribe to OcStore

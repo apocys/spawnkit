@@ -282,6 +282,39 @@
             body += '</div>';
         }
 
+        // ── Agent Configuration Panel (Phase 1.2) ──
+        body += '<div class="detail-section"><div class="detail-section-title">⚙️ Configuration</div>';
+        // Model selector
+        body += '<div style="margin-bottom:12px;">';
+        body += '<label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:4px;">Model</label>';
+        body += '<select id="agentModelSelect" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border-medium);background:var(--bg-tertiary);color:var(--text-primary);font-size:13px;font-family:var(--font-family);box-sizing:border-box;">';
+        var agentModels = [
+            { id: 'claude-opus-4-6', name: 'Claude Opus 4.6 (Premium)' },
+            { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4 (Recommended)' },
+            { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5 (Fast)' },
+            { id: 'gpt-5.4', name: 'GPT-5.4 (Standard)' },
+            { id: 'gpt-5', name: 'GPT-5 (Premium)' },
+            { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro' },
+            { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Fast)' }
+        ];
+        // Load saved config for this agent
+        var savedAgentConfig = {};
+        try { savedAgentConfig = JSON.parse(localStorage.getItem('spawnkit-agent-config-' + agentId) || '{}'); } catch(e) {}
+        agentModels.forEach(function(m) {
+            var sel = (savedAgentConfig.model === m.id || (!savedAgentConfig.model && m.id === 'claude-sonnet-4-20250514')) ? ' selected' : '';
+            body += '<option value="' + m.id + '"' + sel + '>' + esc(m.name) + '</option>';
+        });
+        body += '</select></div>';
+        // Traits / personality
+        body += '<div style="margin-bottom:12px;">';
+        body += '<label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:4px;">Personality Traits</label>';
+        body += '<textarea id="agentTraitsInput" rows="3" placeholder="e.g. concise, creative, detail-oriented, bilingual FR/EN" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border-medium);background:var(--bg-tertiary);color:var(--text-primary);font-size:13px;font-family:var(--font-family);box-sizing:border-box;resize:vertical;">' + esc(savedAgentConfig.traits || '') + '</textarea>';
+        body += '</div>';
+        // Save button
+        body += '<button id="saveAgentConfigBtn" style="width:100%;padding:10px;border-radius:8px;background:var(--exec-blue);color:white;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-family);">💾 Save Configuration</button>';
+        body += '<div id="agentConfigStatus" style="margin-top:6px;font-size:11px;color:var(--text-tertiary);text-align:center;"></div>';
+        body += '</div>';
+
         // SOUL excerpt + Edit button (NEW #4)
         if (API) {
             try {
@@ -301,6 +334,57 @@
         }
 
         document.getElementById('detailBody').innerHTML = body;
+
+        // Wire up Agent Config save button
+        var saveConfigBtn = document.getElementById('saveAgentConfigBtn');
+        if (saveConfigBtn) {
+            saveConfigBtn.addEventListener('click', function() {
+                var modelEl = document.getElementById('agentModelSelect');
+                var traitsEl = document.getElementById('agentTraitsInput');
+                var statusEl = document.getElementById('agentConfigStatus');
+                var model = modelEl ? modelEl.value : '';
+                var traits = traitsEl ? traitsEl.value.trim() : '';
+                // Save locally
+                var configData = { model: model, traits: traits, updatedAt: new Date().toISOString() };
+                localStorage.setItem('spawnkit-agent-config-' + agentId, JSON.stringify(configData));
+                // Also save to server
+                saveConfigBtn.disabled = true;
+                saveConfigBtn.textContent = 'Saving...';
+                var fetcher = window.skFetch || fetch;
+                fetcher('/api/oc/agents/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agentId: agentId, model: model, traits: traits })
+                }).then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.ok) {
+                        if (statusEl) statusEl.textContent = '✅ Saved to OpenClaw';
+                        if (typeof showToast === 'function') showToast('✅ ' + (agent.name || agentId) + ' configuration saved');
+                    } else {
+                        if (statusEl) statusEl.textContent = '⚠️ Saved locally (server: ' + (data.error || 'error') + ')';
+                    }
+                }).catch(function(e) {
+                    if (statusEl) statusEl.textContent = '💾 Saved locally (server offline)';
+                }).finally(function() {
+                    saveConfigBtn.disabled = false;
+                    saveConfigBtn.textContent = '💾 Save Configuration';
+                    setTimeout(function() { if (statusEl) statusEl.textContent = ''; }, 3000);
+                });
+            });
+            // Load from server on panel open
+            var fetcher = window.skFetch || fetch;
+            fetcher('/api/oc/agents/config?agentId=' + encodeURIComponent(agentId))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok && data.agents && data.agents[agentId]) {
+                    var serverConfig = data.agents[agentId];
+                    var modelEl = document.getElementById('agentModelSelect');
+                    var traitsEl = document.getElementById('agentTraitsInput');
+                    if (modelEl && serverConfig.model) modelEl.value = serverConfig.model;
+                    if (traitsEl && serverConfig.traits) traitsEl.value = serverConfig.traits;
+                }
+            }).catch(function() {});
+        }
 
         // Wire up skill management buttons (NEW #1) — works with or without API
         var addSkillBtn = document.getElementById('addSkillBtn');
