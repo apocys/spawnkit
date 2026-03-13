@@ -4,7 +4,7 @@
 
   var contextMenu = null;
   var raycaster = null;
-  var mouse = new window.THREE.Vector2();
+  var mouse = null;
 
   function init() {
     if (!window.castleApp || !window.THREE) {
@@ -12,6 +12,7 @@
       return;
     }
 
+    mouse = new window.THREE.Vector2();
     setupRaycaster();
     setupContextMenu();
     bindEvents();

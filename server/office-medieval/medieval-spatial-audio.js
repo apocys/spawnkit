@@ -25,10 +25,18 @@
     audioListener = new window.THREE.AudioListener();
     window.castleApp.camera.add(audioListener);
 
-    // Create audio context if needed
+    // Create audio context if needed (user gesture required)
     if (!window.THREE.AudioContext) {
       window.THREE.AudioContext = window.AudioContext || window.webkitAudioContext;
     }
+
+    // Defer audio context creation until user interaction
+    document.addEventListener('click', function resumeAudio() {
+      if (audioListener && audioListener.context && audioListener.context.state === 'suspended') {
+        audioListener.context.resume();
+      }
+      document.removeEventListener('click', resumeAudio);
+    }, { once: true });
   }
 
   function createAmbientSounds() {
