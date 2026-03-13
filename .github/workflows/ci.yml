@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: '20'
       - name: Run unit tests
-        run: npm run test:unit
+        run: node --test --test-force-exit test/unit/*.test.js
 
   # ── API Smoke Tests (requires running server) ──
   test-smoke:

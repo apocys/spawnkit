@@ -25,7 +25,7 @@ jobs:
         run: node scripts/lint.js
 
       - name: Run unit tests
-        run: npm run test:unit
+        run: node --test --test-force-exit test/unit/*.test.js
 
   # ──────────────────────────────────────────────
   # Job 2: Binary bloat detection
