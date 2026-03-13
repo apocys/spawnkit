@@ -65,6 +65,7 @@
 
     var pickerOverlay = null;
     window.openThemePicker = function() {
+        if (window.dismissAllOverlays) window.dismissAllOverlays('themePicker');
         if (!pickerOverlay) pickerOverlay = createPicker();
         pickerOverlay.style.display = 'flex';
     };

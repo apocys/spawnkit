@@ -250,7 +250,7 @@
                     subHtml += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-subtle);">';
                     subHtml += '<span style="width:6px;height:6px;border-radius:50%;background:' + (isActive ? '#30D158' : '#8E8E93') + ';flex-shrink:0;"></span>';
                     subHtml += '<div style="flex:1;min-width:0;">';
-                    subHtml += '<div style="font-size:13px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(s.label || s.displayName || 'sub-agent') + '</div>';
+                    subHtml += '<div style="font-size:13px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(window.humanizeAgentName ? window.humanizeAgentName(s.label || s.displayName || 'sub-agent') : (s.label || s.displayName || 'sub-agent')) + '</div>';
                     subHtml += '<div style="font-size:11px;color:var(--text-tertiary);">' + esc(s.model || '\u2014') + ' \u00b7 ' + (s.totalTokens || 0).toLocaleString() + ' tokens</div>';
                     subHtml += '</div>';
                     subHtml += '<span style="font-size:10px;color:var(--text-tertiary);white-space:nowrap;">' + agoStr + '</span>';

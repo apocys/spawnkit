@@ -59,7 +59,7 @@
         { key: '8', icon: '🏰', label: 'Allies', action: function() {
             if (typeof window.openBuildingPanel === 'function') window.openBuildingPanel('🏰 Rookery');
         }},
-        { key: '9', icon: '🔊', label: 'Sound', action: function() {
+        { key: '9', icon: '🔊', label: 'Sound', secondary: true, action: function() {
             var isMuted = window.castleApp && window.castleApp.soundEnabled === false;
             if (window.castleAudio) {
                 window.castleAudio.setMuted(!isMuted);
@@ -77,7 +77,7 @@
                 slot.querySelector('span:nth-child(2)').textContent = isMuted ? 'Sound' : 'Muted';
             }
         }},
-        { key: '0', icon: '🌙', label: 'Night', action: function() {
+        { key: '0', icon: '🌙', label: 'Night', secondary: true, action: function() {
             // Toggle forced day/night override
             window._forcedDayNight = window._forcedDayNight === 'night' ? 'day' : 'night';
             var isNight = window._forcedDayNight === 'night';
@@ -139,15 +139,33 @@
     });
     hotbar.appendChild(weatherSlot);
 
+    var _hotbarExpanded = false;
+    var secondarySlots = [];
     items.forEach(function(item) {
         var slot = document.createElement('div');
         slot.style.cssText = 'width:52px;height:52px;background:rgba(30,30,30,0.85);border:2px solid rgba(255,255,255,0.15);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;position:relative;';
+        if (item.secondary) slot.style.display = 'none';
         slot.innerHTML = '<span style="font-size:20px;line-height:1;">' + item.icon + '</span><span style="font-size:8px;color:rgba(255,255,255,0.5);margin-top:1px;">' + item.label + '</span><span style="position:absolute;top:2px;left:4px;font-size:9px;color:rgba(255,255,255,0.3);">' + item.key + '</span>';
+        slot.title = item.label + ' [' + item.key + ']';
         slot.addEventListener('mouseenter', function() { slot.style.borderColor = 'rgba(255,200,50,0.6)'; slot.style.transform = 'translateY(-2px)'; });
         slot.addEventListener('mouseleave', function() { slot.style.borderColor = 'rgba(255,255,255,0.15)'; slot.style.transform = 'none'; });
         slot.addEventListener('click', function() { item.action(); });
+        if (item.secondary) secondarySlots.push(slot);
         hotbar.appendChild(slot);
     });
+    // More button to expand secondary items
+    var moreSlot = document.createElement('div');
+    moreSlot.style.cssText = 'width:52px;height:52px;background:rgba(30,30,30,0.85);border:2px solid rgba(255,255,255,0.1);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;position:relative;';
+    moreSlot.innerHTML = '<span style="font-size:16px;line-height:1;opacity:0.5;">•••</span><span style="font-size:8px;color:rgba(255,255,255,0.3);margin-top:1px;">More</span>';
+    moreSlot.title = 'Toggle extra controls';
+    moreSlot.addEventListener('mouseenter', function() { moreSlot.style.borderColor = 'rgba(255,200,50,0.4)'; });
+    moreSlot.addEventListener('mouseleave', function() { moreSlot.style.borderColor = 'rgba(255,255,255,0.1)'; });
+    moreSlot.addEventListener('click', function() {
+        _hotbarExpanded = !_hotbarExpanded;
+        secondarySlots.forEach(function(s) { s.style.display = _hotbarExpanded ? 'flex' : 'none'; });
+        moreSlot.querySelector('span').textContent = _hotbarExpanded ? '✕' : '•••';
+    });
+    hotbar.appendChild(moreSlot);
     document.addEventListener('keydown', function(e) {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
         var idx = parseInt(e.key) - 1;

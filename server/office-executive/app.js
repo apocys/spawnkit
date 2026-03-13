@@ -1,3 +1,14 @@
+      // Humanize agent labels: "brainstorm-atlas-synthesis" → "Atlas Synthesis"
+      window.humanizeAgentName = function(raw) {
+        if (!raw) return 'Agent';
+        // Remove common prefixes
+        var name = raw.replace(/^(brainstorm|research|premium|coding|debug|review)-/i, '');
+        // Split on - and _ , capitalize each word
+        return name.split(/[-_]/).map(function(w) {
+          return w.charAt(0).toUpperCase() + w.slice(1);
+        }).join(' ');
+      };
+
       // Auto-detect local OpenClaw gateway
       (function() {
         var stored = {};

@@ -105,7 +105,16 @@
         if (except !== 'summonWizard' && window.SummonWizard && window.SummonWizard.close) {
             window.SummonWizard.close();
         }
-        if (window.PersonaCard && window.PersonaCard.close) window.PersonaCard.close();
+        if (except !== 'personaCard' && window.PersonaCard && window.PersonaCard.close) window.PersonaCard.close();
+        if (except !== 'themePicker') {
+            var tp = document.getElementById('theme-picker-overlay');
+            if (tp) tp.style.display = 'none';
+        }
+        // Close customize/settings panel
+        if (except !== 'customize') {
+            var cp = document.getElementById('customize-panel');
+            if (cp) cp.style.display = 'none';
+        }
         var sidebar = document.querySelector('.castle-sidebar');
         if (sidebar) sidebar.classList.remove('panel-open');
     };

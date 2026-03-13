@@ -1966,10 +1966,15 @@ class MedievalCastle3D {
         document.getElementById('stat-resources').textContent = (totalTokens / 1000).toFixed(1) + 'k';
         document.getElementById('stat-uptime').textContent = this.calculateOverallUptime(sessions);
 
-        // Add recent activity
+        // Add recent activity (only log NEW sessions, not repeats)
         if (sessions.length > 0) {
             const recentSession = sessions.sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0))[0];
-            this.addActivityLog(`Royal session active: ${recentSession.label || recentSession.key}`, 'system');
+            const sessionKey = recentSession.label || recentSession.key || '';
+            // Skip cron heartbeat noise and already-logged sessions
+            if (!sessionKey.toLowerCase().includes('heartbeat') && sessionKey !== this._lastLoggedSession) {
+                this._lastLoggedSession = sessionKey;
+                this.addActivityLog(`Royal session active: ${sessionKey}`, 'system');
+            }
         }
     }
 
@@ -2043,8 +2048,8 @@ class MedievalCastle3D {
                         }
                     }
 
-                    // Update activity with real data
-                    if (Date.now() - this.lastMetricsUpdate > 30000) { // Every 30s
+                    // Update activity with real data (every 5 min, not 30s)
+                    if (Date.now() - this.lastMetricsUpdate > 300000) {
                         this.addActivityLog(`Royal court status: ${totalSessions} sessions, ${(totalTokens/1000).toFixed(1)}k wisdom gathered`, 'Royal Herald');
                         this.lastMetricsUpdate = Date.now();
                     }

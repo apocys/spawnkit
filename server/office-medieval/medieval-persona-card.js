@@ -261,6 +261,7 @@
 
   // ── Open / Close ───────────────────────────────────────────────────────────
   function openCard(agentId) {
+    if (window.dismissAllOverlays) window.dismissAllOverlays('personaCard');
     var alreadyOpen = overlay.classList.contains('pc-visible');
     _currentAgent = agentId;
     if (!alreadyOpen) {
