@@ -29,13 +29,9 @@
   var _realAgentSessions = [];
 
   function getAgentList() {
-    if (!_isConnected && !window.__skDemoMode) {
-      // Not connected yet — show only CEO with "connect to see your team" hint
-      return [AGENTS_TEMPLATES[0]];
-    }
-    if (window.__skDemoMode || !_isConnected) {
-      // Demo mode — show all templates
-      return AGENTS_TEMPLATES;
+    if (!_isConnected) {
+      // Not connected — show all template agents (demo/standalone mode)
+      return AGENTS_TEMPLATES.slice();
     }
     // Connected mode — show CEO + real sub-agents from sessions
     var agents = [AGENTS_TEMPLATES[0]]; // Always include CEO
