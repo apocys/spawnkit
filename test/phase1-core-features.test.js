@@ -67,7 +67,7 @@ async function run() {
 
   await test('GET /api/fleet/status returns JSON (200 or 502)', async function () {
     const r = await apiGet('/api/fleet/status');
-    if (r.status !== 200 && r.status !== 502) throw new Error('Expected 200 or 502, got ' + r.status);
+    if (r.status !== 200) throw new Error("Expected 200, got " + r.status);
     if (typeof r.data !== 'object') throw new Error('Expected JSON object');
   });
 
@@ -79,7 +79,7 @@ async function run() {
 
   await test('GET /api/fleet/mailbox returns JSON (200 or 502)', async function () {
     const r = await apiGet('/api/fleet/mailbox');
-    if (r.status !== 200 && r.status !== 502) throw new Error('Expected 200 or 502, got ' + r.status);
+    if (r.status !== 200) throw new Error("Expected 200, got " + r.status);
     if (typeof r.data !== 'object') throw new Error('Expected JSON object');
   });
 
@@ -91,7 +91,7 @@ async function run() {
 
   await test('GET /api/fleet/peers returns JSON', async function () {
     const r = await apiGet('/api/fleet/peers');
-    if (r.status !== 200 && r.status !== 502) throw new Error('Expected 200 or 502, got ' + r.status);
+    if (r.status !== 200) throw new Error("Expected 200, got " + r.status);
   });
 
   // ── Chat API ────────────────────────────────────────────────
@@ -112,7 +112,7 @@ async function run() {
     // We just verify the endpoint accepts the message format
     const r = await apiPost('/api/oc/chat', { message: '[Speaking to Atlas] Hello Atlas' });
     // 200 = gateway responded, 502 = gateway not running (both valid)
-    if (r.status !== 200 && r.status !== 502) throw new Error('Expected 200 or 502, got ' + r.status);
+    if (r.status !== 200) throw new Error("Expected 200, got " + r.status);
   });
 
   // ── Other Core APIs ─────────────────────────────────────────

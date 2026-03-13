@@ -54,7 +54,7 @@ describe('API fleet/remote integration tests', () => {
       assert.ok(instances !== null && instances !== undefined, 'has data');
     } else {
       // Could be 404 if fleet endpoint not configured
-      assert.ok([200, 404, 502, 503].includes(res.status), `acceptable status: ${res.status}`);
+      assert.strictEqual(res.status, 200);
     }
   });
 
@@ -72,7 +72,7 @@ describe('API fleet/remote integration tests', () => {
   test('GET /api/fleet/mailbox → 200 (or 502 if relay down)', async (t) => {
     if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/fleet/mailbox');
-    assert.ok([200, 502].includes(res.status), `expected 200 or 502 (relay down), got ${res.status}`);
+    assert.strictEqual(res.status, 200);
   });
 
   test('GET /api/fleet/mailbox → has messages array', async (t) => {
@@ -109,7 +109,7 @@ describe('API fleet/remote integration tests', () => {
   test('GET /api/remote/offices → 200 (or 502 if relay down)', async (t) => {
     if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/remote/offices');
-    assert.ok([200, 502].includes(res.status), `expected 200 or 502 (relay down), got ${res.status}`);
+    assert.strictEqual(res.status, 200);
   });
 
   test('GET /api/remote/offices → has offices array', async (t) => {

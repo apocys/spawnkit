@@ -200,14 +200,14 @@ async function run() {
 
   await test('Existing /api/auth/validate still works', async function () {
     const r = await apiPost('/api/auth/validate', { url: 'http://127.0.0.1:18789' });
-    if (r.status !== 200 && r.status !== 502) throw new Error('Expected 200 or 502, got ' + r.status);
+    if (r.status !== 200) throw new Error("Expected 200, got " + r.status);
   });
 
   await test('All phase1 routes still functional', async function () {
     const checks = ['/api/oc/health', '/api/oc/agents', '/api/fleet/status', '/api/fleet/mailbox'];
     for (const c of checks) {
       const r = await apiGet(c);
-      if (r.status !== 200 && r.status !== 502) throw new Error(c + ' returned ' + r.status);
+      if (r.status !== 200) throw new Error("Expected 200, got " + r.status);
     }
   });
 

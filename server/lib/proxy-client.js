@@ -19,6 +19,11 @@ function readBody(req) {
 }
 
 async function proxyRequest(method, url, token, bodyObj) {
+  // Mock fleet relay if MOCK_FLEET env var is set
+  if (process.env.MOCK_FLEET === '1' && url.includes('18790')) {
+    return { ok: true, status: 200, data: getMockFleetData(url) };
+  }
+
   const lib = url.startsWith('https') ? require('https') : require('http');
   const parsed = new (require('url').URL)(url);
   const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;
@@ -45,7 +50,20 @@ async function proxyRequest(method, url, token, bodyObj) {
   });
 }
 
+function getMockFleetData(url) {
+  if (url.includes('/api/fleet/peers')) return { peers: ['apocyz_runner', 'dev-mac'] };
+  if (url.includes('/api/fleet/stats')) return { activePeers: 2, totalMessages: 42, uptime: 1337 };
+  if (url.includes('/api/fleet/mailbox')) return { messages: [], total: 0 };
+  if (url.includes('/api/remote/offices')) return { offices: [], recentMessages: [] };
+  return { mock: true };
+}
+
 async function proxyFetch(url, token) {
+  // Mock fleet relay if MOCK_FLEET env var is set
+  if (process.env.MOCK_FLEET === '1' && url.includes('18790')) {
+    return { ok: true, status: 200, data: getMockFleetData(url) };
+  }
+
   const lib = url.startsWith('https') ? require('https') : require('http');
   return new Promise((resolve) => {
     const req = lib.get(url, {

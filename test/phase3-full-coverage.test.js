@@ -85,7 +85,7 @@ async function run() {
   await test('auth', 'POST /api/auth/validate accepts valid format', async function () {
     const r = await apiPost('/api/auth/validate', { url: 'http://127.0.0.1:18789' });
     // 200 or 502 — both valid (gateway may not be running)
-    if (r.status !== 200 && r.status !== 502) throw new Error('Expected 200 or 502, got ' + r.status);
+    if (r.status !== 200) throw new Error("Expected 200, got " + r.status);
   });
 
   // ═══ HEALTH ════════════════════════════════════════════
@@ -163,7 +163,7 @@ async function run() {
 
   await test('chat', 'POST /api/oc/chat accepts persona prefix format', async function () {
     const r = await apiPost('/api/oc/chat', { message: '[Speaking to Atlas] test' });
-    if (r.status !== 200 && r.status !== 502) throw new Error('Expected 200 or 502, got ' + r.status);
+    if (r.status !== 200) throw new Error("Expected 200, got " + r.status);
   });
 
   // ═══ FLEET RELAY ═══════════════════════════════════════
@@ -171,24 +171,24 @@ async function run() {
 
   await test('fleet', 'GET /api/fleet/status returns instances', async function () {
     const r = await apiGet('/api/fleet/status');
-    if (r.status !== 200 && r.status !== 502) throw new Error('Expected 200 or 502, got ' + r.status);
+    if (r.status !== 200) throw new Error("Expected 200, got " + r.status);
     if (r.status === 200 && !Array.isArray(r.data.instances)) throw new Error('Missing instances array');
   });
 
   await test('fleet', 'GET /api/fleet/mailbox returns messages', async function () {
     const r = await apiGet('/api/fleet/mailbox?limit=5');
-    if (r.status !== 200 && r.status !== 502) throw new Error('Expected 200 or 502');
+    if (r.status !== 200) throw new Error("Expected 200, got " + r.status);
     if (r.status === 200 && !r.data.messages) throw new Error('Missing messages');
   });
 
   await test('fleet', 'GET /api/fleet/peers returns data', async function () {
     const r = await apiGet('/api/fleet/peers');
-    if (r.status !== 200 && r.status !== 502) throw new Error('Expected 200 or 502');
+    if (r.status !== 200) throw new Error("Expected 200, got " + r.status);
   });
 
   await test('fleet', 'GET /api/remote/offices returns offices array', async function () {
     const r = await apiGet('/api/remote/offices');
-    if (r.status !== 200 && r.status !== 502) throw new Error('Expected 200 or 502');
+    if (r.status !== 200) throw new Error("Expected 200, got " + r.status);
     if (r.status === 200 && !r.data.offices) throw new Error('Missing offices');
   });
 
