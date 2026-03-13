@@ -59,8 +59,8 @@ class MedievalCastle3D {
 
     setupThreeJS() {
         const container = document.getElementById('scene-container');
-        const w = container.clientWidth;
-        const h = container.clientHeight;
+        const w = container.clientWidth || window.innerWidth;
+        const h = container.clientHeight || window.innerHeight;
 
         // Scene
         this.scene = new THREE.Scene();
@@ -241,8 +241,8 @@ class MedievalCastle3D {
 
     onResize() {
         const container = document.getElementById('scene-container');
-        const w = container.clientWidth;
-        const h = container.clientHeight;
+        const w = container.clientWidth || window.innerWidth;
+        const h = container.clientHeight || window.innerHeight;
         const aspect = w / h;
         const frustum = 18;
 
@@ -2076,7 +2076,19 @@ class MedievalCastle3D {
 
     updateAgentRoster(agents) {
         const c = document.getElementById('agents-list');
+        if (!c) return;
         if (!agents.length) agents = Array.from(this.agents.entries()).map(([id, a]) => ({ id, name: id, role: a.role, status: a.status, metrics: a.metrics }));
+        // Fallback: always show core agents even without live data
+        if (!agents.length) {
+            agents = [
+                { id: 'apomac', name: 'ApoMac', role: 'King', status: 'active', metrics: {} },
+                { id: 'sycopa', name: 'Sycopa', role: 'Advisor', status: 'idle', metrics: {} },
+                { id: 'forge', name: 'Forge', role: 'Smith', status: 'idle', metrics: {} },
+                { id: 'atlas', name: 'Atlas', role: 'Scribe', status: 'idle', metrics: {} },
+                { id: 'hunter', name: 'Hunter', role: 'Huntsman', status: 'idle', metrics: {} },
+                { id: 'sentinel', name: 'Sentinel', role: 'Guard', status: 'idle', metrics: {} }
+            ];
+        }
         c.innerHTML = agents.map(a => {
             const d = this.agents.get(a.id);
             const st = a.status || 'idle';
