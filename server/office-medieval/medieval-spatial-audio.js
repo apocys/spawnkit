@@ -258,16 +258,16 @@
     var audioToggle = document.createElement('div');
     audioToggle.id = 'audio-toggle';
     audioToggle.style.cssText = `
-      position: fixed;
-      top: 16px;
-      right: 60px;
-      z-index: 1000;
-      background: rgba(20, 12, 5, 0.9);
+      position: absolute;
+      top: 10px;
+      right: 16px;
+      z-index: 10;
+      background: rgba(20, 12, 5, 0.7);
       border: 1px solid var(--castle-gold);
-      border-radius: 6px;
-      padding: 6px 8px;
+      border-radius: 4px;
+      padding: 4px 6px;
       cursor: pointer;
-      font-size: 16px;
+      font-size: 14px;
       transition: all 0.2s;
       backdrop-filter: blur(4px);
     `;
@@ -282,7 +282,14 @@
       this.style.transform = 'scale(1)';
     });
 
-    document.body.appendChild(audioToggle);
+    // Add to castle sidebar instead of body
+    var sidebar = document.querySelector('.castle-sidebar');
+    if (sidebar) {
+      sidebar.style.position = 'relative';
+      sidebar.appendChild(audioToggle);
+    } else {
+      document.body.appendChild(audioToggle);
+    }
 
     function updateAudioToggle() {
       audioToggle.textContent = isMuted ? '🔇' : '🔊';

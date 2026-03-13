@@ -352,7 +352,7 @@
       bar = document.createElement('div');
       bar.id = 'game-engine-status';
       // Positioned top-left, shifted right so it never overlaps the left-panel close button
-      bar.style.cssText = 'position:fixed;bottom:80px;left:12px;z-index:160;' +
+      bar.style.cssText = 'position:fixed;top:16px;left:320px;z-index:160;' +
         'background:rgba(26,26,46,0.92);border:1px solid rgba(201,169,89,0.4);' +
         'border-radius:8px;padding:8px 12px;font-family:Crimson Text,serif;' +
         'color:#f4e4bc;font-size:11px;max-width:220px;min-width:120px;backdrop-filter:blur(8px);' +
@@ -367,7 +367,7 @@
     // Reposition dynamically: shift right when left sidebar is open
     var sidebar = document.querySelector('.castle-sidebar');
     var sidebarOpen = sidebar && sidebar.classList.contains('panel-open');
-    bar.style.left = '12px'; // always bottom-left, sidebar doesn't overlap
+    bar.style.left = '320px'; // top-right of sidebar area
 
     // Show real missions from SpawnKit data (Option A)
     var missions = (window.SpawnKit && window.SpawnKit.data && window.SpawnKit.data.missions) || [];

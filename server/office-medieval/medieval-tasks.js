@@ -26,10 +26,43 @@
       if (inActive && /^\s*[-*]/.test(line)) {
         var isDone = /✅|☑|done/i.test(line);
         var text = line.replace(/^\s*[-*]\s*/, '').replace(/[✅⬜☑☐]/g, '').replace(/\*\*/g, '').trim();
-        if (text && text.length > 2 && !isDone) tasks.push({ type: 'task', done: isDone, text: text });
+        if (text && text.length > 2 && !isDone) {
+          // Convert technical tasks to medieval quest descriptions
+          var questText = convertToMedievalQuest(text);
+          tasks.push({ type: 'task', done: isDone, text: questText });
+        }
       }
     }
     return tasks.slice(0, 10);
+  }
+
+  function convertToMedievalQuest(text) {
+    var lower = text.toLowerCase();
+    
+    // Common technical task patterns -> medieval equivalents
+    if (lower.includes('deploy') || lower.includes('hetzner')) return '⚔️ Deploy forces to the frontier outpost';
+    if (lower.includes('test') || lower.includes('playwright')) return '🛡️ Test the castle defenses';
+    if (lower.includes('mobile') || lower.includes('responsive')) return '📱 Forge portable battle scrolls';
+    if (lower.includes('accessibility') || lower.includes('aria')) return '♿ Ensure all citizens can access the castle';
+    if (lower.includes('arena') || lower.includes('battle')) return '⚔️ Prepare the grand battle arena';
+    if (lower.includes('context menu')) return '📜 Create righteous decree scrolls';
+    if (lower.includes('spatial audio') || lower.includes('audio')) return '🎵 Enchant the castle with mystical sounds';
+    if (lower.includes('agent') && lower.includes('visual')) return '👤 Grant magical appearances to court wizards';
+    if (lower.includes('kpi') || lower.includes('mood') || lower.includes('energy')) return '💫 Divine the spirits of your champions';
+    if (lower.includes('fleet') || lower.includes('mock')) return '🏴‍☠️ Establish communication with allied ships';
+    if (lower.includes('onboarding')) return '🏰 Welcome new arrivals to the castle';
+    if (lower.includes('map') && lower.includes('editor')) return '🗺️ Allow castle customization by the architects';
+    if (lower.includes('real-time') || lower.includes('todo')) return '📋 Maintain the royal decree scroll';
+    if (lower.includes('cinematic') || lower.includes('camera')) return '🎬 Create epic castle flyover scenes';
+    if (lower.includes('api') || lower.includes('server')) return '📡 Strengthen the realm\'s message network';
+    if (lower.includes('bug') || lower.includes('fix')) return '🐛 Vanquish the castle gremlins';
+    if (lower.includes('feature')) return '✨ Craft new magical castle abilities';
+    if (lower.includes('ui') || lower.includes('ux')) return '🎨 Beautify the castle\'s appearance';
+    if (lower.includes('cron') || lower.includes('schedule')) return '⏰ Establish the castle\'s daily rituals';
+    
+    // Default: add medieval flavor to generic tasks
+    if (text.length > 50) return '📜 ' + text.substring(0, 47) + '...';
+    return '⚡ ' + text;
   }
 
   function render(tasks) {

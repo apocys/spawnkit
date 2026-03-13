@@ -35,9 +35,12 @@
                 if (window.castleApp) window.castleApp.resetCamera();
             }
         }},
-        { key: '5', icon: '⚙️', label: 'Settings', action: function() {
-            if (typeof window.openBuildingPanel === 'function') window.openBuildingPanel('🏠 Chapel');
-            else if (window.ThemeCustomize) ThemeCustomize.show();
+        { key: '5', icon: '⚡', label: 'Arena', action: function() {
+            if (window.ArenaIntegration && window.ArenaIntegration.startBattle) {
+                window.ArenaIntegration.startBattle('config-fix');
+            } else if (window.showToast) {
+                window.showToast('Arena battles coming soon!', 'info');
+            }
         }},
         { key: '6', icon: '⚔️', label: 'Summon', action: function() {
             // Prefer the new SummonKnight wizard when available
@@ -51,62 +54,12 @@
             overlay.style.display = 'flex';
             setTimeout(function() { overlay.classList.add('visible'); }, 50);
         }},
-        { key: '7', icon: '🏗️', label: 'Edit', action: function() {
-            if (window.MissionHouses && typeof window.MissionHouses.toggleEditMode === 'function') {
-                window.MissionHouses.toggleEditMode();
-            }
+        { key: '7', icon: '⋯', label: 'More', action: function() {
+            showMoreMenu();
         }},
         { key: '8', icon: '🏰', label: 'Allies', action: function() {
             if (typeof window.openBuildingPanel === 'function') window.openBuildingPanel('🏰 Rookery');
-        }},
-        { key: '9', icon: '🔊', label: 'Sound', secondary: true, action: function() {
-            var isMuted = window.castleApp && window.castleApp.soundEnabled === false;
-            if (window.castleAudio) {
-                window.castleAudio.setMuted(!isMuted);
-            } else {
-                // Fallback — toggle via castleApp
-                if (window.castleApp) window.castleApp.soundEnabled = isMuted;
-            }
-            // Update icon + scene toggle
-            var btn = document.getElementById('btn-toggle-sound');
-            if (btn) btn.textContent = isMuted ? '🔊' : '🔇';
-            // Update hotbar slot icon (Weather is children[0], items start at children[1])
-            var slot = hotbar.children[9]; // items[8] = Sound = children[9]
-            if (slot) {
-                slot.querySelector('span:first-child').textContent = isMuted ? '🔊' : '🔇';
-                slot.querySelector('span:nth-child(2)').textContent = isMuted ? 'Sound' : 'Muted';
-            }
-        }},
-        { key: '0', icon: '🌙', label: 'Night', secondary: true, action: function() {
-            // Toggle forced day/night override
-            window._forcedDayNight = window._forcedDayNight === 'night' ? 'day' : 'night';
-            var isNight = window._forcedDayNight === 'night';
-            // Weather is children[0], items start at children[1], Night is items[9] = children[10]
-            var slot = hotbar.children[10];
-            if (slot) {
-                slot.querySelector('span:first-child').textContent = isNight ? '☀️' : '🌙';
-                slot.querySelector('span:nth-child(2)').textContent = isNight ? 'Day' : 'Night';
-            }
-            // Apply lighting immediately
-            if (window.castleApp && window.castleApp.applyForcedDayNight) {
-                window.castleApp.applyForcedDayNight(window._forcedDayNight);
-            } else if (window.castleApp) {
-                var app = window.castleApp;
-                if (app.sunLight) {
-                    app.sunLight.intensity = isNight ? 0.15 : 1.8;
-                    app.sunLight.color.setHex(isNight ? 0x334466 : 0xffe8cc);
-                }
-                if (app.ambientLight) {
-                    app.ambientLight.intensity = isNight ? 0.06 : 0.45;
-                    app.ambientLight.color.setHex(isNight ? 0x223355 : 0xfff5e0);
-                }
-                if (app.hemiLight) app.hemiLight.intensity = isNight ? 0.08 : 0.25;
-                if (app.torchLights) app.torchLights.forEach(function(t) { t.intensity = isNight ? 5 : 2; });
-                if (app.bloomPass) app.bloomPass.strength = isNight ? 0.7 : 0.25;
-                var skyBg = document.getElementById('scene-container');
-                if (skyBg) skyBg.style.background = isNight ? 'linear-gradient(180deg,#060b1a 0%,#0d1b3a 60%,#1a2040 100%)' : '';
-            }
-        }},
+        }}
     ];
 
     // ── Weather button ──────────────────────────────────────────
@@ -175,6 +128,106 @@
             setTimeout(function() { hotbar.children[idx].style.borderColor = 'rgba(255,255,255,0.15)'; }, 200);
         }
     });
+
+    // More menu function
+    function showMoreMenu() {
+        // Remove existing menu
+        var existing = document.getElementById('hotbar-more-menu');
+        if (existing) {
+            existing.remove();
+            return;
+        }
+
+        var menu = document.createElement('div');
+        menu.id = 'hotbar-more-menu';
+        menu.style.cssText = `
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 12, 5, 0.95);
+            border: 1px solid var(--castle-gold);
+            border-radius: 8px;
+            padding: 8px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 160px;
+            backdrop-filter: blur(8px);
+        `;
+
+        var menuItems = [
+            { icon: '⚙️', label: 'Settings', action: function() {
+                if (typeof window.openBuildingPanel === 'function') window.openBuildingPanel('🏠 Chapel');
+                else if (window.ThemeCustomize) ThemeCustomize.show();
+            }},
+            { icon: '🏗️', label: 'Edit Mode', action: function() {
+                if (window.MissionHouses && typeof window.MissionHouses.toggleEditMode === 'function') {
+                    window.MissionHouses.toggleEditMode();
+                }
+            }},
+            { icon: '🔊', label: 'Audio', action: function() {
+                if (window.SpatialAudio && window.SpatialAudio.toggleAudio) {
+                    window.SpatialAudio.toggleAudio();
+                }
+            }},
+            { icon: '🌙', label: 'Night Mode', action: function() {
+                document.body.classList.toggle('night-mode');
+            }},
+            { icon: '🌦️', label: 'Weather', action: function() {
+                if (window.showToast) window.showToast('Weather system coming soon!', 'info');
+            }},
+            { icon: '🎨', label: 'Themes', action: function() {
+                if (window.ThemeCustomize) ThemeCustomize.show();
+            }}
+        ];
+
+        menuItems.forEach(function(item) {
+            var menuItem = document.createElement('div');
+            menuItem.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 12px;
+                cursor: pointer;
+                border-radius: 4px;
+                transition: background 0.15s;
+                font-family: var(--font-serif);
+                color: var(--castle-gold);
+                font-size: 13px;
+            `;
+            
+            menuItem.innerHTML = '<span>' + item.icon + '</span><span>' + item.label + '</span>';
+            
+            menuItem.addEventListener('mouseenter', function() {
+                this.style.background = 'rgba(201, 169, 89, 0.2)';
+            });
+            
+            menuItem.addEventListener('mouseleave', function() {
+                this.style.background = '';
+            });
+            
+            menuItem.addEventListener('click', function() {
+                item.action();
+                menu.remove();
+            });
+
+            menu.appendChild(menuItem);
+        });
+
+        document.body.appendChild(menu);
+
+        // Close menu when clicking outside
+        setTimeout(function() {
+            document.addEventListener('click', function closeMenu(e) {
+                if (!menu.contains(e.target)) {
+                    menu.remove();
+                    document.removeEventListener('click', closeMenu);
+                }
+            });
+        }, 100);
+    }
 
     // Remove floating buttons on the right side (they duplicate hotbar)
     setTimeout(function() {

@@ -358,7 +358,17 @@
             }
         } catch(e) { mcTranscriptContent = '<em style="color:rgba(168,162,153,0.6)">(The scribes have fled — reconnect the royal messenger)</em>'; }
         var el2 = document.getElementById('mcRawTranscript');
-        if (el2) el2.innerHTML = mcTranscriptContent;
+        if (el2) {
+            // Preserve scroll position when updating content
+            var wasAtBottom = el2.scrollHeight - el2.scrollTop - el2.clientHeight < 50;
+            el2.innerHTML = mcTranscriptContent;
+            
+            // If user was at bottom, keep them at bottom (new messages)
+            // If they were scrolled up, preserve their position
+            if (wasAtBottom) {
+                el2.scrollTop = el2.scrollHeight;
+            }
+        }
     }
 
     // ═══ RIGHT COLUMN — Court Status ═══
