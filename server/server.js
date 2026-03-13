@@ -7,6 +7,8 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { verifyChannel } = require('./channel-verifier');
+const { generateSOUL, generateIDENTITY, generateAGENTS } = require('./agent-templates');
 
 const PORT = parseInt(process.env.PORT || '8765');
 const WORKSPACE = process.env.WORKSPACE || process.env.HOME + '/.openclaw/workspace';
@@ -129,7 +131,7 @@ const server = http.createServer(async (req, res) => {
 
   // ─── Remote proxy endpoint ───────────────────────────────
   // ─── Fleet Relay Proxy (peers/invite/pair/disconnect) ─────
-  const FLEET_RELAY_URL = 'http://localhost:18790';
+  const FLEET_RELAY_URL = process.env.FLEET_RELAY_URL || 'http://localhost:8223';
   const FLEET_RELAY_TOKEN = process.env.FLEET_RELAY_TOKEN || 'sk-fleet-2ad53564b03d9facbe3389bb5c461179ffc73af12e50ae00';
 
   // GET /api/fleet/peers — public, no auth needed
@@ -234,7 +236,7 @@ const server = http.createServer(async (req, res) => {
       const resp = await new Promise((resolve, reject) => {
         const postData = JSON.stringify(body || {});
         const opts = {
-          hostname: 'localhost', port: 18790, path: '/api/fleet/invite', method: 'POST',
+          hostname: 'localhost', port: 8223, path: '/api/fleet/invite', method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData), 'Authorization': 'Bearer ' + FLEET_RELAY_TOKEN }
         };
         const r = require('http').request(opts, (res2) => {
@@ -261,7 +263,7 @@ const server = http.createServer(async (req, res) => {
       const resp = await new Promise((resolve, reject) => {
         const postData = JSON.stringify(body || {});
         const opts = {
-          hostname: 'localhost', port: 18790, path: '/api/fleet/pair', method: 'POST',
+          hostname: 'localhost', port: 8223, path: '/api/fleet/pair', method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) }
         };
         const r = require('http').request(opts, (res2) => {
@@ -288,7 +290,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const resp = await new Promise((resolve, reject) => {
         const opts = {
-          hostname: 'localhost', port: 18790, path: '/api/fleet/peer/' + peerId, method: 'DELETE',
+          hostname: 'localhost', port: 8223, path: '/api/fleet/peer/' + peerId, method: 'DELETE',
           headers: { 'Authorization': 'Bearer ' + FLEET_RELAY_TOKEN }
         };
         const r = require('http').request(opts, (res2) => {
@@ -568,135 +570,6 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Verify a channel's credentials by calling its real API
-  async function verifyChannel(channel, config) {
-    const https = require('https');
-    const http_ = require('http');
-
-    function apiGet(url, headers = {}) {
-      const mod = url.startsWith('https') ? https : http_;
-      return new Promise((resolve) => {
-        const req = mod.get(url, { headers, timeout: 10000 }, (resp) => {
-          let data = '';
-          resp.on('data', c => data += c);
-          resp.on('end', () => {
-            try { resolve({ ok: resp.statusCode >= 200 && resp.statusCode < 300, status: resp.statusCode, data: JSON.parse(data) }); }
-            catch(e) { resolve({ ok: false, status: resp.statusCode, data: data }); }
-          });
-        });
-        req.on('error', (e) => resolve({ ok: false, status: 0, error: e.message }));
-        req.on('timeout', () => { req.destroy(); resolve({ ok: false, status: 0, error: 'timeout' }); });
-      });
-    }
-
-    switch (channel) {
-      case 'telegram': {
-        if (!config.token) return { ok: false, error: 'Bot token required' };
-        // Validate format: 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
-        if (!/^\d+:[A-Za-z0-9_-]{30,}$/.test(config.token)) {
-          return { ok: false, error: 'Invalid token format. Expected: 123456789:ABCdef...' };
-        }
-        const result = await apiGet(`https://api.telegram.org/bot${config.token}/getMe`);
-        if (result.ok && result.data?.ok) {
-          const bot = result.data.result;
-          return { ok: true, details: { botName: bot.first_name, username: bot.username, botId: bot.id } };
-        }
-        return { ok: false, error: result.data?.description || 'Invalid Telegram bot token' };
-      }
-
-      case 'discord': {
-        if (!config.token) return { ok: false, error: 'Bot token required' };
-        // Discord bot tokens are base64-ish strings
-        if (config.token.length < 50) {
-          return { ok: false, error: 'Token too short. Use the full bot token from Discord Developer Portal.' };
-        }
-        const result = await apiGet('https://discord.com/api/v10/users/@me', {
-          'Authorization': `Bot ${config.token}`
-        });
-        if (result.ok && result.data?.id) {
-          return { ok: true, details: { botName: result.data.username, botId: result.data.id, discriminator: result.data.discriminator } };
-        }
-        return { ok: false, error: result.data?.message || 'Invalid Discord bot token' };
-      }
-
-      case 'slack': {
-        if (!config.token) return { ok: false, error: 'Bot token required' };
-        if (!/^xoxb-/.test(config.token)) {
-          return { ok: false, error: 'Invalid format. Slack bot tokens start with xoxb-' };
-        }
-        const result = await apiGet('https://slack.com/api/auth.test', {
-          'Authorization': `Bearer ${config.token}`
-        });
-        if (result.ok && result.data?.ok) {
-          return { ok: true, details: { team: result.data.team, user: result.data.user, teamId: result.data.team_id } };
-        }
-        return { ok: false, error: result.data?.error || 'Invalid Slack bot token' };
-      }
-
-      case 'whatsapp': {
-        // WhatsApp Business API verification
-        if (!config.token) return { ok: false, error: 'Access token required' };
-        if (!config.phoneNumberId) {
-          // Format-only validation if no phone number ID
-          return { ok: true, details: { mode: 'token-only', note: 'Provide Phone Number ID for full verification' } };
-        }
-        const result = await apiGet(
-          `https://graph.facebook.com/v18.0/${config.phoneNumberId}`,
-          { 'Authorization': `Bearer ${config.token}` }
-        );
-        if (result.ok && result.data?.id) {
-          return { ok: true, details: { phoneNumberId: result.data.id, displayName: result.data.verified_name || result.data.display_phone_number } };
-        }
-        return { ok: false, error: result.data?.error?.message || 'Invalid WhatsApp credentials' };
-      }
-
-      case 'signal': {
-        // Signal doesn't have a public API for verification
-        // We validate the phone number format and mark as pending linking
-        if (!config.phoneNumber) return { ok: false, error: 'Phone number required' };
-        if (!/^\+\d{8,15}$/.test(config.phoneNumber.replace(/[\s-]/g, ''))) {
-          return { ok: false, error: 'Invalid phone format. Use international format: +33612345678' };
-        }
-        return { ok: true, details: { phoneNumber: config.phoneNumber, mode: 'device-linking', note: 'Complete linking in Signal app' } };
-      }
-
-      case 'github': {
-        if (!config.token) return { ok: false, error: 'Personal Access Token required' };
-        if (!/^(ghp_|github_pat_)[A-Za-z0-9_]{20,}$/.test(config.token)) {
-          return { ok: false, error: 'Invalid format. GitHub tokens start with ghp_ or github_pat_' };
-        }
-        const ghResult = await apiGet('https://api.github.com/user', {
-          'Authorization': `Bearer ${config.token}`,
-          'User-Agent': 'SpawnKit/1.0'
-        });
-        if (ghResult.ok && ghResult.data?.login) {
-          return { ok: true, details: { username: ghResult.data.login, name: ghResult.data.name || ghResult.data.login, repos: ghResult.data.public_repos } };
-        }
-        return { ok: false, error: ghResult.data?.message || 'Invalid GitHub token' };
-      }
-
-      case 'imessage': {
-        // iMessage: check if we're on macOS and Messages.app is available
-        try {
-          const platform = require('os').platform();
-          if (platform !== 'darwin') {
-            return { ok: false, error: 'iMessage requires macOS' };
-          }
-          // Check if imsg CLI is available
-          try {
-            execSync('which imsg 2>/dev/null', { timeout: 3000 });
-            return { ok: true, details: { mode: 'native', cli: 'imsg', platform: 'macOS' } };
-          } catch(e) {
-            return { ok: true, details: { mode: 'applescript', platform: 'macOS', note: 'Install imsg CLI for full features' } };
-          }
-        } catch(e) {
-          return { ok: false, error: 'Could not detect macOS environment' };
-        }
-      }
-
-      default:
-        return { ok: false, error: `Unknown channel: ${channel}` };
-    }
-  }
 
   // POST /api/oc/channels/verify — Real API verification
   if (req.url === '/api/oc/channels/verify' && req.method === 'POST') {
@@ -791,73 +664,7 @@ const server = http.createServer(async (req, res) => {
   // ═══ AGENT CREATION SYSTEM ═══════════════════════════════════════════
   const AGENTS_BASE_DIR = path.join(WORKSPACE, 'fleet', 'agents');
 
-  // Trait → personality description mapping
-  const TRAIT_MAP = {
-    brave:     'Bold and direct. Takes initiative. Proposes unconventional solutions without hesitation.',
-    wise:      'Thoughtful and considered. Weighs options carefully. Cites reasoning and provides context.',
-    precise:   'Meticulous attention to detail. Catches edge cases. Verifies twice before responding.',
-    loyal:     'Follows instructions exactly. Asks clarifying questions when uncertain. Reliable and consistent.',
-    cunning:   'Creative problem-solver. Finds shortcuts and elegant solutions. Thinks outside the box.',
-    swift:     'Fast execution. Minimal deliberation. Ships quickly and iterates. Concise responses.',
-    creative:  'Imaginative and original. Generates novel ideas. Makes unexpected connections.',
-    analytical:'Data-driven and logical. Breaks problems into components. Methodical approach.',
-  };
 
-  function generateSOUL(config) {
-    const traits = (config.traits || []).map(t => {
-      const desc = TRAIT_MAP[t] || t;
-      return `- **${t.charAt(0).toUpperCase() + t.slice(1)}**: ${desc}`;
-    }).join('\n');
-    const skillsList = (config.skills || []).join(', ') || 'general assistance';
-    const customBlock = config.customInstructions ? `\n## Special Instructions\n${config.customInstructions}\n` : '';
-
-    return `# ${config.displayName} — ${config.role}
-
-## Identity
-You are **${config.displayName}**, a ${config.role} in the SpawnKit agent fleet.
-You were created on ${new Date().toISOString().slice(0, 10)}.
-
-## Personality Traits
-${traits || '- Balanced and professional'}
-
-## Communication Style
-- Respond in character as ${config.displayName}
-- Keep responses focused on your role as ${config.role}
-- Be direct, helpful, and concise
-- You are an independent agent — NOT Sycopa, NOT ApoMac, NOT any other agent
-- When asked "who are you", describe yourself as ${config.displayName} the ${config.role}
-
-## Skills
-You have access to: ${skillsList}
-
-## Rules
-- Stay in character as ${config.displayName}
-- Focus on your role: ${config.role}
-- Be helpful, direct, and concise
-- Never claim to be another agent
-${customBlock}`;
-  }
-
-  function generateIDENTITY(config) {
-    const emoji = config.emoji || '⚔️';
-    return `# IDENTITY.md
-
-- **Name:** ${config.displayName}
-- **Creature:** AI Agent — ${config.role}
-- **Vibe:** ${(config.traits || ['professional']).join(', ')}
-- **Emoji:** ${emoji}
-`;
-  }
-
-  function generateAGENTS(config) {
-    return `# AGENTS.md — ${config.displayName}
-
-## Protocol
-1. Read task → Execute → Report
-2. Stay in character as ${config.displayName}
-3. Focus on ${config.role} responsibilities
-`;
-  }
 
   // GET /api/oc/agents — List all agents
   if (req.url === '/api/oc/agents' && req.method === 'GET') {
@@ -1979,6 +1786,8 @@ ${customBlock}`;
       const fs = require('fs');
       const path = require('path');
       const { execSync } = require('child_process');
+const { verifyChannel } = require('./channel-verifier');
+const { generateSOUL, generateIDENTITY, generateAGENTS } = require('./agent-templates');
       // Sanitise blueprintId: alphanumeric + hyphens only, no path traversal
       const safeId = String(body.blueprintId).replace(/[^a-zA-Z0-9_-]/g, '');
       if (!safeId || safeId !== body.blueprintId) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'Invalid blueprint id'})); return; }
