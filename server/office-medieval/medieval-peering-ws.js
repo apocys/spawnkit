@@ -13,7 +13,8 @@
     function start() {
         var wsUrl, token;
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            wsUrl = 'ws://localhost:18790/ws/fleet';
+            var wsPort = window.location.port || '8765';
+            wsUrl = 'ws://localhost:' + wsPort + '/ws/fleet';
         } else {
             wsUrl = (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//fleet.spawnkit.ai/ws/fleet';
         }

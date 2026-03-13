@@ -5,12 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpawnKit — Medieval Castle 3D</title>
     <script>
-        if (window.location.hostname.includes('spawnkit.ai')) {
-            window.OC_RELAY_URL = window.location.origin;
-        } else {
-            window.OC_RELAY_URL = window.OC_RELAY_URL || 'http://127.0.0.1:18790';
-        }
         var API_URL = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8765');
+        // OC_RELAY_URL should match API_URL — the SpawnKit server proxies all /api/oc/* calls
+        window.OC_RELAY_URL = window.OC_RELAY_URL || API_URL;
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -704,12 +701,9 @@
 </head>
 <body>
     <script>
-        if (window.location.hostname.includes('spawnkit.ai')) {
-            window.OC_RELAY_URL = window.location.origin;
-        } else {
-            window.OC_RELAY_URL = 'http://localhost:18790';
-        }
-        window.OC_RELAY_TOKEN = localStorage.getItem('spawnkit-token') || 'sk-oc-proxy-spawnkit-2026';
+        // Use API_URL (set above) as relay, SpawnKit server proxies everything
+        window.OC_RELAY_URL = window.OC_RELAY_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8765');
+        window.OC_RELAY_TOKEN = localStorage.getItem('spawnkit-token') || localStorage.getItem('spawnkit-api-token') || 'sk-oc-proxy-spawnkit-2026';
     </script>
 
     <div class="castle-layout">
