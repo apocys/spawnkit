@@ -374,13 +374,29 @@
     var activeMissions = missions.filter(function(m) { return m.status === 'in_progress' || m.status === 'active'; });
 
     var lines = [];
+    // Convert mission names to medieval quest descriptions
+    function toQuestName(name) {
+      var lower = (name || '').toLowerCase();
+      if (lower === 'main' || lower === 'agent:main:main') return 'Defend the Realm';
+      if (lower.includes('cron')) return 'Castle Daily Rituals';
+      if (lower.includes('deploy')) return 'March to the Frontier';
+      if (lower.includes('test')) return 'Fortify the Walls';
+      if (lower.includes('fix') || lower.includes('bug')) return 'Vanquish the Gremlins';
+      if (lower.includes('build') || lower.includes('feature')) return 'Forge New Weapons';
+      if (lower.includes('review')) return 'Council Review';
+      if (lower.includes('setup')) return 'Prepare the Keep';
+      if (name && name.length > 30) return name.substring(0, 27) + '...';
+      return name || 'Unknown Quest';
+    }
+
     activeMissions.forEach(function (m) {
       var pct = Math.round((m.progress || 0) * 100);
       var priorityColor = m.priority === 'critical' ? '#ff6b6b' : m.priority === 'high' ? '#ffaa33' : '#4ade80';
+      var questName = toQuestName(m.title || m.name);
       lines.push(
         '<div style="display:flex;align-items:center;gap:4px;margin:2px 0;">' +
-        '<span style="color:' + priorityColor + ';font-size:9px;">●</span>' +
-        '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (m.title || m.name) + '</span>' +
+        '<span style="color:' + priorityColor + ';font-size:9px;">⚔️</span>' +
+        '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + questName + '</span>' +
         '<span style="color:#4ade80;font-size:9px;">' + pct + '%</span>' +
         '</div>'
       );

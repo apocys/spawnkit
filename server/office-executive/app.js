@@ -490,7 +490,7 @@
         var themesBtn = document.getElementById('themesBtn');
         var closeBtn = document.getElementById('themePickerClose');
 
-        if (themesBtn) {
+        if (themesBtn && overlay) {
             themesBtn.addEventListener('click', function() {
                 overlay.classList.add('open');
             });
