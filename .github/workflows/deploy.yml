@@ -58,14 +58,16 @@ jobs:
           fi
           echo "All JSON files are valid."
 
-      - name: Check JS syntax in src/
+      - name: Check JS syntax (src/ + server/)
         run: |
-          echo "🔍 Checking JS syntax in src/..."
+          echo "🔍 Checking JS syntax..."
           FAILED=0
-          JS_FILES=$(find src/ -name "*.js" 2>/dev/null)
-          if [ -z "$JS_FILES" ]; then
-            echo "  No .js files found in src/ — skipping."
-          else
+          for DIR in src server; do
+            JS_FILES=$(find $DIR/ -name "*.js" -not -path "*/node_modules/*" 2>/dev/null)
+            if [ -z "$JS_FILES" ]; then
+              echo "  No .js files found in $DIR/ — skipping."
+              continue
+            fi
             for f in $JS_FILES; do
               if node --check "$f" 2>/dev/null; then
                 echo "  ✅ $f"
@@ -75,7 +77,7 @@ jobs:
                 FAILED=1
               fi
             done
-          fi
+          done
           if [ "$FAILED" -eq 1 ]; then
             echo "One or more JS files have syntax errors."
             exit 1

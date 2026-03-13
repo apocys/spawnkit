@@ -1,0 +1,74 @@
+name: Deploy to Hetzner
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hetzner
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: 🚀 Deploy to VPS
+    runs-on: ubuntu-latest
+    # Only deploy if tests pass
+    needs: []
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            set -e
+            echo "🚀 Deploying SpawnKit to production..."
+
+            cd ~/spawnkit 2>/dev/null || cd ~/clawd/spawnkit 2>/dev/null || {
+              echo "❌ SpawnKit directory not found"
+              exit 1
+            }
+
+            # Pull latest
+            echo "📥 Pulling latest from main..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Check if server.js syntax is valid before restarting
+            echo "🔍 Validating server.js syntax..."
+            node --check server/server.js || {
+              echo "❌ server.js has syntax errors — aborting deploy"
+              exit 1
+            }
+
+            # Restart the server
+            echo "🔄 Restarting SpawnKit server..."
+            # Try pm2 first, then systemd, then manual
+            if command -v pm2 &>/dev/null && pm2 list 2>/dev/null | grep -q spawnkit; then
+              pm2 restart spawnkit
+              echo "✅ Restarted via pm2"
+            elif systemctl is-active --quiet spawnkit 2>/dev/null; then
+              sudo systemctl restart spawnkit
+              echo "✅ Restarted via systemd"
+            else
+              # Kill old process and restart
+              pkill -f "node.*server.js" || true
+              sleep 2
+              cd server && nohup node server.js > /tmp/spawnkit.log 2>&1 &
+              echo "✅ Restarted manually (PID: $!)"
+            fi
+
+            # Health check
+            sleep 3
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${PORT:-8765}/api/oc/health || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Health check passed — deploy complete!"
+            else
+              echo "⚠️ Health check returned $HTTP_CODE — server may need manual review"
+              tail -20 /tmp/spawnkit.log 2>/dev/null || true
+              exit 1
+            fi

@@ -25,9 +25,9 @@ class AgentOSNaming {
 
     static get ROLES() {
         return { ...this.CORE_ROLES, ...Object.fromEntries(this.customRoles) };
-    },
+    }
 
-    registerRole(name, config) {
+    static registerRole(name, config) {
         // Validate role name
         if (!name || typeof name !== 'string') {
             throw new Error('Role name must be a non-empty string');
