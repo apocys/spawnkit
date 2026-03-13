@@ -162,7 +162,10 @@
         #agent-info.visible { display: flex; align-items: center; gap: 12px; }
         #agent-info .agent-name { font-family: var(--font-heading); color: var(--castle-gold); font-weight: 600; }
         #agent-info .agent-title { color: var(--text-secondary); font-style: italic; }
-        #agent-info .agent-mood { }
+        #agent-info .agent-mood { color: var(--castle-gold); }
+        #agent-info .agent-energy { color: var(--status-active); }
+        #agent-info .agent-trust { color: var(--castle-silver); }
+        #agent-info .agent-conscience { color: var(--text-secondary); font-style: italic; }
         #agent-info .agent-zone { color: var(--text-secondary); }
 
         /* ── Scrollbar ── */
@@ -197,6 +200,9 @@
         <span class="agent-name" id="ai-name"></span>
         <span class="agent-title" id="ai-title"></span>
         <span class="agent-mood" id="ai-mood"></span>
+        <span class="agent-energy" id="ai-energy"></span>
+        <span class="agent-trust" id="ai-trust"></span>
+        <span class="agent-conscience" id="ai-conscience"></span>
         <span class="agent-zone" id="ai-zone"></span>
     </div>
 
@@ -261,10 +267,25 @@
             var agent = e.detail.agent;
             var bar = document.getElementById('agent-info');
             if (!agent) { bar.classList.remove('visible'); return; }
+            
             document.getElementById('ai-name').textContent = agent.name;
             var p = agent.personality || {};
             document.getElementById('ai-title').textContent = p.title || '';
-            document.getElementById('ai-mood').textContent = agent.emoji || '';
+            
+            // Real KPI display
+            var moodPercent = Math.round((agent.mood || 0) * 100);
+            var energyPercent = Math.round((agent.energy || 0) * 100);
+            document.getElementById('ai-mood').textContent = '😊 ' + moodPercent + '%';
+            document.getElementById('ai-energy').textContent = '⚡ ' + energyPercent + '%';
+            
+            var trustStars = '★'.repeat(Math.max(0, Math.min(5, agent.trust || 0))) + 
+                           '☆'.repeat(Math.max(0, 5 - (agent.trust || 0)));
+            document.getElementById('ai-trust').textContent = trustStars;
+            
+            var conscienceEmoji = { 'dutiful': '🛡️', 'independent': '⚔️', 'chaotic': '🌪️' };
+            document.getElementById('ai-conscience').textContent = 
+                (conscienceEmoji[agent.conscience] || '🛡️') + ' ' + (agent.conscience || 'dutiful');
+                
             document.getElementById('ai-zone').textContent = agent.currentZone ? ('📍 ' + agent.currentZone) : '';
             bar.classList.add('visible');
         });

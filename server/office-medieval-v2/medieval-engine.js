@@ -33,7 +33,7 @@
   // ── Data bridge state ──
   var sessions = [];
   var lastFetchTime = 0;
-  var FETCH_INTERVAL = 10000; // 10s
+  var FETCH_INTERVAL = 5000; // 5s for more responsive KPI updates
 
   // ── Default agents ──
   var DEFAULT_AGENTS = [
@@ -137,6 +137,8 @@
       personality: personality,
       mood: personality.moodBase,
       energy: 1.0,
+      trust: 3,
+      conscience: 'dutiful',
       isActive: false,
       isSubAgent: isSubAgent || false,
       toolStatus: null,
@@ -552,13 +554,15 @@
   // ── Data bridge ──
 
   function fetchData() {
+    // Use the current server for session data (SpawnKit server on 8765)
+    var baseUrl = window.location.origin;
     var relayUrl = window.OC_RELAY_URL || 'http://127.0.0.1:18790';
     var token = window.OC_RELAY_TOKEN || localStorage.getItem('spawnkit-token') || '';
     var headers = {};
     if (token) headers['Authorization'] = 'Bearer ' + token;
 
-    // Fetch sessions
-    fetch(relayUrl + '/api/oc/sessions', { headers: headers })
+    // Fetch sessions from the current SpawnKit server
+    fetch(baseUrl + '/api/oc/sessions', { headers: headers })
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (data) {
         sessions = Array.isArray(data) ? data : (data.sessions || []);
@@ -568,6 +572,9 @@
   }
 
   function syncAgentsWithSessions() {
+    // Calculate real KPIs from session data
+    var agentKPIs = calculateAgentKPIs(sessions);
+
     // Mark all agents inactive
     characters.forEach(function (ch) {
       ch.isActive = false;
@@ -583,7 +590,15 @@
         if (label.indexOf(ch.id) >= 0 || label.indexOf(ch.name.toLowerCase()) >= 0) {
           ch.isActive = true;
           ch.toolStatus = s.model ? ('🔮 ' + s.model.split('/').pop()) : null;
-          ch.energy = Math.min(1, ch.energy + 0.1);
+          
+          // Apply real KPI data instead of simple energy boost
+          var kpi = agentKPIs[ch.id];
+          if (kpi) {
+            ch.mood = kpi.mood / 100; // Convert 0-100 to 0-1
+            ch.energy = kpi.energy / 100; // Convert 0-100 to 0-1
+            ch.trust = kpi.trust;
+            ch.conscience = kpi.conscience;
+          }
           matched = true;
         }
       });
@@ -595,6 +610,29 @@
           var ch = spawnAgent(subId, s.label || 'Knight', Math.floor(Math.random() * 6), true);
           ch.isActive = true;
           ch.toolStatus = s.model ? ('⚔️ ' + s.model.split('/').pop()) : '⚔️ On quest';
+          
+          // Apply KPI for sub-agents too
+          var agentId = mapSessionToAgent(s);
+          var kpi = agentKPIs[agentId];
+          if (kpi) {
+            ch.mood = kpi.mood / 100;
+            ch.energy = kpi.energy / 100;
+            ch.trust = kpi.trust;
+            ch.conscience = kpi.conscience;
+          }
+        }
+      }
+    });
+
+    // Update KPIs for idle agents (not in active sessions)
+    characters.forEach(function (ch) {
+      if (!ch.isActive) {
+        var kpi = agentKPIs[ch.id];
+        if (kpi) {
+          ch.mood = kpi.mood / 100;
+          ch.energy = kpi.energy / 100;
+          ch.trust = kpi.trust;
+          ch.conscience = kpi.conscience;
         }
       }
     });
@@ -610,6 +648,239 @@
 
     // Dispatch update event
     document.dispatchEvent(new CustomEvent('agents:updated', { detail: { sessions: sessions } }));
+  }
+
+  // ── KPI Calculation Functions ──
+
+  function calculateAgentKPIs(sessionData) {
+    if (!Array.isArray(sessionData)) {
+      return {};
+    }
+
+    var now = Date.now();
+    var kpis = {};
+
+    // Initialize core agents with default values
+    var DEFAULT_AGENTS = ['sycopa', 'forge', 'atlas', 'hunter', 'echo', 'sentinel'];
+    DEFAULT_AGENTS.forEach(function (agentId) {
+      kpis[agentId] = {
+        mood: 50,      // Neutral mood baseline
+        energy: 30,    // Low energy when idle
+        trust: 3,      // Moderate trust baseline  
+        conscience: 'dutiful'
+      };
+    });
+
+    // Process each session
+    sessionData.forEach(function (session) {
+      var agentId = mapSessionToAgent(session);
+      if (!agentId) return;
+
+      // Initialize agent if not exists
+      if (!kpis[agentId]) {
+        kpis[agentId] = {
+          mood: 50,
+          energy: 30,
+          trust: 3,
+          conscience: 'dutiful'
+        };
+      }
+
+      // Calculate activity metrics
+      var activityMetrics = calculateActivityMetrics(session, now);
+      var errorMetrics = calculateErrorMetrics(session);
+      var trustMetrics = calculateTrustMetrics(session, activityMetrics);
+      
+      // Apply KPI formulas
+      kpis[agentId].mood = calculateMood(activityMetrics, errorMetrics);
+      kpis[agentId].energy = calculateEnergy(activityMetrics, errorMetrics, now);
+      kpis[agentId].trust = calculateTrust(trustMetrics, activityMetrics);
+      kpis[agentId].conscience = calculateConscience(session, activityMetrics);
+    });
+
+    return kpis;
+  }
+
+  function mapSessionToAgent(session) {
+    var label = (session.label || session.displayName || session.key || '').toLowerCase();
+    var key = session.key || '';
+
+    // Direct agent name matching
+    var directMatch = ['sycopa', 'forge', 'atlas', 'hunter', 'echo', 'sentinel']
+      .find(function (agent) { return label.indexOf(agent) >= 0 || key.indexOf(agent) >= 0; });
+    
+    if (directMatch) return directMatch;
+
+    // Main session maps to sycopa
+    if (key === 'agent:main:main' || session.kind === 'main') {
+      return 'sycopa';
+    }
+
+    // Action-based mapping for sub-agents
+    var action = session.action || 'idle';
+    switch (action) {
+      case 'coding':
+      case 'debugging':
+        return 'forge';
+      case 'reviewing':
+      case 'researching':
+        return 'atlas';
+      case 'planning':
+        return 'sycopa';
+      case 'communicating':
+        return 'echo';
+      case 'guarding':
+        return 'sentinel';
+      case 'deploying':
+        return 'hunter';
+      default:
+        return 'atlas';
+    }
+  }
+
+  function calculateActivityMetrics(session, now) {
+    var lastActive = session.lastActive || 0;
+    var idleTime = now - lastActive;
+    var totalTokens = session.totalTokens || 0;
+    var isActive = session.status === 'active';
+    
+    var activityLevel = 'LOW';
+    if (isActive && idleTime < 5 * 60 * 1000) { // Active within 5 minutes
+      activityLevel = totalTokens > 1000 ? 'HIGH' : 'MEDIUM';
+    } else if (idleTime < 30 * 60 * 1000) { // Active within 30 minutes
+      activityLevel = 'MEDIUM';
+    }
+
+    return {
+      activityLevel: activityLevel,
+      idleMinutes: Math.floor(idleTime / (60 * 1000)),
+      totalTokens: totalTokens,
+      isActive: isActive,
+      tokensPerHour: calculateTokensPerHour(session, now)
+    };
+  }
+
+  function calculateTokensPerHour(session, now) {
+    var lastActive = session.lastActive || now;
+    var hoursSinceActive = Math.max(1, (now - lastActive) / (60 * 60 * 1000));
+    return Math.floor((session.totalTokens || 0) / hoursSinceActive);
+  }
+
+  function calculateErrorMetrics(session) {
+    var action = session.action || 'idle';
+    var label = (session.label || '').toLowerCase();
+    
+    var hasErrors = action === 'debugging' || 
+      label.indexOf('error') >= 0 || 
+      label.indexOf('debug') >= 0 || 
+      label.indexOf('fix') >= 0 ||
+      label.indexOf('broken') >= 0;
+
+    var errorRate = hasErrors ? 0.3 : 0.05;
+    
+    return {
+      hasErrors: hasErrors,
+      errorRate: errorRate,
+      errorState: action === 'debugging'
+    };
+  }
+
+  function calculateTrustMetrics(session, activityMetrics) {
+    var completionHeuristic = activityMetrics.totalTokens > 500 ? 0.8 : 0.6;
+    var consistencyScore = activityMetrics.isActive ? 1.0 : 0.7;
+    
+    return {
+      completionHeuristic: completionHeuristic,
+      consistencyScore: consistencyScore,
+      reliability: (completionHeuristic + consistencyScore) / 2
+    };
+  }
+
+  function calculateMood(activityMetrics, errorMetrics) {
+    var activityLevel = activityMetrics.activityLevel;
+    var hasErrors = errorMetrics.hasErrors;
+    var errorRate = errorMetrics.errorRate;
+
+    var baseMood = 50;
+
+    switch (activityLevel) {
+      case 'HIGH':
+        if (!hasErrors || errorRate < 0.1) {
+          baseMood = 80 + Math.random() * 15; // High mood (80-95%)
+        } else {
+          baseMood = 30 + Math.random() * 20; // Stressed mood (30-50%)
+        }
+        break;
+      case 'MEDIUM':
+        baseMood = 60 + Math.random() * 20; // Focused mood (60-80%)
+        break;
+      case 'LOW':
+        if (activityMetrics.idleMinutes > 30) {
+          baseMood = 20 + Math.random() * 20; // Bored mood (20-40%)
+        } else {
+          baseMood = 40 + Math.random() * 20; // Slightly bored (40-60%)
+        }
+        break;
+    }
+
+    return Math.round(Math.max(0, Math.min(100, baseMood)));
+  }
+
+  function calculateEnergy(activityMetrics, errorMetrics, now) {
+    var idleMinutes = activityMetrics.idleMinutes;
+    var isActive = activityMetrics.isActive;
+    var errorState = errorMetrics.errorState;
+
+    var baseEnergy = 50;
+
+    if (errorState) {
+      baseEnergy = 5 + Math.random() * 15; // Error state = Depleted energy (5-20%)
+    } else if (isActive && idleMinutes < 10) {
+      baseEnergy = 80 + Math.random() * 20; // Recent activity = High energy (80-100%)
+    } else if (idleMinutes >= 10 && idleMinutes <= 30) {
+      baseEnergy = 40 + Math.random() * 30; // Idle 10-30min = Medium energy (40-70%)
+    } else if (idleMinutes > 30) {
+      baseEnergy = 10 + Math.random() * 20; // Idle >30min = Low energy (10-30%)
+    }
+
+    return Math.round(Math.max(0, Math.min(100, baseEnergy)));
+  }
+
+  function calculateTrust(trustMetrics, activityMetrics) {
+    var reliability = trustMetrics.reliability;
+    var totalTokens = activityMetrics.totalTokens;
+
+    var trustScore = Math.floor(reliability * 5);
+    
+    if (totalTokens > 5000) {
+      trustScore = Math.min(5, trustScore + 1);
+    }
+
+    if (activityMetrics.isActive && trustScore < 1) {
+      trustScore = 1;
+    }
+
+    return Math.max(0, Math.min(5, trustScore));
+  }
+
+  function calculateConscience(session, activityMetrics) {
+    var action = session.action || 'idle';
+    var label = (session.label || '').toLowerCase();
+    var activityLevel = activityMetrics.activityLevel;
+
+    if (action === 'planning' || action === 'reviewing' || label.indexOf('systematic') >= 0) {
+      return 'dutiful';
+    }
+    
+    if (activityLevel === 'HIGH' && (action === 'coding' || action === 'researching')) {
+      return 'independent';
+    }
+    
+    if (action === 'debugging' || label.indexOf('emergency') >= 0 || label.indexOf('hotfix') >= 0) {
+      return 'chaotic';
+    }
+
+    return 'dutiful';
   }
 
   // ── Resize ──

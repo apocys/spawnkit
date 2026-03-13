@@ -78,6 +78,9 @@
     var coreAgents = ['sycopa', 'forge', 'atlas', 'hunter', 'echo', 'sentinel'];
     var agentSessions = {};
 
+    // Calculate real KPIs from session data
+    var kpis = calculateAgentKPIs(sessions);
+
     // Main session → sycopa
     var mainSession = sessions.find(function (s) { return s.key === 'agent:main:main'; });
     if (mainSession && mainSession.status === 'active') {
@@ -199,12 +202,28 @@
           }
         }
 
+        // Add KPI data to agent state
+        if (kpis[agentId]) {
+          newState.mood = kpis[agentId].mood;
+          newState.energy = kpis[agentId].energy;
+          newState.trust = kpis[agentId].trust;
+          newState.conscience = kpis[agentId].conscience;
+        }
+
         agentActions.set(agentId, newState);
         showActionBubble(agentId, config.label, sessionData ? sessionData.task : null);
 
       } else if (current && sessionData) {
         current.tokens = sessionData.tokens;
         current.task = sessionData.task;
+        
+        // Update KPIs for existing agent
+        if (kpis[agentId]) {
+          current.mood = kpis[agentId].mood;
+          current.energy = kpis[agentId].energy;
+          current.trust = kpis[agentId].trust;
+          current.conscience = kpis[agentId].conscience;
+        }
       }
     });
 
@@ -426,6 +445,74 @@
       if (task) msg += ' (' + task.substring(0, 40) + ')';
       app.addActivityLog(msg, agentId);
     }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // KPI CALCULATION (simplified from server/lib/kpi-engine.js)
+  // ══════════════════════════════════════════════════════════════
+
+  function calculateAgentKPIs(sessions) {
+    var now = Date.now();
+    var kpis = {};
+    
+    // Default agents with baseline values
+    ['sycopa', 'forge', 'atlas', 'hunter', 'echo', 'sentinel'].forEach(function(agentId) {
+      kpis[agentId] = { mood: 50, energy: 30, trust: 3, conscience: 'dutiful' };
+    });
+
+    sessions.forEach(function(session) {
+      var agentId = mapSessionToAgent(session);
+      if (!agentId || !kpis[agentId]) return;
+
+      var kpi = kpis[agentId];
+      var lastActivity = new Date(session.endedAt || session.startedAt).getTime();
+      var idleMinutes = (now - lastActivity) / (1000 * 60);
+      var tokens = session.totalTokens || 0;
+
+      // Energy based on recent activity
+      if (session.status === 'active') {
+        kpi.energy = Math.min(100, 80 + Math.random() * 20);
+      } else if (idleMinutes < 10) {
+        kpi.energy = 60 + Math.random() * 20;
+      } else if (idleMinutes < 30) {
+        kpi.energy = 30 + Math.random() * 20;
+      } else {
+        kpi.energy = 10 + Math.random() * 20;
+      }
+
+      // Mood based on activity + errors
+      var hasError = session.action === 'error' || (session.error && session.error.length > 0);
+      if (hasError) {
+        kpi.mood = 20 + Math.random() * 30; // Frustrated
+      } else if (tokens > 1000) {
+        kpi.mood = 70 + Math.random() * 25; // Productive
+      } else if (session.status === 'active') {
+        kpi.mood = 60 + Math.random() * 20; // Focused
+      } else if (idleMinutes > 30) {
+        kpi.mood = 20 + Math.random() * 20; // Bored
+      }
+
+      // Trust based on consistency
+      kpi.trust = Math.min(5, 3 + (tokens > 500 ? 1 : 0) + (hasError ? -1 : 0));
+
+      // Conscience based on agent type
+      if (agentId === 'sycopa') kpi.conscience = 'independent';
+      else if (agentId === 'forge') kpi.conscience = 'dutiful';
+      else kpi.conscience = 'chaotic';
+    });
+
+    return kpis;
+  }
+
+  function mapSessionToAgent(session) {
+    if (session.key === 'agent:main:main') return 'sycopa';
+    var label = (session.label || '').toLowerCase();
+    if (label.includes('forge') || session.action === 'coding') return 'forge';
+    if (label.includes('echo') || session.action === 'communicating') return 'echo';
+    if (label.includes('sentinel') || session.action === 'reviewing') return 'sentinel';
+    if (label.includes('atlas') || session.action === 'planning') return 'atlas';
+    if (label.includes('hunter')) return 'hunter';
+    return null; // unassigned
   }
 
   // ══════════════════════════════════════════════════════════════
