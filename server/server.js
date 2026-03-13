@@ -131,7 +131,7 @@ const server = http.createServer(async (req, res) => {
 
   // ─── Remote proxy endpoint ───────────────────────────────
   // ─── Fleet Relay Proxy (peers/invite/pair/disconnect) ─────
-  const FLEET_RELAY_URL = process.env.FLEET_RELAY_URL || 'http://localhost:8223';
+  const FLEET_RELAY_URL = process.env.FLEET_RELAY_URL || 'http://localhost:18790';
   const FLEET_RELAY_TOKEN = process.env.FLEET_RELAY_TOKEN || 'sk-fleet-2ad53564b03d9facbe3389bb5c461179ffc73af12e50ae00';
 
   // GET /api/fleet/peers — public, no auth needed
@@ -236,7 +236,7 @@ const server = http.createServer(async (req, res) => {
       const resp = await new Promise((resolve, reject) => {
         const postData = JSON.stringify(body || {});
         const opts = {
-          hostname: 'localhost', port: 8223, path: '/api/fleet/invite', method: 'POST',
+          hostname: 'localhost', port: parseInt(new URL(FLEET_RELAY_URL).port || '18790'), path: '/api/fleet/invite', method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData), 'Authorization': 'Bearer ' + FLEET_RELAY_TOKEN }
         };
         const r = require('http').request(opts, (res2) => {
@@ -263,7 +263,7 @@ const server = http.createServer(async (req, res) => {
       const resp = await new Promise((resolve, reject) => {
         const postData = JSON.stringify(body || {});
         const opts = {
-          hostname: 'localhost', port: 8223, path: '/api/fleet/pair', method: 'POST',
+          hostname: 'localhost', port: parseInt(new URL(FLEET_RELAY_URL).port || '18790'), path: '/api/fleet/pair', method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) }
         };
         const r = require('http').request(opts, (res2) => {
@@ -290,7 +290,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const resp = await new Promise((resolve, reject) => {
         const opts = {
-          hostname: 'localhost', port: 8223, path: '/api/fleet/peer/' + peerId, method: 'DELETE',
+          hostname: 'localhost', port: parseInt(new URL(FLEET_RELAY_URL).port || '18790'), path: '/api/fleet/peer/' + peerId, method: 'DELETE',
           headers: { 'Authorization': 'Bearer ' + FLEET_RELAY_TOKEN }
         };
         const r = require('http').request(opts, (res2) => {

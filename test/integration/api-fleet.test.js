@@ -69,10 +69,10 @@ describe('API fleet/remote integration tests', () => {
   });
 
   // ── Fleet Mailbox ───────────────────────────────────────────────────────────
-  test('GET /api/fleet/mailbox → 200 or 502', async (t) => {
+  test('GET /api/fleet/mailbox → 200 (or 502 if relay down)', async (t) => {
     if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/fleet/mailbox');
-    assert.ok([200, 502].includes(res.status), `expected 200 or 502, got ${res.status}`);
+    assert.ok([200, 502].includes(res.status), `expected 200 or 502 (relay down), got ${res.status}`);
   });
 
   test('GET /api/fleet/mailbox → has messages array', async (t) => {
@@ -106,10 +106,10 @@ describe('API fleet/remote integration tests', () => {
   });
 
   // ── Remote Offices ──────────────────────────────────────────────────────────
-  test('GET /api/remote/offices → 200 or 502', async (t) => {
+  test('GET /api/remote/offices → 200 (or 502 if relay down)', async (t) => {
     if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/remote/offices');
-    assert.ok([200, 502].includes(res.status), `expected 200 or 502, got ${res.status}`);
+    assert.ok([200, 502].includes(res.status), `expected 200 or 502 (relay down), got ${res.status}`);
   });
 
   test('GET /api/remote/offices → has offices array', async (t) => {
