@@ -22,11 +22,12 @@ window.__skOnboardingV2 = true;
       position: fixed;
       inset: 0;
       z-index: 10000;
-      background: rgba(20,12,5,0.92);
-      backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(20,12,5,0.1) 0%, rgba(20,12,5,0.85) 100%);
+      pointer-events: none;
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       justify-content: center;
+      padding-bottom: 80px;
       font-family: 'Crimson Text', Georgia, 'Times New Roman', serif;
       color: #F5E6D0;
       transition: opacity 0.6s ease;
@@ -49,7 +50,7 @@ window.__skOnboardingV2 = true;
     }
 
     /* Beats container */
-    .sk-med-ob-beat {
+    .sk-med-ob-beat { pointer-events: auto;
       position: relative;
       display: none;
       flex-direction: column;
@@ -70,7 +71,16 @@ window.__skOnboardingV2 = true;
     /* ── Beat 1: Herald ── */
     .sk-med-ob-herald-wrap {
       text-align: center;
-      max-width: 560px;
+      background: rgba(20, 12, 5, 0.85);
+      border: 1px solid rgba(201, 169, 89, 0.3);
+      padding: 30px 40px;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8), inset 0 0 20px rgba(201, 169, 89, 0.05);
+      position: relative;
+    }
+    .sk-med-ob-herald-wrap::before {
+      content: ''; position: absolute; top: -4px; left: -4px; right: -4px; bottom: -4px;
+      border: 1px solid rgba(201, 169, 89, 0.15); pointer-events: none; border-radius: 10px;
     }
     .sk-med-ob-herald-line1 {
       font-family: 'Cinzel', Georgia, serif;
@@ -762,6 +772,43 @@ window.__skOnboardingV2 = true;
       _baseGoTo(n);
       const b = beats[n];
       if (b && b._init) b._init();
+
+      // Sync 3D Camera
+      if (window.castleApp && window.castleApp.camera) {
+        const app = window.castleApp;
+        app.controls.enabled = false;
+        let targetPos, targetLook;
+        
+        if (n === 0) {
+          targetPos = {x: 0, y: 35, z: 45}; targetLook = {x: 0, y: 0, z: 0};
+        } else if (n === 1) {
+          targetPos = {x: 0, y: 15, z: 25}; targetLook = {x: 0, y: 5, z: 0};
+        } else if (n === 2) {
+          targetPos = {x: -10, y: 12, z: 20}; targetLook = {x: -5, y: 2, z: 15};
+        } else if (n === 3) {
+          targetPos = {x: 10, y: 20, z: 30}; targetLook = {x: 0, y: 0, z: 0};
+        }
+
+        if (targetPos) {
+           // Simple manual lerp animation
+           let startPos = app.camera.position.clone();
+           let steps = 60; let step = 0;
+           function anim() {
+             step++;
+             let t = step / steps;
+             let e = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // ease in out
+             app.camera.position.set(
+               startPos.x + (targetPos.x - startPos.x) * e,
+               startPos.y + (targetPos.y - startPos.y) * e,
+               startPos.z + (targetPos.z - startPos.z) * e
+             );
+             app.camera.lookAt(targetLook.x, targetLook.y, targetLook.z);
+             if (step < steps) requestAnimationFrame(anim);
+           }
+           anim();
+        }
+      }
+
     };
 
     // Start
