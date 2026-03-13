@@ -279,6 +279,24 @@ function updateMood(agentId, app) {
     else if (state.mood > 0.7) state.moodLabel = 'happy';
     else if (state.mood < 0.35) state.moodLabel = 'stressed';
     else state.moodLabel = 'neutral';
+
+    // Update KPIs from real session data
+    if (agentData) {
+        // Trust tier: based on session count and success rate
+        var sessions = agentData.sessions || [];
+        var totalSessions = sessions.length + (agentData.totalSessions || 0);
+        state.trustTier = totalSessions >= 50 ? 5 : totalSessions >= 20 ? 4 : totalSessions >= 10 ? 3 : totalSessions >= 3 ? 2 : totalSessions >= 1 ? 1 : 0;
+
+        // Conscience: based on activity level
+        state.conscience = hasSessions ? 'dutiful' : (state.energy > 0.5 ? 'independent' : 'idle');
+
+        // Last quest from active session
+        if (sessions.length > 0) {
+            var latest = sessions[sessions.length - 1];
+            state.lastQuestName = latest.task || latest.label || agentData.action || null;
+            state.lastQuestTime = latest.startedAt || Date.now();
+        }
+    }
 }
 
 // ── Emoji Expression System ──────────────────────────────────

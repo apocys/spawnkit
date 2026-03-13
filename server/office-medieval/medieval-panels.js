@@ -818,7 +818,7 @@
                     if (obj && obj.userData.buildingName) {
                         if (obj.userData.buildingName === '🏰 Royal Court' && window.RoyalCourt) {
                             window.RoyalCourt.show();
-                        } else if (window.MissionHouses && window.MissionHouses.handleClick(obj.userData.buildingName)) {
+                        } else if (window.MissionHouses && window.MissionHouses.handleClick(obj.userData.buildingName, obj.userData.missionId)) {
                             // Mission house click consumed
                         } else {
                             window.openBuildingPanel(obj.userData.buildingName);

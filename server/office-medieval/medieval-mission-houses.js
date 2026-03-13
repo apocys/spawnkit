@@ -20,6 +20,25 @@
     function warn() { console.warn.apply(console, [LOG_PREFIX].concat(Array.prototype.slice.call(arguments))); }
     function err() { console.error.apply(console, [LOG_PREFIX].concat(Array.prototype.slice.call(arguments))); }
 
+    // ── Chat formatting helpers ──────────────────────────────────────
+    function formatChatMsg(raw) {
+        var text = (raw || '').substring(0, 2000);
+        return esc(text)
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/`([^`]+)`/g, '<code style="background:rgba(201,169,89,.1);padding:1px 4px;border-radius:3px;font-size:11px;">$1</code>')
+            .replace(/^### (.+)$/gm, '<strong style="color:#c9a959;font-size:13px;">$1</strong>')
+            .replace(/^## (.+)$/gm, '<strong style="color:#c9a959;font-size:14px;">$1</strong>')
+            .replace(/^- (.+)$/gm, '• $1')
+            .replace(/\n/g, '<br>');
+    }
+    function autoScrollChat(el) {
+        // Only auto-scroll if user is near the bottom (within 80px)
+        if (el.scrollHeight - el.scrollTop - el.clientHeight < 80) {
+            el.scrollTop = el.scrollHeight;
+        }
+    }
+
     // ── Color palette ─────────────────────────────────────────────────
     var HOUSE_COLORS = [
         { name: 'Indigo',  roof: 0x6366f1 }, { name: 'Emerald', roof: 0x10b981 },
@@ -92,6 +111,8 @@
                     }
                 });
             }
+            // Notify any open overlays that data refreshed
+            window.dispatchEvent(new CustomEvent('missions-synced', { detail: { count: missions.length } }));
         }).catch(function(e) { warn('Backend load failed (using localStorage):', e.message || e); });
 
         return missions;
@@ -209,11 +230,11 @@
 
         group.position.set(pos.x, 0, pos.z);
         group.userData.missionId = mission.id;
-        group.userData.buildingName = '🏠 ' + mission.name;
+        group.userData.buildingName = (mission.icon || '🏠') + ' ' + mission.name;
         group.traverse(function(child) {
             if (child.isMesh) {
                 child.userData.missionId = mission.id;
-                child.userData.buildingName = '🏠 ' + mission.name;
+                child.userData.buildingName = (mission.icon || '🏠') + ' ' + mission.name;
             }
         });
 
@@ -544,16 +565,10 @@
             } else {
                 chatEl.innerHTML = messages.slice(-20).map(function(m) {
                     var role = m.role === 'user' ? '👤' : '🤖';
-                    var raw = (m.content || m.text || '').substring(0, 500);
-                    // Convert light markdown → HTML for readability
-                    var html = esc(raw)
-                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                        .replace(/`([^`]+)`/g, '<code style="background:rgba(201,169,89,.1);padding:1px 4px;border-radius:3px;font-size:11px;">$1</code>')
-                        .replace(/\n/g, '<br>');
-                    return '<div style="margin-bottom:8px;padding:6px 8px;background:rgba(0,0,0,.15);border-radius:4px;border-left:2px solid rgba(201,169,89,' + (m.role === 'user' ? '.2' : '.4') + ');"><span style="color:rgba(201,169,89,.6);font-size:11px;">' + role + ' ' + (m.role === 'user' ? 'You' : 'Agent') + '</span><br><span style="color:rgba(220,210,195,.85);font-size:12px;line-height:1.5;">' + html + '</span></div>';
+                    var roleLabel = m.role === 'user' ? 'You' : (m.agent || 'Agent');
+                    return '<div style="margin-bottom:8px;padding:6px 8px;background:rgba(0,0,0,.15);border-radius:4px;border-left:2px solid rgba(201,169,89,' + (m.role === 'user' ? '.2' : '.4') + ');"><span style="color:rgba(201,169,89,.6);font-size:11px;">' + role + ' ' + esc(roleLabel) + '</span><br><span style="color:rgba(220,210,195,.85);font-size:12px;line-height:1.5;">' + formatChatMsg(m.content || m.text || '') + '</span></div>';
                 }).join('');
-                chatEl.scrollTop = chatEl.scrollHeight;
+                autoScrollChat(chatEl);
             }
         });
 
@@ -641,10 +656,10 @@
             var chatEl = document.getElementById('mh-chat-history');
             if (chatEl) {
                 var newMsg = document.createElement('div');
-                newMsg.style.cssText = 'margin-bottom:6px;';
-                newMsg.innerHTML = '<span style="color:rgba(201,169,89,.6);">👤</span> <span style="color:rgba(168,162,153,.8);">' + esc(text) + '</span>';
+                newMsg.style.cssText = 'margin-bottom:8px;padding:6px 8px;background:rgba(0,0,0,.15);border-radius:4px;border-left:2px solid rgba(201,169,89,.2);';
+                newMsg.innerHTML = '<span style="color:rgba(201,169,89,.6);font-size:11px;">👤 You</span><br><span style="color:rgba(220,210,195,.85);font-size:12px;line-height:1.5;">' + formatChatMsg(text) + '</span>';
                 chatEl.appendChild(newMsg);
-                chatEl.scrollTop = chatEl.scrollHeight;
+                autoScrollChat(chatEl);
             }
             // Send via mission-scoped API
             sendMissionChat(missionId, text, function(data) {
@@ -654,12 +669,12 @@
                     data.results.forEach(function(r) {
                         if (r.ok && r.reply) {
                             var replyMsg = document.createElement('div');
-                            replyMsg.style.cssText = 'margin-bottom:6px;';
-                            replyMsg.innerHTML = '<span style="color:rgba(201,169,89,.6);">🤖 ' + esc(r.agent) + '</span> <span style="color:rgba(168,162,153,.8);">' + esc(r.reply.substring(0, 500)) + '</span>';
+                            replyMsg.style.cssText = 'margin-bottom:8px;padding:6px 8px;background:rgba(0,0,0,.15);border-radius:4px;border-left:2px solid rgba(201,169,89,.4);';
+                            replyMsg.innerHTML = '<span style="color:rgba(201,169,89,.6);font-size:11px;">🤖 ' + esc(r.agent) + '</span><br><span style="color:rgba(220,210,195,.85);font-size:12px;line-height:1.5;">' + formatChatMsg(r.reply) + '</span>';
                             chatEl.appendChild(replyMsg);
                         }
                     });
-                    chatEl.scrollTop = chatEl.scrollHeight;
+                    autoScrollChat(chatEl);
                 }
             });
         });
@@ -978,9 +993,11 @@
             if (label) label.textContent = selectedIcon + ' ' + newName;
             var group = houseGroups.get(missionId);
             if (group) {
-                group.userData.buildingName = '🏠 ' + newName;
+                var buildTag = selectedIcon + ' ' + newName;
+                group.userData.buildingName = buildTag;
+                group.userData.missionId = missionId;
                 group.traverse(function(c) {
-                    if (c.isMesh) c.userData.buildingName = '🏠 ' + newName;
+                    if (c.isMesh) { c.userData.buildingName = buildTag; c.userData.missionId = missionId; }
                     if (c.name === 'roof' && c.material) c.material.color.setHex(parseInt(newColor.replace('#',''), 16));
                 });
             }
@@ -990,11 +1007,18 @@
     }
 
     // ── Click Handler ─────────────────────────────────────────────────
-    function handleBuildingClick(name) {
-        if (!name || !name.startsWith('🏠 ')) return false;
-        var missionName = name.substring(3);
-        var mission = missions.find(function(m) { return m.name === missionName; });
-        if (!mission) { warn('Click on unknown mission house:', missionName); return false; }
+    function handleBuildingClick(name, missionId) {
+        // Support click by missionId (from 3D userData) or by building name
+        var mission;
+        if (missionId) {
+            mission = missions.find(function(m) { return m.id === missionId; });
+        }
+        if (!mission && name) {
+            // Strip leading emoji + space to find mission by name
+            var missionName = name.replace(/^.\s+/, '');
+            mission = missions.find(function(m) { return m.name === missionName; });
+        }
+        if (!mission) { warn('Click on unknown mission house:', name || missionId); return false; }
 
         if (editModeActive) {
             showEditDialog(mission.id);
