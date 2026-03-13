@@ -265,24 +265,11 @@
     // Add mute toggle button to UI
     var audioToggle = document.createElement('div');
     audioToggle.id = 'audio-toggle';
-    audioToggle.style.cssText = `
-      position: absolute;
-      top: 10px;
-      right: 16px;
-      z-index: 10;
-      background: rgba(20, 12, 5, 0.7);
-      border: 1px solid var(--castle-gold);
-      border-radius: 4px;
-      padding: 4px 6px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s;
-      backdrop-filter: blur(4px);
-    `;
+    audioToggle.style.cssText = 'display:none;';
     
-    updateAudioToggle();
+    audioToggle.textContent = isMuted ? '🔇' : '🔊';
+    audioToggle.title = isMuted ? 'Unmute audio' : 'Mute audio';
     
-    audioToggle.addEventListener('click', toggleAudio);
     audioToggle.addEventListener('mouseenter', function() {
       this.style.transform = 'scale(1.1)';
     });
@@ -299,19 +286,31 @@
       document.body.appendChild(audioToggle);
     }
 
-    function updateAudioToggle() {
+    function updateToggle() {
       audioToggle.textContent = isMuted ? '🔇' : '🔊';
       audioToggle.title = isMuted ? 'Unmute audio' : 'Mute audio';
     }
 
-    function toggleAudio() {
-      isMuted = !isMuted;
-      setMasterVolume(isMuted ? 0 : masterVolume);
-      updateAudioToggle();
-      
-      if (window.showToast) {
-        window.showToast(isMuted ? 'Audio muted' : 'Audio enabled', 'info');
-      }
+    audioToggle.addEventListener('click', function() {
+      toggleAudio();
+      updateToggle();
+    });
+  }
+
+  // Outer-scope toggleAudio so the export can reach it
+  function toggleAudio() {
+    isMuted = !isMuted;
+    setMasterVolume(isMuted ? 0 : masterVolume);
+    
+    // Update toggle button if it exists
+    var btn = document.getElementById('audio-toggle');
+    if (btn) {
+      btn.textContent = isMuted ? '🔇' : '🔊';
+      btn.title = isMuted ? 'Unmute audio' : 'Mute audio';
+    }
+    
+    if (window.showToast) {
+      window.showToast(isMuted ? 'Audio muted' : 'Audio enabled', 'info');
     }
   }
 
