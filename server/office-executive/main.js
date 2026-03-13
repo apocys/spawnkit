@@ -381,7 +381,7 @@
             var h = now.getHours().toString().padStart(2, '0');
             var m = now.getMinutes().toString().padStart(2, '0');
             var statusEl = document.getElementById('statusSystem');
-            if (statusEl) statusEl.textContent = 'All systems nominal \u2022 ' + h + ':' + m;
+            if (statusEl) statusEl.textContent = h + ':' + m;
         }
         updateClock();
         setInterval(updateClock, 30000);
