@@ -1451,6 +1451,441 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── Setup Wizard API ──────────────────────────────────────
+
+  // GET /api/setup/status — aggregate status of all 6 setup steps
+  if (req.url === '/api/setup/status' && req.method === 'GET') {
+    cors(res);
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const { exec } = require('child_process');
+      const util = require('util');
+      const execAsync = util.promisify(exec);
+      
+      const steps = [
+        { id: 'cliproxy', name: 'CLIProxyAPI', status: 'pending', details: '' },
+        { id: 'gateway', name: 'OpenClaw Gateway', status: 'pending', details: '' },
+        { id: 'channels', name: 'Channels', status: 'pending', details: '' },
+        { id: 'fleet', name: 'Fleet Nodes', status: 'pending', details: '' },
+        { id: 'skills', name: 'Skills', status: 'pending', details: '' },
+        { id: 'test', name: 'End-to-End Test', status: 'pending', details: 'Run manually' }
+      ];
+
+      // Step 0: CLIProxyAPI
+      try {
+        const response = await fetch('http://127.0.0.1:8317/v1/models');
+        if (response.ok) {
+          const data = await response.json();
+          const modelCount = data?.data?.length || 0;
+          if (modelCount > 0) {
+            steps[0].status = 'done';
+            steps[0].details = `${modelCount} models available`;
+          } else {
+            steps[0].details = 'No models found';
+          }
+        }
+      } catch (e) {
+        steps[0].details = 'Not running';
+      }
+
+      // Step 1: Gateway
+      try {
+        const ocToken = process.env.OC_TOKEN;
+        const ocGateway = process.env.OC_GATEWAY || 'http://localhost:18789';
+        if (ocToken) {
+          const response = await fetch(`${ocGateway}/api/status`, {
+            headers: { 'Authorization': `Bearer ${ocToken}` }
+          });
+          if (response.ok) {
+            steps[1].status = 'done';
+            steps[1].details = 'Gateway responding';
+          } else {
+            steps[1].details = 'Gateway not responding';
+          }
+        } else {
+          steps[1].details = 'OC_TOKEN not set';
+        }
+      } catch (e) {
+        steps[1].details = 'Gateway not reachable';
+      }
+
+      // Step 2: Channels
+      try {
+        const configPath = path.join(process.env.HOME, '.openclaw', 'config.yaml');
+        if (fs.existsSync(configPath)) {
+          const config = fs.readFileSync(configPath, 'utf8');
+          if (config.includes('channels:') || config.includes('telegram:') || config.includes('discord:')) {
+            steps[2].status = 'done';
+            steps[2].details = 'Channels configured';
+          } else {
+            steps[2].details = 'No channels found in config';
+          }
+        } else {
+          steps[2].details = 'Config file not found';
+        }
+      } catch (e) {
+        steps[2].details = 'Config read error';
+      }
+
+      // Step 3: Fleet
+      try {
+        const sessionsPath = path.join(process.env.HOME, '.openclaw', 'agents', 'main', 'sessions', 'sessions.json');
+        if (fs.existsSync(sessionsPath)) {
+          const sessions = JSON.parse(fs.readFileSync(sessionsPath, 'utf8'));
+          const nodeCount = Object.keys(sessions).filter(k => k.startsWith('node:')).length;
+          if (nodeCount > 0) {
+            steps[3].status = 'done';
+            steps[3].details = `${nodeCount} nodes paired`;
+          } else {
+            steps[3].details = 'No nodes paired';
+          }
+        } else {
+          steps[3].details = 'Sessions file not found';
+        }
+      } catch (e) {
+        steps[3].details = 'Sessions read error';
+      }
+
+      // Step 4: Skills
+      try {
+        const skillsPath = path.join(process.env.HOME, '.openclaw', 'workspace', 'skills');
+        if (fs.existsSync(skillsPath)) {
+          const skillDirs = fs.readdirSync(skillsPath).filter(d => 
+            fs.statSync(path.join(skillsPath, d)).isDirectory()
+          );
+          if (skillDirs.length > 0) {
+            steps[4].status = 'done';
+            steps[4].details = `${skillDirs.length} skills installed`;
+          } else {
+            steps[4].details = 'No skills found';
+          }
+        } else {
+          steps[4].details = 'Skills directory not found';
+        }
+      } catch (e) {
+        steps[4].details = 'Skills check error';
+      }
+
+      const completedCount = steps.filter(s => s.status === 'done').length;
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200);
+      res.end(JSON.stringify({ 
+        ok: true, 
+        steps, 
+        completedCount, 
+        totalCount: steps.length 
+      }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // GET /api/setup/cliproxy — detect CLIProxyAPI status
+  if (req.url === '/api/setup/cliproxy' && req.method === 'GET') {
+    cors(res);
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      
+      let running = false;
+      let models = [];
+      let providers = [];
+      
+      try {
+        const response = await fetch('http://127.0.0.1:8317/v1/models');
+        if (response.ok) {
+          running = true;
+          const data = await response.json();
+          models = (data?.data || []).map(m => ({
+            id: m.id,
+            provider: m.id.split('-')[0] // claude, gpt, gemini, etc.
+          }));
+        }
+      } catch (e) {
+        // CLIProxyAPI not running
+      }
+
+      // Check auth files
+      const authDir = path.join(process.env.HOME, '.cli-proxy-api');
+      const providerMap = { claude: 'claude', gemini: 'gemini', codex: 'codex' };
+      
+      Object.entries(providerMap).forEach(([name, prefix]) => {
+        const modelCount = models.filter(m => m.provider === prefix).length;
+        let authenticated = false;
+        
+        // Check for auth files (varies by provider)
+        try {
+          const authFiles = [
+            path.join(authDir, `${name}_auth.json`),
+            path.join(authDir, `${name}.json`),
+            path.join(authDir, `auth_${name}.json`)
+          ];
+          authenticated = authFiles.some(f => fs.existsSync(f));
+        } catch (e) {}
+        
+        providers.push({ name, authenticated, modelCount });
+      });
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200);
+      res.end(JSON.stringify({ 
+        ok: true, 
+        running, 
+        models, 
+        providers, 
+        totalModels: models.length 
+      }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // POST /api/setup/cliproxy/login — trigger CLIProxyAPI OAuth login
+  if (req.url === '/api/setup/cliproxy/login' && req.method === 'POST') {
+    cors(res);
+    try {
+      const body = await readBody(req);
+      if (!body || !body.provider) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'provider required' }));
+        return;
+      }
+      
+      const { spawn } = require('child_process');
+      const path = require('path');
+      
+      // Map provider to CLI flag
+      const flagMap = {
+        claude: '-claude-login',
+        gemini: '-login',
+        codex: '-codex-login'
+      };
+      
+      const flag = flagMap[body.provider];
+      if (!flag) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unknown provider' }));
+        return;
+      }
+      
+      const configPath = path.join(process.env.HOME, '.cli-proxy-api', 'config.yaml');
+      const command = ['cliproxyapi', flag, '-config', configPath];
+      
+      // Start OAuth process (non-blocking)
+      const child = spawn(command[0], command.slice(1), { 
+        detached: true, 
+        stdio: 'ignore' 
+      });
+      child.unref();
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200);
+      res.end(JSON.stringify({ 
+        ok: true, 
+        message: `OAuth flow started for ${body.provider}`,
+        command: command.join(' ')
+      }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // GET /api/setup/gateway — check OpenClaw gateway status
+  if (req.url === '/api/setup/gateway' && req.method === 'GET') {
+    cors(res);
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      
+      let running = false;
+      let version = '';
+      let config = { defaultModel: '', channels: [] };
+      
+      // Check gateway status
+      try {
+        const ocToken = process.env.OC_TOKEN;
+        const ocGateway = process.env.OC_GATEWAY || 'http://localhost:18789';
+        
+        if (ocToken) {
+          const response = await fetch(`${ocGateway}/api/status`, {
+            headers: { 'Authorization': `Bearer ${ocToken}` }
+          });
+          if (response.ok) {
+            running = true;
+            const data = await response.json();
+            version = data?.version || 'unknown';
+          }
+        }
+      } catch (e) {
+        // Gateway not running
+      }
+      
+      // Read config
+      try {
+        const configPath = path.join(process.env.HOME, '.openclaw', 'config.yaml');
+        if (fs.existsSync(configPath)) {
+          const configText = fs.readFileSync(configPath, 'utf8');
+          
+          // Extract default model
+          const modelMatch = configText.match(/defaultModel:\s*(.+)/);
+          if (modelMatch) config.defaultModel = modelMatch[1].trim();
+          
+          // Extract channels (simple parsing)
+          const channelMatches = configText.match(/channels:\s*\n([\s\S]*?)(?=\n\w|\n$)/);
+          if (channelMatches) {
+            const channelText = channelMatches[1];
+            const channels = [];
+            if (channelText.includes('telegram:')) channels.push('telegram');
+            if (channelText.includes('discord:')) channels.push('discord');
+            config.channels = channels;
+          }
+        }
+      } catch (e) {
+        // Config read error
+      }
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200);
+      res.end(JSON.stringify({ 
+        ok: true, 
+        running, 
+        version, 
+        config 
+      }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // GET /api/setup/fleet — list paired nodes
+  if (req.url === '/api/setup/fleet' && req.method === 'GET') {
+    cors(res);
+    try {
+      const { execSync } = require('child_process');
+      const fs = require('fs');
+      const path = require('path');
+      
+      let nodes = [];
+      
+      // Try openclaw command first
+      try {
+        const output = execSync('openclaw nodes status --json', { encoding: 'utf8' });
+        const data = JSON.parse(output);
+        nodes = data?.nodes || [];
+      } catch (e) {
+        // Fallback to reading sessions file
+        try {
+          const sessionsPath = path.join(process.env.HOME, '.openclaw', 'agents', 'main', 'sessions', 'sessions.json');
+          if (fs.existsSync(sessionsPath)) {
+            const sessions = JSON.parse(fs.readFileSync(sessionsPath, 'utf8'));
+            nodes = Object.entries(sessions)
+              .filter(([key]) => key.startsWith('node:'))
+              .map(([key, data]) => ({
+                id: key.replace('node:', ''),
+                name: data?.name || 'Unknown',
+                os: data?.os || 'Unknown',
+                lastSeen: data?.lastSeen || null,
+                status: data?.status || 'unknown'
+              }));
+          }
+        } catch (e2) {
+          // No nodes found
+        }
+      }
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200);
+      res.end(JSON.stringify({ 
+        ok: true, 
+        nodes 
+      }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // POST /api/setup/test — run end-to-end test
+  if (req.url === '/api/setup/test' && req.method === 'POST') {
+    cors(res);
+    try {
+      const ocToken = process.env.OC_TOKEN;
+      const ocGateway = process.env.OC_GATEWAY || 'http://localhost:18789';
+      
+      if (!ocToken) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ 
+          ok: true, 
+          success: false, 
+          responseTime: 0, 
+          agentReply: 'OC_TOKEN not set' 
+        }));
+        return;
+      }
+      
+      const startTime = Date.now();
+      
+      try {
+        const response = await fetch(`${ocGateway}/api/chat`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${ocToken}`
+          },
+          body: JSON.stringify({ message: 'ping' })
+        });
+        
+        const responseTime = Date.now() - startTime;
+        
+        if (response.ok) {
+          const data = await response.json();
+          res.setHeader('Content-Type', 'application/json');
+          res.writeHead(200);
+          res.end(JSON.stringify({ 
+            ok: true, 
+            success: true, 
+            responseTime, 
+            agentReply: data?.reply || 'pong'
+          }));
+        } else {
+          res.setHeader('Content-Type', 'application/json');
+          res.writeHead(200);
+          res.end(JSON.stringify({ 
+            ok: true, 
+            success: false, 
+            responseTime, 
+            agentReply: `HTTP ${response.status}`
+          }));
+        }
+      } catch (e) {
+        const responseTime = Date.now() - startTime;
+        res.setHeader('Content-Type', 'application/json');
+        res.writeHead(200);
+        res.end(JSON.stringify({ 
+          ok: true, 
+          success: false, 
+          responseTime, 
+          agentReply: e.message
+        }));
+      }
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   // ─── AI Provider Setup API ────────────────────────────────
   
   // GET /api/wizard/providers — list available provider presets
