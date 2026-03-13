@@ -31,53 +31,58 @@
     panel.id = 'skCustomPanel';
 
     var header = '<div class="sk-custom-header"><h2>⚙️ Customize</h2><button class="sk-custom-close">×</button></div>';
-    var body = '<div class="sk-custom-body">';
 
-    // Section 1: Agent Names
-    body += '<div class="sk-custom-section"><h3 class="sk-custom-section-title">🏷️ Agent Names</h3><div class="sk-custom-agents">';
+    // Tabbed navigation
+    var tabs = [
+      { id: 'agents', icon: '⚔️', label: 'Agents' },
+      { id: 'world', icon: '🌅', label: 'World' }
+    ];
+    var tabBar = '<div class="sk-custom-tabs" style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:8px;">';
+    for (var t = 0; t < tabs.length; t++) {
+      tabBar += '<button class="sk-custom-tab' + (t === 0 ? ' sk-tab-active' : '') + '" data-tab="' + tabs[t].id + '" style="flex:1;padding:8px 4px;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-size:12px;font-weight:600;letter-spacing:0.5px;transition:all 0.15s;' +
+        (t === 0 ? 'background:rgba(255,255,255,0.08);color:inherit;' : 'background:transparent;color:inherit;opacity:0.5;') + '">' +
+        tabs[t].icon + ' ' + tabs[t].label + '</button>';
+    }
+    tabBar += '</div>';
+
+    var body = '<div class="sk-custom-body">' + tabBar;
+
+    // Tab: Agents — compact per-agent cards
+    body += '<div class="sk-custom-tab-content" data-tab-content="agents">';
     for (var i = 0; i < opts.agents.length; i++) {
       var a = opts.agents[i], val = config.agentNames[a.id] || a.name;
-      body += '<div class="sk-custom-agent-row"><span class="sk-custom-agent-emoji">' + a.emoji + '</span>' +
+      var cur = config.agentBuildings[a.id] || '';
+      var activecol = config.agentColors[a.id] || '';
+      body += '<div style="padding:10px 12px;margin-bottom:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);">';
+      // Row 1: emoji + name input + role
+      body += '<div class="sk-custom-agent-row" style="margin-bottom:6px;"><span class="sk-custom-agent-emoji">' + a.emoji + '</span>' +
         '<input class="sk-custom-agent-name" value="' + val + '" data-agent="' + a.id + '" />' +
         '<span class="sk-custom-agent-role">' + a.role + '</span></div>';
-    }
-    body += '</div></div>';
-
-    // Section 2: Assignments
-    body += '<div class="sk-custom-section"><h3 class="sk-custom-section-title">🏠 Assignments</h3><div class="sk-custom-assignments">';
-    for (var j = 0; j < opts.agents.length; j++) {
-      var ag = opts.agents[j], cur = config.agentBuildings[ag.id] || '';
-      var label = config.agentNames[ag.id] || ag.name;
-      body += '<div class="sk-custom-assign-row"><span>' + ag.emoji + ' ' + label + '</span><select data-agent="' + ag.id + '"><option value="">Unassigned</option>';
+      // Row 2: assignment + colors (compact, single line)
+      body += '<div style="display:flex;align-items:center;gap:8px;margin-top:4px;">';
+      body += '<select data-agent="' + a.id + '" style="flex:0 0 120px;padding:4px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:inherit;font-size:11px;"><option value="">Unassigned</option>';
       for (var k = 0; k < opts.buildings.length; k++) {
         var b = opts.buildings[k];
         body += '<option value="' + b.id + '"' + (cur === b.id ? ' selected' : '') + '>' + b.name + '</option>';
       }
-      body += '</select></div>';
-    }
-    body += '</div></div>';
-
-    // Section 3: Colors
-    body += '<div class="sk-custom-section"><h3 class="sk-custom-section-title">🎨 Colors</h3><div class="sk-custom-colors">';
-    for (var m = 0; m < opts.agents.length; m++) {
-      var ac = opts.agents[m], activecol = config.agentColors[ac.id] || '';
-      var lbl = config.agentNames[ac.id] || ac.name;
-      body += '<div class="sk-custom-color-row"><span>' + ac.emoji + ' ' + lbl + '</span><div class="sk-custom-color-options">';
+      body += '</select>';
+      body += '<div class="sk-custom-color-options" style="display:flex;gap:3px;">';
       for (var n = 0; n < COLORS.length; n++) {
         var cl = COLORS[n], isActive = activecol === cl ? ' active' : '';
-        body += '<button class="sk-custom-color-dot' + isActive + '" data-agent="' + ac.id + '" data-color="' + cl + '" style="background:' + cl + '"></button>';
+        body += '<button class="sk-custom-color-dot' + isActive + '" data-agent="' + a.id + '" data-color="' + cl + '" style="background:' + cl + ';width:18px;height:18px;"></button>';
       }
-      body += '</div></div>';
+      body += '</div></div></div>';
     }
-    body += '</div></div>';
+    body += '</div>';
 
-    // Section 4: Day Cycle
+    // Tab: World — day cycle + reset
+    body += '<div class="sk-custom-tab-content" data-tab-content="world" style="display:none;">';
     body += '<div class="sk-custom-section"><h3 class="sk-custom-section-title">🌅 Day Cycle Speed</h3>' +
       '<div class="sk-custom-slider-row"><input type="range" class="sk-custom-slider" min="1" max="30" value="' + config.dayCycleMinutes + '" />' +
       '<span class="sk-custom-slider-val">' + config.dayCycleMinutes + ' min</span></div></div>';
-
-    // Section 5: Reset
     body += '<div class="sk-custom-section"><button class="sk-custom-reset">🔄 Reset to Defaults</button></div>';
+    body += '</div>';
+
     body += '</div>';
 
     panel.innerHTML = header + body;
@@ -87,6 +92,23 @@
 
   function bindEvents() {
     panel.querySelector('.sk-custom-close').addEventListener('click', function() { ThemeCustomize.hide(); });
+
+    // Tab switching
+    var tabBtns = panel.querySelectorAll('.sk-custom-tab');
+    for (var t = 0; t < tabBtns.length; t++) {
+      tabBtns[t].addEventListener('click', function(e) {
+        var target = e.target.getAttribute('data-tab');
+        var allTabs = panel.querySelectorAll('.sk-custom-tab');
+        var allContent = panel.querySelectorAll('.sk-custom-tab-content');
+        for (var x = 0; x < allTabs.length; x++) { allTabs[x].classList.remove('sk-tab-active'); allTabs[x].style.opacity = '0.5'; allTabs[x].style.background = 'transparent'; }
+        for (var y = 0; y < allContent.length; y++) { allContent[y].style.display = 'none'; }
+        e.target.classList.add('sk-tab-active');
+        e.target.style.opacity = '1';
+        e.target.style.background = 'rgba(255,255,255,0.08)';
+        var show = panel.querySelector('[data-tab-content="' + target + '"]');
+        if (show) show.style.display = 'block';
+      });
+    }
 
     var nameInputs = panel.querySelectorAll('.sk-custom-agent-name');
     for (var i = 0; i < nameInputs.length; i++) {

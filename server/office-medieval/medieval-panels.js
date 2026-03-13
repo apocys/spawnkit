@@ -2,6 +2,25 @@
 (function () {
     'use strict';
 
+    // ── Central Escape Key Manager ──────────────────────────────────────
+    // Overlays register themselves when opened. Escape closes the most recent one.
+    var _escapeStack = [];
+    window.pushEscapeHandler = function(id, closeFn) {
+        _escapeStack = _escapeStack.filter(function(h) { return h.id !== id; });
+        _escapeStack.push({ id: id, close: closeFn });
+    };
+    window.popEscapeHandler = function(id) {
+        _escapeStack = _escapeStack.filter(function(h) { return h.id !== id; });
+    };
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && _escapeStack.length > 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            var top = _escapeStack.pop();
+            top.close();
+        }
+    }, true); // capture phase — runs before individual listeners
+
     // ── Panel config ────────────────────────────────────────────────────
     var BUILDING_PANELS = {
         '⚔️ Mission Hall': { icon: '⚔️', title: 'Mission Hall',      render: renderMissionHall },
