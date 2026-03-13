@@ -460,6 +460,6 @@
     addAgentSounds: addAgentSounds,
     setMasterVolume: setMasterVolume,
     isMuted: function() { return isMuted; },
-    toggleAudio: function() { toggleAudio(); }
+    toggleAudio: toggleAudio
   };
 })();
