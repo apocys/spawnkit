@@ -143,10 +143,10 @@ describe('server-structure', () => {
       assert.ok(lines < 100, `proxy-client.js has ${lines} lines, expected < 100`);
     });
 
-    test('server.js line count < 2800 (pre-modularization)', () => {
+    test('server.js line count < 300 after modularization', () => {
       const content = fs.readFileSync(path.join(SERVER_DIR, 'server.js'), 'utf8');
       const lines = content.split('\n').length;
-      assert.ok(lines < 2800, `server.js has ${lines} lines, expected < 2800`);
+      assert.ok(lines < 300, `server.js has ${lines} lines, expected < 300`);
     });
 
     test('total lib files are present', () => {

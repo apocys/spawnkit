@@ -1,9 +1,10 @@
 'use strict';
-const { test, describe } = require('node:test');
+const { test, describe, before, after } = require('node:test');
+const { startServer, stopServer } = require('../helpers/server-harness');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 
-const BASE = 'http://127.0.0.1:8765';
+let BASE = 'http://127.0.0.1:8765';
 const REFERER = 'http://127.0.0.1:8765/';
 
 function get(urlPath) {
@@ -31,21 +32,20 @@ function get(urlPath) {
   });
 }
 
-async function isServerUp() {
-  try { await get('/api/oc/health'); return true; } catch(e) { return false; }
-}
 
 describe('API fleet/remote integration tests', () => {
 
+  before(async () => { const port = await startServer(); BASE = `http://127.0.0.1:${port}`; });
+  after(() => { stopServer(); });
+
+
   // ── Fleet Status ────────────────────────────────────────────────────────────
   test('GET /api/fleet/status → not 500', async (t) => {
-    if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/fleet/status');
     assert.ok(res.status !== 500, `should not be 500, got ${res.status}`);
   });
 
   test('GET /api/fleet/status → has instances array', async (t) => {
-    if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/fleet/status');
     if (res.status === 200) {
       assert.ok(res.json, 'has json body');
@@ -59,7 +59,6 @@ describe('API fleet/remote integration tests', () => {
   });
 
   test('GET /api/fleet/status → response is object', async (t) => {
-    if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/fleet/status');
     if (res.status === 200) {
       assert.equal(typeof res.json, 'object', 'json is object');
@@ -70,13 +69,11 @@ describe('API fleet/remote integration tests', () => {
 
   // ── Fleet Mailbox ───────────────────────────────────────────────────────────
   test('GET /api/fleet/mailbox → 200 (or 502 if relay down)', async (t) => {
-    if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/fleet/mailbox');
     assert.strictEqual(res.status, 200);
   });
 
   test('GET /api/fleet/mailbox → has messages array', async (t) => {
-    if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/fleet/mailbox');
     if (res.status === 200) {
       assert.ok(res.json, 'has json body');
@@ -86,7 +83,6 @@ describe('API fleet/remote integration tests', () => {
   });
 
   test('GET /api/fleet/mailbox → messages have id and body fields', async (t) => {
-    if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/fleet/mailbox');
     if (res.status === 200 && res.json?.messages?.length > 0) {
       const msg = res.json.messages[0];
@@ -97,7 +93,6 @@ describe('API fleet/remote integration tests', () => {
   });
 
   test('GET /api/fleet/mailbox → has total count', async (t) => {
-    if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/fleet/mailbox');
     if (res.status === 200) {
       assert.ok('total' in res.json, 'has total field');
@@ -107,13 +102,11 @@ describe('API fleet/remote integration tests', () => {
 
   // ── Remote Offices ──────────────────────────────────────────────────────────
   test('GET /api/remote/offices → 200 (or 502 if relay down)', async (t) => {
-    if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/remote/offices');
     assert.strictEqual(res.status, 200);
   });
 
   test('GET /api/remote/offices → has offices array', async (t) => {
-    if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/remote/offices');
     if (res.status === 200) {
       assert.ok(res.json, 'has json');
@@ -123,7 +116,6 @@ describe('API fleet/remote integration tests', () => {
   });
 
   test('GET /api/remote/offices → offices have id and status fields', async (t) => {
-    if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/remote/offices');
     if (res.status === 200 && res.json?.offices?.length > 0) {
       const office = res.json.offices[0];
@@ -134,7 +126,6 @@ describe('API fleet/remote integration tests', () => {
   });
 
   test('GET /api/remote/offices → has recentMessages array', async (t) => {
-    if (!await isServerUp()) return t.skip('Server not reachable');
     const res = await get('/api/remote/offices');
     if (res.status === 200) {
       assert.ok(Array.isArray(res.json?.recentMessages), 'has recentMessages array');
