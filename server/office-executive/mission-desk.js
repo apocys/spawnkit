@@ -502,7 +502,10 @@
     // Suggestion chips
     document.querySelectorAll('.md-chip').forEach(function(chip) {
       chip.addEventListener('click', function() {
-        if (chip.dataset.prompt && heroInput) { heroInput.value = chip.dataset.prompt; heroInput.dispatchEvent(new Event('input')); heroInput.focus(); }
+        var prompt = chip.dataset.prompt;
+        if (!prompt) return;
+        // Activate chat mode and send the message directly
+        activate(prompt);
       });
     });
 

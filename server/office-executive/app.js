@@ -362,6 +362,9 @@
                     );
                 }
                 
+                // Store agent state for tooltip
+                latestAgentState[agentId] = { session, memory };
+                
                 let statusText = '';
                 let statusColor = 'var(--text-tertiary)';
                 
@@ -404,6 +407,31 @@
                 speechEl.textContent = statusText;
                 speechEl.style.color = statusColor;
             });
+            
+            // Agent tile click → open chat with that agent
+            document.querySelectorAll('.exec-room[data-agent]').forEach(function(tile) {
+                if (tile._agentClickBound) return; // prevent double-binding
+                tile._agentClickBound = true;
+                tile.addEventListener('click', function() {
+                    var agentId = tile.dataset.agent;
+                    // Map tile agent ID to chat widget agent
+                    var chatAgentId = agentId === 'ceo' ? 'sycopa' : agentId;
+                    // Open chat widget with this agent
+                    if (window.ExecChatWidget) {
+                        window.ExecChatWidget.open(chatAgentId);
+                    }
+                });
+                
+                // Add hover tooltip handlers
+                if (tile._tooltipBound) return; // prevent double-binding
+                tile._tooltipBound = true;
+                tile.addEventListener('mouseenter', function() {
+                    showAgentTooltip(tile, tile.dataset.agent);
+                });
+                tile.addEventListener('mouseleave', function() {
+                    hideAgentTooltip();
+                });
+            });
         }
         
         // Helper to extract >>> NEXT task from TODO.md
@@ -429,6 +457,105 @@
             if (minutes < 60) return `${minutes}m ago`;
             if (hours < 24) return `${hours}h ago`;
             return `${days}d ago`;
+        }
+        
+        // Store latest agent state for tooltip access
+        let latestAgentState = {};
+        
+        // Create agent tooltip
+        function createAgentTooltip() {
+            const tooltip = document.createElement('div');
+            tooltip.id = 'agent-tooltip';
+            tooltip.style.cssText = 'position:fixed;z-index:9999;padding:10px 14px;background:var(--bg-elevated,#1c1c1e);border:1px solid var(--border-subtle,#333);border-radius:10px;font-size:12px;line-height:1.5;color:var(--text-primary,#fff);pointer-events:none;opacity:0;transition:opacity 0.15s;max-width:240px;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+            document.body.appendChild(tooltip);
+            return tooltip;
+        }
+        
+        // Initialize tooltip
+        let agentTooltip = null;
+        function getTooltip() {
+            if (!agentTooltip) {
+                agentTooltip = createAgentTooltip();
+            }
+            return agentTooltip;
+        }
+        
+        // Show agent tooltip
+        function showAgentTooltip(tile, agentId) {
+            const tooltip = getTooltip();
+            const agentData = latestAgentState[agentId];
+            
+            let agentName = agentId.charAt(0).toUpperCase() + agentId.slice(1);
+            let role = 'Agent';
+            
+            // Map agent IDs to proper names and roles
+            const agentInfo = {
+                'ceo': { name: 'ApoMac', role: 'Chief Executive Officer' },
+                'atlas': { name: 'Atlas', role: 'COO' },
+                'forge': { name: 'Forge', role: 'CTO' },
+                'hunter': { name: 'Hunter', role: 'CRO' },
+                'echo': { name: 'Echo', role: 'CMO' },
+                'sentinel': { name: 'Sentinel', role: 'QA & Security' }
+            };
+            
+            if (agentInfo[agentId]) {
+                agentName = agentInfo[agentId].name;
+                role = agentInfo[agentId].role;
+            }
+            
+            let statusText = 'Ready';
+            let lastActivity = 'Unknown';
+            let modelInfo = '';
+            
+            if (agentData && agentData.session) {
+                const session = agentData.session;
+                if (session.status === 'active') {
+                    statusText = 'Active';
+                    const taskName = session.label || session.displayName || 'Working';
+                    lastActivity = `Running: ${taskName}`;
+                } else {
+                    statusText = 'Idle';
+                    if (session.lastActive) {
+                        const agoMs = Date.now() - new Date(session.lastActive).getTime();
+                        lastActivity = `Last active: ${formatTimeAgo(agoMs)}`;
+                    }
+                }
+                
+                // Add model info if available
+                if (session.model) {
+                    modelInfo = `<div>Model: ${session.model}</div>`;
+                }
+            }
+            
+            tooltip.innerHTML = `
+                <div style="font-weight:600;margin-bottom:4px;">${agentName}</div>
+                <div style="color:var(--text-secondary,#999);margin-bottom:6px;font-size:11px;">${role}</div>
+                <div style="margin-bottom:2px;">Status: <span style="color:${statusText === 'Active' ? '#30D158' : '#8E8E93'}">${statusText}</span></div>
+                <div style="color:var(--text-secondary,#999);font-size:11px;">${lastActivity}</div>
+                ${modelInfo}
+            `;
+            
+            // Position tooltip near the tile
+            const rect = tile.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+            
+            let left = rect.left + rect.width / 2 - 120; // Center horizontally
+            let top = rect.top - tooltipRect.height - 8; // Above the tile
+            
+            // Keep tooltip on screen
+            if (left < 8) left = 8;
+            if (left + 240 > window.innerWidth - 8) left = window.innerWidth - 248;
+            if (top < 8) top = rect.bottom + 8; // Below if no room above
+            
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+            tooltip.style.opacity = '1';
+        }
+        
+        // Hide agent tooltip
+        function hideAgentTooltip() {
+            const tooltip = getTooltip();
+            tooltip.style.opacity = '0';
         }
         
         // loadRemoteOffices moved to MC IIFE scope
