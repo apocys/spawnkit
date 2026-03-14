@@ -15,19 +15,48 @@ function readJSON(fp) {
 }
 
 function getAgents() {
-  const agentsFile = path.join(WORKSPACE, 'agents.json');
   try {
-    const data = readJSON(agentsFile);
-    if (data && data.agents) return data;
-  } catch(e) {}
+    // Read from OpenClaw config
+    const configPath = path.join(process.env.HOME, '.openclaw', 'openclaw.json');
+    const config = readJSON(configPath);
+    
+    if (config && config.agents && config.agents.list) {
+      const sessions = getSessions();
+      const agents = config.agents.list.map(agent => {
+        // Capitalize ID for display name
+        const name = agent.id.charAt(0).toUpperCase() + agent.id.slice(1);
+        
+        // Get current status from sessions
+        const agentSessions = sessions.filter(s => s.key.includes(`:${agent.id}:`) || s.key === `agent:${agent.id}:${agent.id}`);
+        const isActive = agentSessions.some(s => s.status === 'active');
+        
+        // Extract model info
+        const model = config.agents?.defaults?.model?.primary || 'unknown';
+        
+        return {
+          id: agent.id,
+          name: name,
+          workspace: agent.workspace || config.agents?.defaults?.workspace || WORKSPACE,
+          model: model,
+          status: isActive ? 'active' : 'idle',
+          template: false // These are real agents from config
+        };
+      });
+      
+      return { agents };
+    }
+  } catch(e) {
+    console.warn('[getAgents] Error reading OpenClaw config:', e.message);
+  }
 
+  // Fallback to hardcoded template agents if config read fails
   return { agents: [
-    { id: 'sycopa', name: 'Sycopa', role: 'Chief of Staff', status: 'active', emoji: '🧠', description: 'Strategic planning and coordination' },
-    { id: 'atlas', name: 'Atlas', role: 'Navigator', status: 'active', emoji: '🗺️', description: 'Research and analysis' },
-    { id: 'forge', name: 'Forge', role: 'Builder', status: 'active', emoji: '🔨', description: 'Code and infrastructure' },
-    { id: 'hunter', name: 'Hunter', role: 'Scout', status: 'active', emoji: '🎯', description: 'Market intelligence and opportunities' },
-    { id: 'echo', name: 'Echo', role: 'Communicator', status: 'active', emoji: '📡', description: 'Channels and messaging' },
-    { id: 'sentinel', name: 'Sentinel', role: 'Guardian', status: 'active', emoji: '🛡️', description: 'Security and quality assurance' },
+    { id: 'sycopa', name: 'Sycopa', role: 'Chief of Staff', status: 'active', emoji: '🧠', description: 'Strategic planning and coordination', template: true },
+    { id: 'atlas', name: 'Atlas', role: 'Navigator', status: 'active', emoji: '🗺️', description: 'Research and analysis', template: true },
+    { id: 'forge', name: 'Forge', role: 'Builder', status: 'active', emoji: '🔨', description: 'Code and infrastructure', template: true },
+    { id: 'hunter', name: 'Hunter', role: 'Scout', status: 'active', emoji: '🎯', description: 'Market intelligence and opportunities', template: true },
+    { id: 'echo', name: 'Echo', role: 'Communicator', status: 'active', emoji: '📡', description: 'Channels and messaging', template: true },
+    { id: 'sentinel', name: 'Sentinel', role: 'Guardian', status: 'active', emoji: '🛡️', description: 'Security and quality assurance', template: true },
   ]};
 }
 
@@ -173,6 +202,144 @@ function getCrons() {
   return { jobs: [] };
 }
 
+function getTasks() {
+  try {
+    const todoFile = path.join(WORKSPACE, 'TODO.md');
+    const content = fs.readFileSync(todoFile, 'utf8');
+    const lines = content.split('\n');
+    const tasks = [];
+
+    lines.forEach((line, index) => {
+      // Match pending tasks: - [ ] ... and completed tasks: - [x] ...
+      const pendingMatch = line.match(/^\s*-\s*\[\s*\]\s*(.+)$/);
+      const doneMatch = line.match(/^\s*-\s*\[x\]\s*(.+)$/i);
+      
+      if (pendingMatch || doneMatch) {
+        const status = pendingMatch ? 'pending' : 'done';
+        const title = (pendingMatch || doneMatch)[1].trim();
+        
+        // Extract priority (high, medium, low)
+        const priorityMatch = title.match(/\((\w+)\)/);
+        const priority = priorityMatch ? priorityMatch[1].toLowerCase() : null;
+        
+        // Extract date if present (YYYY-MM-DD format)
+        const dateMatch = title.match(/(\d{4}-\d{2}-\d{2})/);
+        const created = dateMatch ? dateMatch[1] : null;
+
+        tasks.push({
+          id: index + 1, // Line number (1-indexed)
+          title: title,
+          status: status,
+          priority: priority,
+          created: created
+        });
+      }
+    });
+
+    return { tasks };
+  } catch(e) {
+    console.warn('[getTasks] Error reading TODO.md:', e.message);
+    return { tasks: [] };
+  }
+}
+
+function getSkills() {
+  const skills = [];
+  const seen = new Set();
+
+  // Built-in skills
+  const builtinDir = '/opt/homebrew/lib/node_modules/openclaw/skills/';
+  try {
+    const entries = fs.readdirSync(builtinDir);
+    for (const entry of entries) {
+      if (seen.has(entry)) continue;
+      try {
+        const skillMdPath = path.join(builtinDir, entry, 'SKILL.md');
+        const content = fs.readFileSync(skillMdPath, 'utf8');
+        const lines = content.split('\n').slice(0, 5);
+        
+        // Extract name and description from first few lines
+        let name = entry;
+        let description = '';
+        
+        for (const line of lines) {
+          const nameMatch = line.match(/^#+\s*(.+)$/);
+          if (nameMatch && !description) {
+            name = nameMatch[1].trim();
+          }
+          const descMatch = line.match(/description[:\s]*(.+)/i);
+          if (descMatch) {
+            description = descMatch[1].trim();
+            break;
+          }
+          if (line.trim() && !nameMatch && !description) {
+            description = line.trim();
+          }
+        }
+
+        skills.push({
+          name: name,
+          description: description.slice(0, 200), // Limit description length
+          location: path.join(builtinDir, entry),
+          source: 'builtin'
+        });
+        seen.add(entry);
+      } catch(e) {
+        // Skip if SKILL.md doesn't exist or can't be read
+      }
+    }
+  } catch(e) {
+    console.warn('[getSkills] Error reading builtin skills:', e.message);
+  }
+
+  // Custom skills in workspace
+  const customDir = path.join(WORKSPACE, 'skills');
+  try {
+    const entries = fs.readdirSync(customDir);
+    for (const entry of entries) {
+      if (seen.has(entry)) continue;
+      try {
+        const skillMdPath = path.join(customDir, entry, 'SKILL.md');
+        const content = fs.readFileSync(skillMdPath, 'utf8');
+        const lines = content.split('\n').slice(0, 5);
+        
+        // Extract name and description from first few lines
+        let name = entry;
+        let description = '';
+        
+        for (const line of lines) {
+          const nameMatch = line.match(/^#+\s*(.+)$/);
+          if (nameMatch && !description) {
+            name = nameMatch[1].trim();
+          }
+          const descMatch = line.match(/description[:\s]*(.+)/i);
+          if (descMatch) {
+            description = descMatch[1].trim();
+            break;
+          }
+          if (line.trim() && !nameMatch && !description) {
+            description = line.trim();
+          }
+        }
+
+        skills.push({
+          name: name,
+          description: description.slice(0, 200), // Limit description length
+          location: path.join(customDir, entry),
+          source: 'custom'
+        });
+        seen.add(entry);
+      } catch(e) {
+        // Skip if SKILL.md doesn't exist or can't be read
+      }
+    }
+  } catch(e) {
+    console.warn('[getSkills] Error reading custom skills:', e.message);
+  }
+
+  return { skills };
+}
+
 function getLocalVersion() {
   const VERSION_FILE = path.join(__dirname, '..', 'version.json');
   try { return JSON.parse(fs.readFileSync(VERSION_FILE, 'utf8')); }
@@ -204,4 +371,4 @@ function getLatestVersion() {
   return result;
 }
 
-module.exports = { getAgents, getSessions, getMemory, getChat, getConfig, getCrons, getLocalVersion, getLatestVersion };
+module.exports = { getAgents, getSessions, getMemory, getChat, getConfig, getCrons, getTasks, getSkills, getLocalVersion, getLatestVersion };

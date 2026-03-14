@@ -17,7 +17,7 @@ const MISSIONS_FILE = path.join(WORKSPACE, '.spawnkit-missions.json');
 const STATIC_DIR = __dirname;
 const MissionOrchestrator = require('./mission-orchestrator');
 const registerDashboardRoutes = require('./dashboard-api').registerDashboardRoutes || require('./dashboard-api');
-const { getAgents, getSessions, getMemory, getChat, getConfig, getCrons, getLocalVersion, getLatestVersion } = require('./lib/oc-reader');
+const { getAgents, getSessions, getMemory, getChat, getConfig, getCrons, getTasks, getSkills, getLocalVersion, getLatestVersion } = require('./lib/oc-reader');
 const { proxyRequest, proxyFetch, cors, readBody } = require('./lib/proxy-client');
 const VERSION_FILE = path.join(__dirname, 'version.json');
 const REPO_DIR = process.env.SPAWNKIT_REPO || path.join(process.env.HOME, 'spawnkit');
@@ -2439,6 +2439,65 @@ const { generateSOUL, generateIDENTITY, generateAGENTS } = require('./agent-temp
         res.writeHead(401); res.end(JSON.stringify({error:'unauthorized'})); return;
       }
     }
+    
+    // Handle POST requests for task creation
+    if (req.method === 'POST' && route === '/api/oc/tasks') {
+      try {
+        const body = await readBody(req);
+        const taskData = JSON.parse(body);
+        
+        if (!taskData.title) {
+          res.writeHead(400);
+          res.end(JSON.stringify({error: 'Task title is required'}));
+          return;
+        }
+        
+        // Append new task to TODO.md
+        const todoFile = require('path').join(WORKSPACE, 'TODO.md');
+        const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const priority = taskData.priority ? ` (${taskData.priority})` : '';
+        const newTask = `- [ ] **${taskData.title}**${priority} — Added ${timestamp}`;
+        
+        try {
+          // Read current content
+          let content = '';
+          try {
+            content = require('fs').readFileSync(todoFile, 'utf8');
+          } catch(e) {
+            // File doesn't exist, start with basic structure
+            content = '# TODO.md - What I\'m Working On\n\n';
+          }
+          
+          // Append new task at the end
+          if (!content.endsWith('\n')) content += '\n';
+          content += newTask + '\n';
+          
+          // Write back to file
+          require('fs').writeFileSync(todoFile, content, 'utf8');
+          
+          res.writeHead(201);
+          res.end(JSON.stringify({
+            ok: true,
+            task: {
+              title: taskData.title,
+              status: 'pending',
+              priority: taskData.priority || null,
+              created: timestamp
+            }
+          }));
+          return;
+        } catch(e) {
+          res.writeHead(500);
+          res.end(JSON.stringify({error: 'Failed to write task: ' + e.message}));
+          return;
+        }
+      } catch(e) {
+        res.writeHead(400);
+        res.end(JSON.stringify({error: 'Invalid JSON: ' + e.message}));
+        return;
+      }
+    }
+    
     let data;
     switch(route) {
       case '/api/oc/sessions': data = getSessions(); break;
@@ -2448,7 +2507,8 @@ const { generateSOUL, generateIDENTITY, generateAGENTS } = require('./agent-temp
       case '/api/oc/chat': data = getChat(); break;
       case '/api/oc/chat/history': data = getChat(); break;
       case '/api/oc/agents': data = getAgents(); break;
-      case '/api/oc/skills': { const skillDirs = [require('path').join(require('os').homedir(), '.npm-global/lib/node_modules/openclaw/skills'), require('path').join(WORKSPACE, 'skills'), require('path').join(__dirname, 'skills')]; const skills = []; const seen = new Set(); for (const dir of skillDirs) { try { const entries = require('fs').readdirSync(dir); for (const n of entries) { if (seen.has(n)) continue; try { const md = require('fs').readFileSync(require('path').join(dir, n, 'SKILL.md'), 'utf8'); const m = md.match(/description[:\s]*(.+)/i); skills.push({ id: n, description: m ? m[1].trim().slice(0,200) : '', installed: true }); seen.add(n); } catch(e) {} } } catch(e) {} } data = { skills }; break; }
+      case '/api/oc/tasks': data = getTasks(); break;
+      case '/api/oc/skills': data = getSkills(); break;
       case '/api/oc/health': data = { ok: true, uptime: process.uptime() }; break;
       default: res.writeHead(404); res.end(JSON.stringify({error:'not found'})); return;
     }
