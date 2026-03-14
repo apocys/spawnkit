@@ -143,10 +143,10 @@ describe('server-structure', () => {
       assert.ok(lines < 100, `proxy-client.js has ${lines} lines, expected < 100`);
     });
 
-    test('server.js line count < 2800', () => {
+    test('server.js line count < 300 (modularized)', () => {
       const content = fs.readFileSync(path.join(SERVER_DIR, 'server.js'), 'utf8');
       const lines = content.split('\n').length;
-      assert.ok(lines < 2800, `server.js has ${lines} lines, expected < 2800`);
+      assert.ok(lines < 300, `server.js has ${lines} lines, expected < 300`);
     });
 
     test('total lib files are present', () => {
@@ -154,6 +154,16 @@ describe('server-structure', () => {
       const files = fs.readdirSync(libDir).filter(f => f.endsWith('.js'));
       assert.ok(files.includes('oc-reader.js'), 'oc-reader.js in lib/');
       assert.ok(files.includes('proxy-client.js'), 'proxy-client.js in lib/');
+    });
+
+    test('all route modules are present', () => {
+      const routesDir = path.join(SERVER_DIR, 'routes');
+      const files = fs.readdirSync(routesDir).filter(f => f.endsWith('.js'));
+      const expected = ['auth', 'fleet', 'deploy', 'channels', 'agents', 'chat', 'missions', 'setup', 'oc-data', 'subagent'];
+      for (const name of expected) {
+        assert.ok(files.includes(name + '.js'), `${name}.js in routes/`);
+      }
+      assert.ok(files.length >= expected.length, `at least ${expected.length} route files`);
     });
   });
 });

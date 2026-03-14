@@ -130,10 +130,10 @@ describe('data-integrity', () => {
       assert.ok(content.includes('./lib/proxy-client'), 'requires proxy-client');
     });
 
-    test('server.js line count is < 2800 (pre-modularization)', () => {
+    test('server.js line count is < 300 (modularized)', () => {
       const content = fs.readFileSync(path.join(SERVER_DIR, 'server.js'), 'utf8');
       const lineCount = content.split('\n').length;
-      assert.ok(lineCount < 2800, `server.js has ${lineCount} lines, expected < 2800`);
+      assert.ok(lineCount < 300, `server.js has ${lineCount} lines, expected < 300`);
     });
   });
 
