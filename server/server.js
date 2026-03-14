@@ -187,10 +187,12 @@ const server = http.createServer(async (req, res) => {
         }
         const reqExt = path.extname(filePath);
         if (reqExt && reqExt !== '.html') {
+          // For actual missing files with extensions, return proper 404
           res.writeHead(404, {'Content-Type': 'text/plain'});
           res.end('Not found: ' + filePath);
           return;
         }
+        // Only fallback to executive index.html for extensionless paths
         fs.readFile(path.join(STATIC_DIR, 'office-executive', 'index.html'), (e2, html) => {
           if (e2) { res.writeHead(500); res.end('Error'); return; }
           res.writeHead(200, {'Content-Type': 'text/html', 'Cache-Control': 'no-store, no-cache, must-revalidate'}); res.end(html);

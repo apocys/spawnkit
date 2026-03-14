@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpawnKit — Medieval Safe Mode</title>
+    <script>
+        var API_URL = window.OC_API_URL || (window.location.hostname.includes('spawnkit.ai') ? window.location.origin : 'http://127.0.0.1:8765');
+        window.OC_RELAY_URL = window.OC_RELAY_URL || API_URL;
+        
+        // DISABLE PROBLEMATIC FEATURES
+        localStorage.setItem('spawnkit-tour-done', 'true'); // Skip cinematic tour
+        window._disableCinematic = true;
+        window._disableMobile = true;
+        window._safeMode = true;
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;500;600;700&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- Load only essential scripts -->
+    <script>
+    window._hasWebGL = (function() {
+        try {
+            var c = document.createElement('canvas');
+            return !!(c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl'));
+        } catch(e) { return false; }
+    })();
+    if (window._hasWebGL) {
+        document.write('<scr'+'ipt type="importmap">{"imports":{"three":"https://unpkg.com/three@0.162.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.162.0/examples/jsm/"}}</scr'+'ipt>');
+    }
+    </script>
+    
+    <style>
+        :root {
+            --castle-dark-navy: #1a1a2e;
+            --castle-navy: #16213e;
+            --castle-blue: #0f3460;
+            --castle-red: #e94560;
+            --castle-gold: #c9a959;
+            --castle-parchment: #f4e4bc;
+            --text-primary: var(--castle-parchment);
+            --bg-secondary: var(--castle-navy);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: var(--castle-dark-navy);
+            color: var(--text-primary);
+            font-family: 'Crimson Text', serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .castle-layout {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            height: 100vh;
+        }
+        
+        .castle-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            height: 40px;
+            background: linear-gradient(135deg, #0d0d1a 0%, var(--castle-navy) 50%, #0d0d1a 100%);
+            border-bottom: 1px solid rgba(168,162,153,0.3);
+            z-index: 10;
+        }
+        
+        .castle-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .castle-name {
+            font-family: 'MedievalSharp', fantasy;
+            font-size: 16px;
+            color: var(--castle-gold);
+            letter-spacing: 2px;
+        }
+        
+        .safe-mode-badge {
+            background: var(--castle-red);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .castle-main {
+            position: relative;
+            overflow: hidden;
+            background: #0a0a1a;
+        }
+        
+        .loading-screen {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, #0d0d1a, var(--castle-navy));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        
+        .loading-title {
+            font-family: 'MedievalSharp', fantasy;
+            font-size: 28px;
+            color: var(--castle-gold);
+            margin-bottom: 20px;
+        }
+        
+        .loading-text {
+            font-size: 14px;
+            color: var(--castle-parchment);
+            text-align: center;
+            max-width: 400px;
+            line-height: 1.6;
+        }
+        
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .btn {
+            background: var(--castle-gold);
+            color: var(--castle-dark-navy);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 8px;
+            text-decoration: none;
+            display: inline-block;
+            font-family: 'Cinzel', serif;
+        }
+        
+        .btn:hover {
+            background: #d4b76a;
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: var(--castle-gold);
+            border: 1px solid var(--castle-gold);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(201, 169, 89, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="castle-layout">
+        <header class="castle-header">
+            <div class="castle-banner">
+                <div style="font-size: 18px;">🏰</div>
+                <h1 class="castle-name">Medieval Safe Mode</h1>
+                <span class="safe-mode-badge">SAFE MODE</span>
+            </div>
+        </header>
+
+        <main class="castle-main">
+            <div class="loading-screen" id="loading-screen">
+                <div class="loading-title">🛡️ Safe Mode Active</div>
+                <div class="loading-text">
+                    <p><strong>Cinematic animations and mobile features disabled</strong></p>
+                    <p>This mode helps isolate issues introduced in recent refactoring.</p>
+                    <p>Only essential Three.js castle rendering is enabled.</p>
+                </div>
+                
+                <div class="controls">
+                    <button class="btn" onclick="enableFullMode()">🎮 Try Full Mode</button>
+                    <button class="btn btn-secondary" onclick="showDebugInfo()">🔧 Debug Info</button>
+                    <a href="/office-executive/" class="btn btn-secondary">🏢 Executive Office</a>
+                </div>
+                
+                <div id="debug-info" style="display: none; margin-top: 20px; padding: 16px; background: rgba(0,0,0,0.6); border-radius: 8px; font-family: monospace; font-size: 12px; max-width: 500px;">
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function enableFullMode() {
+            localStorage.removeItem('spawnkit-tour-done');
+            window.location.href = '/office-medieval/';
+        }
+        
+        function showDebugInfo() {
+            const debugDiv = document.getElementById('debug-info');
+            debugDiv.style.display = 'block';
+            
+            const info = {
+                'User Agent': navigator.userAgent,
+                'Screen Size': window.screen.width + 'x' + window.screen.height,
+                'Window Size': window.innerWidth + 'x' + window.innerHeight,
+                'WebGL Support': window._hasWebGL ? 'Yes' : 'No',
+                'Local Storage': localStorage.getItem('spawnkit-tour-done') || 'null',
+                'Document State': document.readyState,
+                'Three.js': typeof window.THREE !== 'undefined' ? 'Loaded' : 'Not loaded'
+            };
+            
+            let html = '<h4 style="color: #c9a959; margin-bottom: 8px;">Debug Information:</h4>';
+            Object.entries(info).forEach(([key, value]) => {
+                html += `<div><strong>${key}:</strong> ${value}</div>`;
+            });
+            
+            debugDiv.innerHTML = html;
+        }
+        
+        // Test Three.js loading
+        if (window._hasWebGL) {
+            setTimeout(() => {
+                if (typeof window.THREE !== 'undefined') {
+                    document.querySelector('.loading-text').innerHTML += '<p style="color: #10b981; margin-top: 12px;">✅ Three.js loaded successfully</p>';
+                } else {
+                    document.querySelector('.loading-text').innerHTML += '<p style="color: #e94560; margin-top: 12px;">❌ Three.js failed to load</p>';
+                }
+            }, 3000);
+        }
+    </script>
+    
+    <!-- Load ONLY essential 3D engine scripts (no cinematic, no mobile) -->
+    <script>
+    if (window._hasWebGL) {
+        const coreScripts = [
+            'medieval-scene.js',
+            'medieval-world.js',
+            'medieval-characters-v2.js'
+        ];
+        
+        coreScripts.forEach(function(src) {
+            var s = document.createElement('script');
+            s.type = 'module';
+            s.src = src + "?v=20";
+            document.head.appendChild(s);
+        });
+    }
+    </script>
+</body>
+</html>

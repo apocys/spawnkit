@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Medieval Debug</title>
+    <style>
+        body { background: #0a0a1a; color: #fff; font-family: monospace; padding: 20px; }
+        .log { background: #1a1a2e; padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .error { background: #e94560; color: white; }
+        .success { background: #10b981; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🏰 Medieval Theme Debug</h1>
+    <div id="results"></div>
+    <script>
+        const results = document.getElementById('results');
+        
+        function log(message, type = 'log') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            results.appendChild(div);
+            console.log(message);
+        }
+        
+        // Test WebGL detection
+        try {
+            const canvas = document.createElement('canvas');
+            const webgl2 = canvas.getContext('webgl2');
+            const webgl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (webgl2) {
+                log('✅ WebGL2 support detected', 'success');
+                window._hasWebGL = true;
+            } else if (webgl) {
+                log('✅ WebGL support detected (legacy)', 'success');
+                window._hasWebGL = true;
+            } else {
+                log('❌ No WebGL support', 'error');
+                window._hasWebGL = false;
+            }
+        } catch(e) {
+            log('❌ WebGL detection failed: ' + e.message, 'error');
+            window._hasWebGL = false;
+        }
+        
+        // Test Three.js import
+        log('🔄 Testing Three.js import...');
+        
+        if (window._hasWebGL) {
+            // Create importmap
+            const importMap = document.createElement('script');
+            importMap.type = 'importmap';
+            importMap.textContent = JSON.stringify({
+                "imports": {
+                    "three": "https://unpkg.com/three@0.162.0/build/three.module.js",
+                    "three/addons/": "https://unpkg.com/three@0.162.0/examples/jsm/"
+                }
+            });
+            document.head.appendChild(importMap);
+            
+            // Test import
+            const testScript = document.createElement('script');
+            testScript.type = 'module';
+            testScript.textContent = `
+                try {
+                    const THREE = await import('three');
+                    window.THREE = THREE;
+                    document.getElementById('results').innerHTML += '<div class="log success">[' + new Date().toLocaleTimeString() + '] ✅ Three.js imported successfully</div>';
+                    
+                    // Test scene creation
+                    const scene = new THREE.Scene();
+                    const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                    const renderer = new THREE.WebGLRenderer();
+                    renderer.setSize(200, 200);
+                    renderer.setClearColor(0x1a1a2e);
+                    document.body.appendChild(renderer.domElement);
+                    
+                    // Simple cube test
+                    const geometry = new THREE.BoxGeometry();
+                    const material = new THREE.MeshBasicMaterial({ color: 0xc9a959 });
+                    const cube = new THREE.Mesh(geometry, material);
+                    scene.add(cube);
+                    camera.position.z = 5;
+                    
+                    function animate() {
+                        requestAnimationFrame(animate);
+                        cube.rotation.x += 0.01;
+                        cube.rotation.y += 0.01;
+                        renderer.render(scene, camera);
+                    }
+                    animate();
+                    
+                    document.getElementById('results').innerHTML += '<div class="log success">[' + new Date().toLocaleTimeString() + '] ✅ 3D scene rendering successfully</div>';
+                } catch(error) {
+                    document.getElementById('results').innerHTML += '<div class="log error">[' + new Date().toLocaleTimeString() + '] ❌ Three.js import failed: ' + error.message + '</div>';
+                }
+            `;
+            document.head.appendChild(testScript);
+        } else {
+            log('⚠️ Skipping Three.js test (no WebGL)');
+        }
+        
+        // Test API connectivity
+        log('🔄 Testing API connectivity...');
+        fetch('/api/oc/agents')
+            .then(r => r.json())
+            .then(data => {
+                log('✅ API accessible: ' + JSON.stringify(data).substring(0, 100), 'success');
+            })
+            .catch(e => {
+                log('❌ API failed: ' + e.message, 'error');
+            });
+    </script>
+</body>
+</html>

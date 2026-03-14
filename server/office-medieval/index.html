@@ -12,6 +12,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;500;600;700&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Load engine protection first -->
+    <script src="engine-ready-guard.js?v=1"></script>
+    <script src="fix-three-js-loading.js?v=1"></script>
+    <script src="medieval-fallback.js?v=2"></script>
+    <script src="blue-screen-fix.js?v=1"></script>
+    <script src="debug-recent-features.js?v=1"></script>
     <script>
     // WebGL detection — determines which engine to load
     window._hasWebGL = (function() {

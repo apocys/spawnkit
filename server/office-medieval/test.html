@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Medieval Test</title>
+    <style>
+        body { 
+            margin: 0; 
+            background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #c9a959;
+            font-family: 'Crimson Text', serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .status { 
+            padding: 10px 20px; 
+            margin: 5px;
+            border: 1px solid #c9a959;
+            border-radius: 8px;
+            background: rgba(201, 169, 89, 0.1);
+            min-width: 300px;
+        }
+        .error { border-color: #e94560; background: rgba(233, 69, 96, 0.1); }
+        .success { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        #canvas { border: 2px solid #c9a959; margin: 20px; }
+    </style>
+</head>
+<body>
+    <h1>🏰 Medieval Theme Diagnostic</h1>
+    <div id="status"></div>
+    <canvas id="canvas" width="300" height="200"></canvas>
+    
+    <script>
+        const status = document.getElementById('status');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = `<strong>${type.toUpperCase()}:</strong> ${message}`;
+            status.appendChild(div);
+        }
+        
+        // Test WebGL
+        try {
+            const testCanvas = document.createElement('canvas');
+            const webgl2 = testCanvas.getContext('webgl2');
+            const webgl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+            
+            if (webgl2) {
+                log('WebGL2 support detected ✅', 'success');
+            } else if (webgl) {
+                log('WebGL support detected ✅', 'success');
+            } else {
+                log('No WebGL support ❌', 'error');
+            }
+        } catch(e) {
+            log('WebGL test failed: ' + e.message, 'error');
+        }
+        
+        // Test Three.js loading
+        if (typeof window.THREE !== 'undefined') {
+            log('Three.js already loaded ✅', 'success');
+        } else {
+            log('Loading Three.js from CDN...', 'info');
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r162/three.min.js';
+            script.onload = () => {
+                log('Three.js loaded successfully ✅', 'success');
+                testThreeJS();
+            };
+            script.onerror = () => {
+                log('Three.js CDN failed ❌', 'error');
+                draw2D();
+            };
+            document.head.appendChild(script);
+        }
+        
+        function testThreeJS() {
+            try {
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, 1.5, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({ canvas: canvas });
+                renderer.setSize(300, 200);
+                renderer.setClearColor(0x1a1a2e);
+                
+                const geometry = new THREE.BoxGeometry();
+                const material = new THREE.MeshBasicMaterial({ color: 0xc9a959 });
+                const cube = new THREE.Mesh(geometry, material);
+                scene.add(cube);
+                camera.position.z = 5;
+                
+                function animate() {
+                    requestAnimationFrame(animate);
+                    cube.rotation.x += 0.01;
+                    cube.rotation.y += 0.01;
+                    renderer.render(scene, camera);
+                }
+                animate();
+                
+                log('Three.js 3D rendering working ✅', 'success');
+            } catch(e) {
+                log('Three.js failed: ' + e.message, 'error');
+                draw2D();
+            }
+        }
+        
+        function draw2D() {
+            log('Using 2D fallback renderer', 'info');
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, 300, 200);
+            
+            // Draw castle
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(60, 120, 180, 80); // Base
+            ctx.fillRect(75, 80, 30, 40);   // Left tower
+            ctx.fillRect(135, 60, 30, 60);  // Center tower
+            ctx.fillRect(195, 80, 30, 40);  // Right tower
+            
+            ctx.fillStyle = '#c9a959';
+            ctx.font = '14px serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('🏰 2D Mode Active', 150, 30);
+        }
+        
+        // Test API
+        fetch('/api/oc/agents')
+            .then(r => r.json())
+            .then(data => {
+                log('API connection successful ✅', 'success');
+            })
+            .catch(e => {
+                log('API connection failed: ' + e.message, 'error');
+            });
+        
+        // Fallback to 2D after 5 seconds
+        setTimeout(() => {
+            if (!document.querySelector('.success')) {
+                log('Timeout reached, using 2D fallback', 'info');
+                draw2D();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

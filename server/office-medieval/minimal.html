@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SpawnKit — Medieval Minimal</title>
+    <style>
+        body {
+            margin: 0;
+            background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #f4e4bc;
+            font-family: 'Crimson Text', serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .castle-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .castle-title {
+            font-size: 3rem;
+            color: #c9a959;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px rgba(201,169,89,0.4);
+        }
+        .castle-subtitle {
+            font-size: 1.2rem;
+            color: #a8a299;
+            margin-bottom: 2rem;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            max-width: 800px;
+            width: 100%;
+            padding: 0 2rem;
+        }
+        .status-card {
+            background: rgba(22,33,62,0.6);
+            border: 1px solid rgba(201,169,89,0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .status-card h3 {
+            color: #c9a959;
+            margin-top: 0;
+            font-size: 1.1rem;
+        }
+        .status-value {
+            font-size: 2rem;
+            color: #f4e4bc;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+        .btn {
+            background: linear-gradient(135deg, #c9a959, #b8860b);
+            color: #0d0d1a;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0.5rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover {
+            background: linear-gradient(135deg, #d4b76a, #c8960b);
+        }
+        #debug-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #c9a959;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="castle-header">
+        <div class="castle-title">🏰</div>
+        <h1 style="color: #c9a959; font-size: 2.5rem; margin: 0;">Royal Command</h1>
+        <p class="castle-subtitle">Medieval Castle - Minimal Mode</p>
+    </div>
+    
+    <div class="status-grid">
+        <div class="status-card">
+            <h3>⚔️ Knights</h3>
+            <div class="status-value" id="knights-count">0</div>
+            <p>Active agents</p>
+        </div>
+        
+        <div class="status-card">
+            <h3>📜 Quests</h3>
+            <div class="status-value" id="missions-count">0</div>
+            <p>Running missions</p>
+        </div>
+        
+        <div class="status-card">
+            <h3>🏰 Castle Status</h3>
+            <div class="status-value" id="castle-status">🟡</div>
+            <p>Operational</p>
+        </div>
+        
+        <div class="status-card">
+            <h3>🌐 Connection</h3>
+            <div class="status-value" id="connection-status">⏳</div>
+            <p>Testing...</p>
+        </div>
+    </div>
+    
+    <div style="margin-top: 2rem; text-align: center;">
+        <a href="/office-medieval/" class="btn">🎮 Full 3D Mode</a>
+        <a href="/office-executive/" class="btn">🏢 Executive Office</a>
+        <button class="btn" onclick="runDiagnostics()">🔧 Run Diagnostics</button>
+    </div>
+    
+    <div id="debug-info" style="display: none;"></div>
+    
+    <script>
+        let debugInfo = '';
+        
+        function log(message) {
+            debugInfo += '[' + new Date().toLocaleTimeString() + '] ' + message + '<br>';
+            console.log('[Medieval Minimal]', message);
+            updateDebugDisplay();
+        }
+        
+        function updateDebugDisplay() {
+            const debugEl = document.getElementById('debug-info');
+            debugEl.innerHTML = '<h4>Debug Log:</h4>' + debugInfo;
+        }
+        
+        function runDiagnostics() {
+            const debugEl = document.getElementById('debug-info');
+            debugEl.style.display = 'block';
+            debugInfo = '';
+            
+            log('Starting diagnostics...');
+            
+            // Test WebGL
+            try {
+                const canvas = document.createElement('canvas');
+                const webgl2 = canvas.getContext('webgl2');
+                const webgl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                
+                if (webgl2) {
+                    log('✅ WebGL2 supported');
+                } else if (webgl) {
+                    log('✅ WebGL supported (legacy)');
+                } else {
+                    log('❌ No WebGL support');
+                }
+            } catch(e) {
+                log('❌ WebGL error: ' + e.message);
+            }
+            
+            // Test Three.js CDN
+            log('Testing Three.js CDN...');
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r162/three.min.js';
+            script.onload = () => {
+                log('✅ Three.js CDN accessible');
+                if (typeof THREE !== 'undefined') {
+                    log('✅ Three.js loaded and available');
+                } else {
+                    log('❌ Three.js loaded but not in global scope');
+                }
+            };
+            script.onerror = () => {
+                log('❌ Three.js CDN failed to load');
+                // Test alternative CDN
+                const altScript = document.createElement('script');
+                altScript.src = 'https://unpkg.com/three@0.162.0/build/three.min.js';
+                altScript.onload = () => log('✅ Alternative Three.js CDN works');
+                altScript.onerror = () => log('❌ Alternative CDN also failed');
+                document.head.appendChild(altScript);
+            };
+            document.head.appendChild(script);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Page loaded');
+            
+            // Test API connection
+            fetch('/api/oc/agents')
+                .then(r => r.json())
+                .then(data => {
+                    log('✅ API connected');
+                    document.getElementById('connection-status').textContent = '🟢';
+                    document.getElementById('knights-count').textContent = data.agents ? data.agents.length : 0;
+                })
+                .catch(e => {
+                    log('❌ API error: ' + e.message);
+                    document.getElementById('connection-status').textContent = '🔴';
+                });
+                
+            // Test missions
+            fetch('/api/oc/missions')
+                .then(r => r.json())
+                .then(data => {
+                    log('✅ Missions API connected');
+                    document.getElementById('missions-count').textContent = data.missions ? data.missions.length : 0;
+                })
+                .catch(e => {
+                    log('❌ Missions API error: ' + e.message);
+                });
+                
+            document.getElementById('castle-status').textContent = '🟢';
+        });
+    </script>
+</body>
+</html>
