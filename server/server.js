@@ -2440,11 +2440,15 @@ const { generateSOUL, generateIDENTITY, generateAGENTS } = require('./agent-temp
       req.on('data', chunk => body += chunk.toString());
       req.on('end', () => {
         try {
-          const { name, schedule, prompt, timezone } = JSON.parse(body);
+          const parsed = JSON.parse(body);
+          const name = parsed.name;
+          const schedule = parsed.schedule;
+          const prompt = parsed.prompt || parsed.task; // frontend sends 'task', accept both
+          const timezone = parsed.timezone;
           
           if (!name || !schedule || !prompt) {
             res.writeHead(400, {'Content-Type':'application/json'});
-            res.end(JSON.stringify({ ok: false, error: 'Missing required fields: name, schedule, prompt' }));
+            res.end(JSON.stringify({ ok: false, error: 'Missing required fields: name, schedule, prompt (or task)' }));
             return;
           }
           
