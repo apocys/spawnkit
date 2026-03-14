@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 
 let BASE = 'http://127.0.0.1:8765';
-const REFERER = 'http://127.0.0.1:8765/';
+let REFERER = 'http://127.0.0.1:8765/';
 
 function request(method, urlPath, headers = {}, bodyObj = null) {
   return new Promise((resolve, reject) => {
@@ -39,7 +39,7 @@ function request(method, urlPath, headers = {}, bodyObj = null) {
 
 describe('API auth integration tests', () => {
 
-  before(async () => { const port = await startServer(); BASE = `http://127.0.0.1:${port}`; });
+  before(async () => { const port = await startServer(); BASE = `http://127.0.0.1:${port}`; REFERER = BASE + '/'; });
   after(() => { stopServer(); });
 
 

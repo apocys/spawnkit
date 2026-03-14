@@ -6,7 +6,9 @@ const os = require('os');
 let serverProcess = null;
 let testDir = null;
 
-async function startServer(port = 8765) {
+async function startServer(port = 0) {
+  // Use random port if 0 or default to avoid EADDRINUSE
+  if (port === 0 || port === 8765) port = 9000 + Math.floor(Math.random() * 1000);
   return new Promise((resolve, reject) => {
     // Create a temporary test directory
     testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spawnkit-test-'));

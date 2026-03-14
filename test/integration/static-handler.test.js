@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 
 let BASE = 'http://127.0.0.1:8765';
-const REFERER = 'http://127.0.0.1:8765/';
+let REFERER = 'http://127.0.0.1:8765/';
 
 // Helper: GET request returning { status, headers, body }
 function get(urlPath, headers = {}) {
@@ -34,7 +34,7 @@ function get(urlPath, headers = {}) {
 
 describe('static file handler', () => {
 
-  before(async () => { const port = await startServer(); BASE = `http://127.0.0.1:${port}`; });
+  before(async () => { const port = await startServer(); BASE = `http://127.0.0.1:${port}`; REFERER = BASE + '/'; });
   after(() => { stopServer(); });
 
   test('/office-executive/main.js returns 200', async (t) => {
