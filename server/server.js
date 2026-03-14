@@ -1276,6 +1276,7 @@ const server = http.createServer(async (req, res) => {
         color: body.color || HOUSE_COLORS[colorIdx],
         agents: body.agents || ['Sycopa'],
         description: body.description || body.name,
+        goal: body.goal || body.description || body.name,
         tasks: Array.isArray(body.tasks) ? body.tasks : [],
         position: nextPos,
         source: body.source || 'telegram',
@@ -1294,6 +1295,49 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET /api/oc/missions/:id — fetch single mission by id
+  const missionGetMatch = req.url.match(/^\/api\/oc\/missions\/([a-zA-Z0-9_-]+)$/);
+  if (missionGetMatch && req.method === 'GET') {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+      const id = missionGetMatch[1];
+      const data = fs.existsSync(MISSIONS_FILE) ? JSON.parse(fs.readFileSync(MISSIONS_FILE, 'utf8')) : [];
+      const mission = data.find(m => m.id === id);
+      if (!mission) { res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return; }
+      res.writeHead(200);
+      res.end(JSON.stringify(mission));
+    } catch(e) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // PATCH /api/oc/missions/:id/tasks/:taskId — granular task update
+  const missionTaskPatchMatch = req.url.match(/^\/api\/oc\/missions\/([a-zA-Z0-9_-]+)\/tasks\/([a-zA-Z0-9_.-]+)$/);
+  if (missionTaskPatchMatch && req.method === 'PATCH') {
+    res.setHeader('Content-Type', 'application/json');
+    const body = await readBody(req);
+    try {
+      const [, id, taskId] = missionTaskPatchMatch;
+      const data = fs.existsSync(MISSIONS_FILE) ? JSON.parse(fs.readFileSync(MISSIONS_FILE, 'utf8')) : [];
+      const mission = data.find(m => m.id === id);
+      if (!mission) { res.writeHead(404); res.end(JSON.stringify({ error: 'Mission not found' })); return; }
+      const task = (mission.tasks || []).find(t => t.id === taskId);
+      if (!task) { res.writeHead(404); res.end(JSON.stringify({ error: 'Task not found' })); return; }
+      const taskAllowed = ['status', 'assignedAgent', 'subagentSessionId', 'subtasks', 'text'];
+      taskAllowed.forEach(k => { if (body && k in body) task[k] = body[k]; });
+      mission.updated = new Date().toISOString();
+      fs.writeFileSync(MISSIONS_FILE, JSON.stringify(data, null, 2));
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, mission, task }));
+    } catch(e) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   // PATCH /api/oc/missions/:id — partial update (tasks, status, name, etc.)
   const missionPatchMatch = req.url.match(/^\/api\/oc\/missions\/([a-zA-Z0-9_-]+)$/);
   if (missionPatchMatch && req.method === 'PATCH') {
@@ -1305,7 +1349,7 @@ const server = http.createServer(async (req, res) => {
       const mission = data.find(m => m.id === id);
       if (!mission) { res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return; }
       // Apply partial updates — only allow safe fields
-      const allowed = ['tasks', 'status', 'name', 'description', 'agents', 'icon', 'color'];
+      const allowed = ['tasks', 'status', 'name', 'description', 'agents', 'icon', 'color', 'goal', 'metadata'];
       allowed.forEach(k => { if (body && k in body) mission[k] = body[k]; });
       mission.updated = new Date().toISOString();
       fs.writeFileSync(MISSIONS_FILE, JSON.stringify(data, null, 2));
@@ -2379,7 +2423,7 @@ const { generateSOUL, generateIDENTITY, generateAGENTS } = require('./agent-temp
     return;
   }
 
-  if (req.url.startsWith('/api/oc/')) {
+  if (req.url.startsWith('/api/oc/') && !req.url.startsWith('/api/oc/missions')) {
     res.setHeader('Content-Type', 'application/json');
     const route = req.url.replace(/\?.*/, '');
     // Auth check: all /api/oc/ routes except health require a valid token
