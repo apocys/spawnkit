@@ -106,7 +106,10 @@
     d.appendChild(msg);
     var btn = el('button', {class:'dw-btn dw-btn-primary'}, 'Start Exploring →');
     btn.addEventListener('click', function() {
-      window.__skDemoMode = true;
+      // Use SpawnKit.authMode instead of window.__skDemoMode
+      if (window.SpawnKit) {
+        window.SpawnKit.authMode = 'demo';
+      }
       localStorage.setItem('spawnkit-demo-mode', '1');
       localStorage.setItem('spawnkit-onboarded', 'true');
       window.DeployWizard.close();

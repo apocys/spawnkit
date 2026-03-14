@@ -10,7 +10,7 @@
     var _polling = false;
     var _subscribers = [];
     var _started = false;
-    var POLL_INTERVAL = 10000; // 10 seconds — fast enough for real-time feel
+    var POLL_INTERVAL = 15000; // 15 seconds — reduced to eliminate duplicate polling
     var _consecutiveFailures = 0;
     var _MAX_FAILURES_BEFORE_BACKOFF = 3;
     var _backoffInterval = null;

@@ -48,6 +48,10 @@
         return window.OC_RELAY_TOKEN || localStorage.getItem('spawnkit-token') || (typeof process !== 'undefined' && process.env && process.env.OC_RELAY_TOKEN) || null;
     }
     const relayToken = getRelayToken(); // initial snapshot for compat
+    
+    // Single source of truth for authentication state
+    SpawnKit.authMode = 'authenticated'; // 'authenticated' | 'demo' | 'reconnecting'
+    SpawnKit.connectionQuality = 'offline'; // 'full' | 'partial' | 'empty' | 'offline'
     SpawnKit.mode = hasElectronAPI ? 'live' : (hasRelayAPI ? 'live' : 'demo');
 
     // ── Agent OS Naming System v2.0 — MINIMAL, PERFECT & EXTENSIBLE ──────────
@@ -409,7 +413,15 @@
             },
             sessions: [],
             events: [],
-            memory: { lastUpdated: new Date(now - 3600000).toISOString(), fileCount: 12, totalSize: '48KB' }
+            memory: { lastUpdated: new Date(now - 3600000).toISOString(), fileCount: 12, totalSize: '48KB' },
+            tasks: [
+                { id: 't-1', name: 'Build frontend fixes', status: 'active', priority: 'high', assignedTo: 'forge' },
+                { id: 't-2', name: 'Update documentation', status: 'pending', priority: 'medium', assignedTo: 'echo' }
+            ],
+            skills: [
+                { id: 's-1', name: 'data-bridge', version: '1.0.0', status: 'active' },
+                { id: 's-2', name: 'auth-handler', version: '2.1.0', status: 'active' }
+            ]
         };
     }
 
@@ -438,32 +450,76 @@
 
     async function fetchRelayData() {
         if (!hasRelayAPI) return false;
+        
+        // Check auth mode - if demo, NEVER try relay
+        if (SpawnKit.authMode === 'demo') {
+            return false;
+        }
+        
         try {
-            // Use OcStore cache for sessions/crons/memory (avoids duplicate fetches)
-            // Only fetch config + agents independently (not in OcStore)
+            // ALWAYS use OcStore for sessions/crons/memory (subscribe to updates)
+            // ONLY independently fetch: agents, config, tasks, skills (things OcStore doesn't cover)
             const ocStore = window.OcStore;
-            const useCache = ocStore && ocStore.lastUpdated > 0 && (Date.now() - ocStore.lastUpdated < 30000);
+            let sessions, crons, memory;
             
-            const [sessions, crons, memory, config, agents] = await Promise.all([
-                useCache ? Promise.resolve(ocStore.sessions) : relayFetch('/api/oc/sessions'),
-                useCache ? Promise.resolve(ocStore.crons) : relayFetch('/api/oc/crons'),
-                useCache ? Promise.resolve(ocStore.memory) : relayFetch('/api/oc/memory'),
+            if (ocStore && ocStore.lastUpdated > 0) {
+                // Use OcStore data directly
+                sessions = ocStore.sessions;
+                crons = ocStore.crons;
+                memory = ocStore.memory;
+            } else {
+                // Fallback if OcStore not available/ready
+                sessions = await relayFetch('/api/oc/sessions');
+                crons = await relayFetch('/api/oc/crons');
+                memory = await relayFetch('/api/oc/memory');
+            }
+            
+            // Independent fetch for non-OcStore endpoints  
+            const [config, agents, tasks, skills] = await Promise.all([
                 relayFetch('/api/oc/config'),
-                relayFetch('/api/oc/agents')
+                relayFetch('/api/oc/agents'),
+                relayFetch('/api/oc/tasks'),
+                relayFetch('/api/oc/skills')
             ]);
 
-            if (!sessions && !crons && !memory) {
+            // Track data quality per endpoint for connection status
+            const dataQuality = {
+                sessions: Array.isArray(sessions) && sessions.length > 0,
+                crons: (Array.isArray(crons) && crons.length > 0) || (crons && typeof crons === 'object' && Object.keys(crons).length > 0),
+                memory: memory && typeof memory === 'object' && Object.keys(memory).length > 0,
+                agents: Array.isArray(agents) && agents.length > 0,
+                config: config && typeof config === 'object' && Object.keys(config).length > 0,
+                tasks: Array.isArray(tasks) && tasks.length > 0,
+                skills: Array.isArray(skills) && skills.length > 0
+            };
+            
+            const endpointsWithData = Object.values(dataQuality).filter(Boolean).length;
+            const totalEndpoints = Object.keys(dataQuality).length;
+            
+            // Set connection quality
+            if (endpointsWithData === 0) {
+                SpawnKit.connectionQuality = 'offline';
                 console.warn('[SpawnKit Relay] All endpoints failed — falling back to demo');
                 return false;
+            } else if (endpointsWithData === totalEndpoints) {
+                SpawnKit.connectionQuality = 'full';
+            } else if (endpointsWithData >= Math.ceil(totalEndpoints / 2)) {
+                SpawnKit.connectionQuality = 'partial';
+            } else {
+                SpawnKit.connectionQuality = 'empty';
             }
 
-            const newData = mapRelayToSpawnKit({ sessions, crons, memory, config, agents });
+            const newData = mapRelayToSpawnKit({ sessions, crons, memory, config, agents, tasks, skills });
 
             // Detect changes
             const oldAgents = SpawnKit.data?.agents || [];
             checkForStatusChanges(oldAgents, newData.agents);
             const oldSubagents = SpawnKit.data?.subagents || [];
             checkForNewSubagents(oldSubagents, newData.subagents);
+            const oldTasks = SpawnKit.data?.tasks || [];
+            checkForTasksUpdates(oldTasks, newData.tasks);
+            const oldSkills = SpawnKit.data?.skills || [];
+            checkForSkillsUpdates(oldSkills, newData.skills);
 
             SpawnKit.data = newData;
             SpawnKit.mode = 'live';
@@ -482,6 +538,8 @@
         const cronsRaw = raw.crons;
         const cronArray = Array.isArray(cronsRaw) ? cronsRaw : (cronsRaw && Array.isArray(cronsRaw.jobs) ? cronsRaw.jobs : []);
         const agentArray = Array.isArray(raw.agents) ? raw.agents : [];
+        const tasksArray = Array.isArray(raw.tasks) ? raw.tasks : [];
+        const skillsArray = Array.isArray(raw.skills) ? raw.skills : [];
 
         // ── Agents ──
         // If /api/oc/agents returned data, use it; otherwise derive from sessions
@@ -638,6 +696,20 @@
             events: [],
             sessions: sessionArray,
             todo: memoryData.todo || '',
+            tasks: tasksArray.map(task => ({
+                id: task.id,
+                name: task.name || task.label,
+                status: task.status || 'unknown',
+                priority: task.priority || 'medium',
+                assignedTo: task.assignedTo || 'main'
+            })),
+            skills: skillsArray.map(skill => ({
+                id: skill.id,
+                name: skill.name,
+                version: skill.version || '1.0.0',
+                status: skill.enabled ? 'active' : 'inactive',
+                description: skill.description || ''
+            })),
             memory: {
                 lastUpdated: memoryData.files && memoryData.files.length > 0 ? new Date().toISOString() : null,
                 fileCount: (memoryData.files || []).length,
@@ -895,6 +967,8 @@
                 model: 'claude-opus-4-6'
             },
             events: events || [],
+            tasks: [], // Would need to be populated from OpenClaw data
+            skills: [], // Would need to be populated from OpenClaw data
             memory: {
                 lastUpdated: memory.longTerm?.lastModified ? new Date(memory.longTerm.lastModified).toISOString() : null,
                 fileCount: memory.daily?.length || 0,
@@ -1091,8 +1165,33 @@
         });
     }
 
+    function checkForTasksUpdates(oldTasks, newTasks) {
+        if (!Array.isArray(oldTasks) || !Array.isArray(newTasks)) return;
+        
+        const oldTasksJson = JSON.stringify(oldTasks);
+        const newTasksJson = JSON.stringify(newTasks);
+        
+        if (oldTasksJson !== newTasksJson) {
+            console.log('📋 SpawnKit: Tasks updated');
+            SpawnKit.emit('tasks:updated', { tasks: newTasks, oldTasks: oldTasks });
+        }
+    }
+
+    function checkForSkillsUpdates(oldSkills, newSkills) {
+        if (!Array.isArray(oldSkills) || !Array.isArray(newSkills)) return;
+        
+        const oldSkillsJson = JSON.stringify(oldSkills);
+        const newSkillsJson = JSON.stringify(newSkills);
+        
+        if (oldSkillsJson !== newSkillsJson) {
+            console.log('🔧 SpawnKit: Skills updated');
+            SpawnKit.emit('skills:updated', { skills: newSkills, oldSkills: oldSkills });
+        }
+    }
+
     // ── Live Updates ────────────────────────────────────────────────────────
     let liveInterval = null;
+    let supplementaryInterval = null;
     let refreshCount = 0;
     let lastRefreshError = null;
     
@@ -1139,6 +1238,41 @@
         }, interval);
         
         SpawnKit.emit('live:started', { interval, mode: SpawnKit.mode });
+        
+        // Start supplementary polling for agents/config/tasks/skills (30s interval)
+        if (hasRelayAPI && !supplementaryInterval) {
+            supplementaryInterval = setInterval(async () => {
+                try {
+                    const [agents, config, tasks, skills] = await Promise.all([
+                        relayFetch('/api/oc/agents'),
+                        relayFetch('/api/oc/config'),
+                        relayFetch('/api/oc/tasks'),
+                        relayFetch('/api/oc/skills')
+                    ]);
+                    
+                    // Update only these specific data points
+                    if (agents && Array.isArray(agents)) {
+                        const oldAgents = SpawnKit.data?.agents || [];
+                        checkForStatusChanges(oldAgents, agents);
+                        SpawnKit.data.agents = agents.map(a => ({...a})); // Map as needed
+                    }
+                    if (tasks) {
+                        const oldTasks = SpawnKit.data?.tasks || [];
+                        checkForTasksUpdates(oldTasks, tasks);
+                        SpawnKit.data.tasks = Array.isArray(tasks) ? tasks : [];
+                    }
+                    if (skills) {
+                        const oldSkills = SpawnKit.data?.skills || [];
+                        checkForSkillsUpdates(oldSkills, skills);
+                        SpawnKit.data.skills = Array.isArray(skills) ? skills : [];
+                    }
+                    
+                } catch (e) {
+                    console.warn('⚠️ SpawnKit: Supplementary poll failed:', e.message);
+                }
+            }, 30000); // 30 second interval
+            console.log('⏰ SpawnKit: Started supplementary polling for agents/config/tasks/skills every 30s');
+        }
     };
     
     SpawnKit.stopLive = function() {
@@ -1147,6 +1281,11 @@
             liveInterval = null;
             console.log(`⏹️  SpawnKit: Stopped live updates (completed ${refreshCount} refreshes)`);
             SpawnKit.emit('live:stopped', { refreshCount, lastError: lastRefreshError?.message });
+        }
+        if (supplementaryInterval) {
+            clearInterval(supplementaryInterval);
+            supplementaryInterval = null;
+            console.log('⏹️  SpawnKit: Stopped supplementary polling');
         }
     };
 
@@ -1396,12 +1535,52 @@
         }
     }
 
+    function updateConnectionStatus(statusText, quality) {
+        // Update auth.js connectedLabel if it exists (from line 190-191)
+        const connectedLabel = document.querySelector('.sk-connected-label') || 
+                               document.getElementById('sk-connected-label') ||
+                               document.querySelector('[data-connected-label]');
+        if (connectedLabel) {
+            connectedLabel.textContent = statusText;
+            connectedLabel.className = `sk-connected-label quality-${quality}`;
+        }
+        
+        // Also try to find any other status displays
+        const statusDisplays = document.querySelectorAll('[data-connection-status]');
+        statusDisplays.forEach(el => {
+            el.textContent = statusText;
+            el.setAttribute('data-quality', quality);
+        });
+    }
+
     // ── Initialize ──────────────────────────────────────────────────────────
     SpawnKit.init = async function() {
         console.log('🚀 SpawnKit: Initializing...');
         
         try {
             SpawnKit.loadConfig();
+            
+            // Subscribe to OcStore updates if available
+            if (window.OcStore && hasRelayAPI) {
+                window.OcStore.subscribe(function(ocData) {
+                    console.log('📡 SpawnKit: Received OcStore update');
+                    // Update our data with OcStore data for sessions/crons/memory
+                    if (SpawnKit.data) {
+                        const oldSessions = SpawnKit.data.sessions || [];
+                        const oldCrons = SpawnKit.data.crons || [];
+                        
+                        SpawnKit.data.sessions = ocData.sessions || [];
+                        SpawnKit.data.crons = Array.isArray(ocData.crons) ? ocData.crons : 
+                                                (ocData.crons && Array.isArray(ocData.crons.jobs) ? ocData.crons.jobs : []);
+                        SpawnKit.data.memory = ocData.memory || {};
+                        
+                        // Check for changes
+                        checkForCronTriggers(oldCrons, SpawnKit.data.crons);
+                        SpawnKit.emit('data:refresh', SpawnKit.data);
+                    }
+                });
+                console.log('🔗 SpawnKit: Subscribed to OcStore updates');
+            }
 
             // Try live data first
             if (hasElectronAPI) {
@@ -1421,17 +1600,31 @@
                 console.log('🔍 SpawnKit: Relay API detected (' + relayURL + '), attempting live connection...');
                 const gotRelay = await fetchRelayData();
                 if (gotRelay) {
-                    console.log('🌐 SpawnKit: Connected via Fleet Relay (live data)');
+                    // Update connection status based on data quality
+                    const qualityMap = {
+                        'full': 'Connected',
+                        'partial': 'Connected',  
+                        'empty': 'Connected — No data yet',
+                        'offline': 'Connection failed'
+                    };
+                    const statusText = qualityMap[SpawnKit.connectionQuality] || 'Connected';
+                    console.log(`🌐 SpawnKit: ${statusText} (${SpawnKit.connectionQuality} data quality)`);
                     console.log(`📊 SpawnKit: Found ${SpawnKit.data.agents.length} agents, ${SpawnKit.data.subagents.length} subagents, ${SpawnKit.data.crons.length} crons`);
+                    
+                    // Update UI status if connected label exists
+                    updateConnectionStatus(statusText, SpawnKit.connectionQuality);
                     hideDemoBadge();
                 } else {
-                    console.log('🎮 SpawnKit: Relay connection failed, falling back to demo mode');
-                    SpawnKit.mode = 'demo';
+                    console.log('🎮 SpawnKit: Relay connection failed, falling back to degraded mode');
+                    SpawnKit.mode = SpawnKit.authMode === 'demo' ? 'demo' : 'degraded';
                     SpawnKit.data = makeDemoData();
-                    showDemoBadge();
+                    if (SpawnKit.authMode === 'demo') {
+                        showDemoBadge();
+                    }
                 }
             } else {
                 console.log('🎮 SpawnKit: Demo mode (browser — no Electron API, no Relay URL)');
+                SpawnKit.authMode = 'demo';
                 SpawnKit.mode = 'demo';
                 SpawnKit.data = makeDemoData();
                 showDemoBadge();

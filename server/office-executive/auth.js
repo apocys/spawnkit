@@ -21,7 +21,7 @@
         // Don't clear token for /api/oc/ or /api/fleet/ — these use the same token
         // Only clear and re-show overlay for actual auth validation failures
         var isApiRoute = url.indexOf('/api/oc/') !== -1 || url.indexOf('/api/fleet/') !== -1 || url.indexOf('/api/tasks') !== -1;
-        if (!isApiRoute && token && !window.__skDemoMode) {
+        if (!isApiRoute && token && !(window.SpawnKit && window.SpawnKit.authMode === 'demo')) {
           localStorage.removeItem(STORAGE_KEY);
           showOverlay();
         }
@@ -156,9 +156,14 @@
   }
 
   // ── Auth gate: called on page load ───────────────────────────────────────
-  // Restore demo mode flag from previous session
+  // Restore demo mode flag from previous session and set SpawnKit.authMode
   if (localStorage.getItem('spawnkit-demo-mode') === '1') {
-    window.__skDemoMode = true;
+    // Set SpawnKit.authMode if SpawnKit is loaded, otherwise set flag for later
+    if (window.SpawnKit) {
+      window.SpawnKit.authMode = 'demo';
+    } else {
+      window.__skDemoMode = true; // Temporary fallback
+    }
   }
 
   // Remove auth-pending gate when auth resolves (prevents overlay chaos)
@@ -224,9 +229,12 @@
             showOverlay();
           }
         });
-    } else if (window.__skDemoMode) {
+    } else if ((window.SpawnKit && window.SpawnKit.authMode === 'demo') || window.__skDemoMode) {
       // Demo mode: no token needed, boot straight in
       console.log('[Auth] Demo mode active — skipping auth overlay');
+      if (window.SpawnKit) {
+        window.SpawnKit.authMode = 'demo';
+      }
       callback();
       window.dispatchEvent(new Event('skAuthResolved'));
     } else {
