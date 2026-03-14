@@ -68,22 +68,22 @@ describe('oc-reader module', () => {
       assert.ok(agent.status, 'has status');
     });
 
-    test('reads agents.json when present', () => {
-      const workspace = process.env.WORKSPACE;
-      const agentsFile = path.join(workspace, 'agents.json');
-      const customAgents = { agents: [
-        { id: 'test1', name: 'Test1', role: 'Tester', status: 'active' },
-        { id: 'test2', name: 'Test2', role: 'Builder', status: 'active' },
-      ]};
-      fs.writeFileSync(agentsFile, JSON.stringify(customAgents));
+    test('reads agents from openclaw.json config when present', () => {
+      const configFile = path.join(process.env.HOME, '.openclaw', 'openclaw.json');
+      fs.mkdirSync(path.dirname(configFile), { recursive: true });
+      const config = { agents: { list: [
+        { id: 'test1' },
+        { id: 'test2' },
+      ], defaults: { model: { primary: 'test-model' } } } };
+      fs.writeFileSync(configFile, JSON.stringify(config));
       // Reload module
       delete require.cache[require.resolve('../../server/lib/oc-reader')];
       const r = require('../../server/lib/oc-reader');
       const result = r.getAgents();
-      assert.equal(result.agents.length, 2, 'reads 2 agents from file');
+      assert.equal(result.agents.length, 2, 'reads 2 agents from config');
       assert.equal(result.agents[0].id, 'test1');
       assert.equal(result.agents[1].id, 'test2');
-      fs.unlinkSync(agentsFile);
+      fs.unlinkSync(configFile);
     });
 
     test('returns default when agents.json has invalid JSON', () => {
@@ -108,18 +108,18 @@ describe('oc-reader module', () => {
       assert.ok(result.agents.length > 0, 'has agents when using templates');
     });
 
-    test('config agents do not have template field', () => {
-      const workspace = process.env.WORKSPACE;
-      const agentsFile = path.join(workspace, 'agents.json');
-      const customAgents = { agents: [
-        { id: 'config1', name: 'Config Agent', role: 'Worker', status: 'active' },
-      ]};
-      fs.writeFileSync(agentsFile, JSON.stringify(customAgents));
+    test('config agents have template: false', () => {
+      const configFile = path.join(process.env.HOME, '.openclaw', 'openclaw.json');
+      fs.mkdirSync(path.dirname(configFile), { recursive: true });
+      const config = { agents: { list: [
+        { id: 'config1' },
+      ], defaults: { model: { primary: 'test-model' } } } };
+      fs.writeFileSync(configFile, JSON.stringify(config));
       delete require.cache[require.resolve('../../server/lib/oc-reader')];
       const r = require('../../server/lib/oc-reader');
       const result = r.getAgents();
-      assert.equal(result.agents[0].template, undefined, 'config agents have no template field');
-      fs.unlinkSync(agentsFile);
+      assert.equal(result.agents[0].template, false, 'config agents have template: false');
+      fs.unlinkSync(configFile);
     });
   });
 
