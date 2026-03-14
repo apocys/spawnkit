@@ -582,27 +582,63 @@
     var isMissionCmd = /^\/m(ission)?\s+/i.test(text);
     if (isMissionCmd) {
       var missionText = text.replace(/^\/m(ission)?\s+/i, '').trim();
+      var token = localStorage.getItem('spawnkit-api-token') || localStorage.getItem('spawnkit-token');
+      var apiBase = window.OC_API_URL || window.location.origin;
+      
+      // Create mission locally first for immediate UI update
       var newMission = {
         id: 'mission-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
         name: missionText.substring(0, 50) + (missionText.length > 50 ? '…' : ''),
         createdAt: Date.now(),
         status: 'active'
       };
-      // Save to localStorage missions list
+      
+      // Save to localStorage for immediate fallback
       try {
         var state = JSON.parse(localStorage.getItem('fleetkit_state') || '{}');
         if (!Array.isArray(state.missions)) state.missions = [];
         state.missions.unshift(newMission);
         localStorage.setItem('fleetkit_state', JSON.stringify(state));
       } catch (e) {}
-      // Switch to new mission
+      
+      // Switch to new mission immediately
       missionId = newMission.id;
       currentMission = { id: newMission.id, name: newMission.name };
       if (elTitle) elTitle.innerHTML = escMc(newMission.name) + ' <span class="mc-chevron">⌄</span>';
-      // Refresh sidebar
       if (window.McSidebarLeft) window.McSidebarLeft.render([]);
-      // Clear chat for new mission
       elBody.innerHTML = '';
+      
+      // Try to sync to API in background
+      if (token && apiBase) {
+        fetch(apiBase + '/api/oc/missions/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ name: missionText, goal: missionText })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.id) {
+            // Update local mission ID with server ID
+            missionId = data.id;
+            currentMission.id = data.id;
+            
+            // Activate the mission
+            fetch(apiBase + '/api/oc/missions/' + data.id + '/activate', {
+              method: 'POST',
+              headers: { 'Authorization': 'Bearer ' + token }
+            }).catch(e => console.warn('Failed to activate mission:', e));
+            
+            console.log('Mission synced to API:', data.id);
+          }
+        })
+        .catch(error => {
+          console.warn('Mission API failed, using localStorage only:', error);
+        });
+      }
+      
       // Prepend /mission prefix for the agent
       text = '🚀 MISSION: ' + missionText;
     }

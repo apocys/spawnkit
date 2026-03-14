@@ -2423,6 +2423,70 @@ const { generateSOUL, generateIDENTITY, generateAGENTS } = require('./agent-temp
     return;
   }
 
+  // Cron creation endpoint
+  if (req.method === 'POST' && req.url === '/api/oc/crons') {
+    res.setHeader('Content-Type', 'application/json');
+    
+    // Auth check
+    const authHeader = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+    if (!authHeader || !apiTokens.includes(authHeader)) {
+      res.writeHead(401, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: false, error: 'Unauthorized' }));
+      return;
+    }
+    
+    try {
+      let body = '';
+      req.on('data', chunk => body += chunk.toString());
+      req.on('end', () => {
+        try {
+          const { name, schedule, prompt, timezone } = JSON.parse(body);
+          
+          if (!name || !schedule || !prompt) {
+            res.writeHead(400, {'Content-Type':'application/json'});
+            res.end(JSON.stringify({ ok: false, error: 'Missing required fields: name, schedule, prompt' }));
+            return;
+          }
+          
+          // Build openclaw cron add command
+          const cronArgs = ['cron', 'add', '--name', name, '--schedule', schedule, '--prompt', prompt];
+          if (timezone) {
+            cronArgs.push('--timezone', timezone);
+          }
+          
+          const { spawn } = require('child_process');
+          const cronProcess = spawn('openclaw', cronArgs);
+          let output = '';
+          let error = '';
+          
+          cronProcess.stdout.on('data', data => output += data.toString());
+          cronProcess.stderr.on('data', data => error += data.toString());
+          
+          cronProcess.on('close', (code) => {
+            if (code === 0) {
+              res.writeHead(200, {'Content-Type':'application/json'});
+              res.end(JSON.stringify({ 
+                ok: true, 
+                job: { name, schedule, prompt, timezone: timezone || 'UTC' },
+                output: output.trim()
+              }));
+            } else {
+              res.writeHead(500, {'Content-Type':'application/json'});
+              res.end(JSON.stringify({ ok: false, error: error || 'Failed to create cron job' }));
+            }
+          });
+        } catch(parseError) {
+          res.writeHead(400, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ ok: false, error: 'Invalid JSON' }));
+        }
+      });
+    } catch(e) {
+      res.writeHead(500, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+    return;
+  }
+
   if (req.url.startsWith('/api/oc/') && !req.url.startsWith('/api/oc/missions')) {
     res.setHeader('Content-Type', 'application/json');
     const route = req.url.replace(/\?.*/, '');

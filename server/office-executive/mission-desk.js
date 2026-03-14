@@ -856,8 +856,14 @@ function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;
       }
     }
 
-    // Include locally-added tasks
+    // Include API tasks first (from SpawnKit.data.tasks), then localStorage extras as fallback
     try {
+      if (window.SpawnKit && window.SpawnKit.data && window.SpawnKit.data.tasks && Array.isArray(window.SpawnKit.data.tasks)) {
+        window.SpawnKit.data.tasks.forEach(function(t) {
+          if (t.text || t.title) tasks.unshift({ done: !!t.done, text: t.text || t.title });
+        });
+      }
+      // Add localStorage extras only as fallback
       var extraTasks = JSON.parse(localStorage.getItem('spawnkit-extra-tasks') || '[]');
       extraTasks.forEach(function(t) {
         if (t.text) tasks.unshift({ done: !!t.done, text: t.text });
@@ -914,18 +920,57 @@ function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;
       document.getElementById('mdAddTaskConfirm').addEventListener('click', function() {
         var text = input.value.trim();
         if (!text) return;
-        // Save to localStorage
-        var tasks = [];
-        try { tasks = JSON.parse(localStorage.getItem('spawnkit-extra-tasks') || '[]'); } catch(e) {}
-        tasks.push({ text: text, done: false, created: Date.now() });
-        localStorage.setItem('spawnkit-extra-tasks', JSON.stringify(tasks));
-        form.remove();
-        // Trigger re-render
-        if (window.OcStore) {
-          var data = { sessions: window.OcStore.sessions, memory: window.OcStore.memory, chat: window.OcStore.chat, crons: window.OcStore.crons };
-          renderTodayTasks(data);
+        
+        // Try API first, fallback to localStorage
+        var token = localStorage.getItem('spawnkit-api-token') || localStorage.getItem('spawnkit-token');
+        var apiBase = window.OC_API_URL || window.location.origin;
+        
+        if (token && apiBase) {
+          fetch(apiBase + '/api/oc/tasks', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ title: text })
+          })
+          .then(response => {
+            if (response.ok) {
+              form.remove();
+              // Refresh OcStore to get updated tasks
+              if (window.OcStore && window.OcStore.refresh) window.OcStore.refresh();
+              if (window.Exec && window.Exec.showToast) window.Exec.showToast('✅ Task added!');
+            } else {
+              throw new Error('API failed');
+            }
+          })
+          .catch(error => {
+            console.warn('API failed, falling back to localStorage:', error);
+            // Fallback to localStorage
+            var tasks = [];
+            try { tasks = JSON.parse(localStorage.getItem('spawnkit-extra-tasks') || '[]'); } catch(e) {}
+            tasks.push({ text: text, done: false, created: Date.now() });
+            localStorage.setItem('spawnkit-extra-tasks', JSON.stringify(tasks));
+            form.remove();
+            if (window.OcStore) {
+              var data = { sessions: window.OcStore.sessions, memory: window.OcStore.memory, chat: window.OcStore.chat, crons: window.OcStore.crons };
+              renderTodayTasks(data);
+            }
+            if (window.Exec && window.Exec.showToast) window.Exec.showToast('⚠️ Task added offline');
+          });
+        } else {
+          // No token, use localStorage
+          var tasks = [];
+          try { tasks = JSON.parse(localStorage.getItem('spawnkit-extra-tasks') || '[]'); } catch(e) {}
+          tasks.push({ text: text, done: false, created: Date.now() });
+          localStorage.setItem('spawnkit-extra-tasks', JSON.stringify(tasks));
+          form.remove();
+          if (window.OcStore) {
+            var data = { sessions: window.OcStore.sessions, memory: window.OcStore.memory, chat: window.OcStore.chat, crons: window.OcStore.crons };
+            renderTodayTasks(data);
+          }
+          if (window.Exec && window.Exec.showToast) window.Exec.showToast('✅ Task added!');
         }
-        if (window.Exec && window.Exec.showToast) window.Exec.showToast('✅ Task added!');
       });
     });
   }
