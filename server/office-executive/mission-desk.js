@@ -27,33 +27,38 @@
   // Demo mode: show all templates
   var _isConnected = false;
   var _realAgentSessions = [];
+  var _realAgents = [];
 
   function getAgentList() {
     if (!_isConnected) {
       // Not connected — show all template agents (demo/standalone mode)
       return AGENTS_TEMPLATES.slice();
     }
-    // Connected mode — show CEO + real sub-agents from sessions
-    var agents = [AGENTS_TEMPLATES[0]]; // Always include CEO
-    _realAgentSessions.forEach(function(s) {
-      var name = s.label || s.displayName || s.key || 'Agent';
-      name = name.replace(/^agent:main:/, '').replace(/^subagent:/, '');
-      // Deduplicate: don't add if name matches existing template
-      var existing = agents.find(function(a) { return a.id === name.toLowerCase() || a.name.toLowerCase() === name.toLowerCase(); });
-      if (!existing) {
-        agents.push({
-          id: name.toLowerCase().replace(/[^a-z0-9]/g, ''),
-          name: name.charAt(0).toUpperCase() + name.slice(1),
-          role: s.kind === 'subagent' ? 'Sub-Agent' : 'Agent',
-          avatar: null,
-          status: s.status === 'active' ? 'active' : 'idle',
-          color: '#007AFF',
-          real: true,
-          sessionKey: s.key
-        });
-      }
-    });
-    return agents;
+    // Connected mode — use real agents from /api/oc/agents (stored in _realAgents)
+    if (_realAgents && _realAgents.length > 0) {
+      var ROLE_MAP = {
+        'main': { name: 'ApoMac', role: 'CEO', avatar: '#avatar-ceo', color: '#FFD60A' },
+        'cto-forge': { name: 'Forge', role: 'CTO · Builder', avatar: '#avatar-forge', color: '#FF6B35' },
+        'coo-atlas': { name: 'Atlas', role: 'COO · Navigator', avatar: '#avatar-atlas', color: '#5856D6' },
+        'cro-hunter': { name: 'Hunter', role: 'CRO · Scout', avatar: '#avatar-hunter', color: '#34C759' },
+        'cmo-echo': { name: 'Echo', role: 'CMO · Communicator', avatar: '#avatar-echo', color: '#007AFF' },
+        'sentinel': { name: 'Sentinel', role: 'CSO · Guardian', avatar: '#avatar-sentinel', color: '#FF3B30' }
+      };
+      return _realAgents.map(function(a) {
+        var mapped = ROLE_MAP[a.id] || {};
+        return {
+          id: a.id,
+          name: mapped.name || a.name || a.id,
+          role: mapped.role || (a.isDefault ? 'Main' : 'Agent'),
+          avatar: mapped.avatar || null,
+          status: a.status || 'idle',
+          color: mapped.color || '#007AFF',
+          real: true
+        };
+      });
+    }
+    // Fallback: use templates
+    return AGENTS_TEMPLATES.slice();
   }
 
   // Legacy compat: AGENTS variable used by getAllAgents
@@ -402,18 +407,14 @@
       }).then(function(sessions) {
         _isConnected = true;
         var b = $('mdConnectBanner'); if (b) b.style.display = 'none';
-        // BUG-007 FIX: Only show named sub-agents in team grid
-        if (Array.isArray(sessions)) {
-          _realAgentSessions = sessions.filter(function(s) {
-            if (!s.key) return false;
-            // Only sub-agents with human-readable labels
-            if (s.kind !== 'subagent') return false;
-            if (!s.label) return false;
-            // Exclude UUID-named sessions
-            if (/^[0-9a-f]{8}-/.test(s.label)) return false;
-            return true;
-          });
-        }
+        // Fetch real agents from /api/oc/agents
+        var fetcher2 = window.skFetch || fetch;
+        return fetcher2(base + '/api/oc/agents').then(function(r2) { return r2.json(); }).then(function(agentData) {
+          if (agentData && Array.isArray(agentData.agents) && agentData.agents.length > 0) {
+            _realAgents = agentData.agents;
+          }
+        }).catch(function() { /* agents fetch failed, will use templates */ });
+      }).then(function() {
         // Refresh team grid with real data
         renderTeamGrid($('missionDeskTeam'));
       }).catch(function() {
@@ -794,6 +795,12 @@ window.openDailyBriefPanel = function() {
     '<div style="padding:12px;background:rgba(255,159,10,0.1);border-radius:10px;"><div style="font-size:24px;font-weight:700;color:#FF9F0A;">' + crons.length + '</div><div style="font-size:11px;color:var(--text-tertiary,#8E8E93);">Cron Jobs</div></div>' +
   '</div>';
 
+  // Build weather placeholder (loaded async)
+  var weatherHtml = '<div id="briefWeather" style="display:flex;align-items:center;gap:12px;"><span style="font-size:28px;" id="briefWeatherIcon">🌤</span><div><div id="briefWeatherTemp" style="font-size:20px;font-weight:700;">Loading...</div><div id="briefWeatherDesc" style="font-size:12px;color:var(--text-tertiary,#8E8E93);">Fetching weather</div></div></div>';
+
+  // Build AI insights placeholder
+  var insightsHtml = '<div id="briefInsights" style="font-size:13px;color:var(--text-secondary,#aaa);line-height:1.5;"><em>Generating executive summary...</em></div>';
+
   var o = document.createElement('div');
   o.id = 'dailyBriefOverlay';
   o.className = 'cron-overlay open';
@@ -811,6 +818,10 @@ window.openDailyBriefPanel = function() {
           '<p style="margin:0;color:var(--text-tertiary,#8E8E93);font-size:13px;">Live executive summary \u2014 ' + new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'}) + '</p>' +
         '</div>' +
         '<div style="background:var(--bg-secondary,rgba(0,0,0,0.02));padding:16px;border-radius:12px;margin-bottom:12px;border:1px solid var(--border-subtle,rgba(0,0,0,0.06));">' +
+          '<h4 style="margin:0 0 8px;font-size:14px;font-weight:600;">\u2600\ufe0f Weather</h4>' +
+          weatherHtml +
+        '</div>' +
+        '<div style="background:var(--bg-secondary,rgba(0,0,0,0.02));padding:16px;border-radius:12px;margin-bottom:12px;border:1px solid var(--border-subtle,rgba(0,0,0,0.06));">' +
           '<h4 style="margin:0 0 8px;font-size:14px;font-weight:600;">\ud83d\udcca Fleet Status</h4>' +
           fleetHtml +
         '</div>' +
@@ -818,13 +829,67 @@ window.openDailyBriefPanel = function() {
           '<h4 style="margin:0 0 8px;font-size:14px;font-weight:600;">\ud83c\udfaf Priority Tasks</h4>' +
           taskHtml +
         '</div>' +
-        '<div style="background:var(--bg-secondary,rgba(0,0,0,0.02));padding:16px;border-radius:12px;border:1px solid var(--border-subtle,rgba(0,0,0,0.06));">' +
+        '<div style="background:var(--bg-secondary,rgba(0,0,0,0.02));padding:16px;border-radius:12px;margin-bottom:12px;border:1px solid var(--border-subtle,rgba(0,0,0,0.06));">' +
           '<h4 style="margin:0 0 8px;font-size:14px;font-weight:600;">\ud83d\udd2e Scheduled Jobs</h4>' +
           cronHtml +
+        '</div>' +
+        '<div style="background:var(--bg-secondary,rgba(0,0,0,0.02));padding:16px;border-radius:12px;border:1px solid var(--border-subtle,rgba(0,0,0,0.06));">' +
+          '<h4 style="margin:0 0 8px;font-size:14px;font-weight:600;">\ud83d\udca1 AI Insights</h4>' +
+          insightsHtml +
         '</div>' +
       '</div>' +
     '</div>';
   document.body.appendChild(o);
+
+  // Async: fetch weather from wttr.in
+  fetch('https://wttr.in/Annecy?format=j1')
+    .then(function(r) { return r.json(); })
+    .then(function(w) {
+      var cur = w.current_condition && w.current_condition[0];
+      if (cur) {
+        var temp = cur.temp_C || '?';
+        var desc = (cur.weatherDesc && cur.weatherDesc[0] && cur.weatherDesc[0].value) || '';
+        var humidity = cur.humidity || '?';
+        var feelsLike = cur.FeelsLikeC || temp;
+        var weatherCodes = {'113':'\u2600\ufe0f','116':'\u26c5','119':'\u2601\ufe0f','122':'\u2601\ufe0f','176':'\ud83c\udf27','200':'\u26c8','296':'\ud83c\udf27','299':'\ud83c\udf27','302':'\ud83c\udf27','311':'\u2744\ufe0f','326':'\u2744\ufe0f','353':'\ud83c\udf26','389':'\u26c8'};
+        var code = cur.weatherCode || '';
+        var icon = weatherCodes[code] || '\ud83c\udf24';
+        var iconEl = document.getElementById('briefWeatherIcon');
+        var tempEl = document.getElementById('briefWeatherTemp');
+        var descEl = document.getElementById('briefWeatherDesc');
+        if (iconEl) iconEl.textContent = icon;
+        if (tempEl) tempEl.textContent = temp + '\u00b0C (feels ' + feelsLike + '\u00b0C)';
+        if (descEl) descEl.textContent = desc + ' \u2022 Humidity: ' + humidity + '%';
+      }
+    })
+    .catch(function() {
+      var descEl = document.getElementById('briefWeatherDesc');
+      if (descEl) descEl.textContent = 'Weather unavailable';
+    });
+
+  // Async: generate AI insights
+  var fetcher = window.skFetch || fetch;
+  fetcher('/api/brainstorm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      question: 'Give me a 3-line executive daily brief: (1) what was accomplished yesterday, (2) top priority today, (3) one strategic insight. Be extremely concise.',
+      complexity: 'quick'
+    })
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var el = document.getElementById('briefInsights');
+      if (el && d.ok && d.answer) {
+        el.innerHTML = d.answer.replace(/\n/g, '<br>').substring(0, 600);
+      } else if (el) {
+        el.textContent = 'Could not generate insights.';
+      }
+    })
+    .catch(function() {
+      var el = document.getElementById('briefInsights');
+      if (el) el.textContent = 'Insights unavailable.';
+    });
   document.getElementById('dailyBriefClose').onclick = function() { o.remove(); };
   o.querySelector('.cron-backdrop').onclick = function() { o.remove(); };
 };

@@ -18,13 +18,9 @@ module.exports = async function agentsRoutes(req, res, ctx) {
   if (req.url === '/api/oc/agents' && req.method === 'GET') {
     res.setHeader('Content-Type', 'application/json');
     try {
-      const { spawnSync } = require('child_process');
-      const ocBinList = process.env.OC_BIN || '/home/apocyz_runner/.npm-global/bin/openclaw';
-      const spawnEnvList = { ...process.env, PATH: (process.env.PATH || '') + ':/home/apocyz_runner/.npm-global/bin' };
-      const result = spawnSync(ocBinList, ['agents', 'list', '--json'], { encoding: 'utf8', timeout: 10000, env: spawnEnvList });
-      const agents = JSON.parse(result.stdout || '[]');
+      const data = getAgents();
       res.writeHead(200);
-      res.end(JSON.stringify({ ok: true, agents }));
+      res.end(JSON.stringify({ ok: true, agents: data.agents || [] }));
     } catch (e) {
       res.writeHead(500);
       res.end(JSON.stringify({ error: e.message }));
