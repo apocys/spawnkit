@@ -2,246 +2,231 @@
 const fs = require('fs');
 const path = require('path');
 
-module.exports = async function chatRoutes(req, res, ctx) {
-  const { readBody, OC_GATEWAY, OC_TOKEN, WORKSPACE } = ctx;
+// ── Shared LLM config ──────────────────────────────────────────────────
+const LLM_URL = process.env.LLM_PROXY_URL || 'http://127.0.0.1:8317';
+const LLM_MODEL = process.env.LLM_CHAT_MODEL || 'claude-sonnet-4-6';
+const LLM_BRAINSTORM_MODEL = process.env.LLM_BRAINSTORM_MODEL || 'claude-sonnet-4-6';
 
+/**
+ * Call CLIProxyAPI for a stateless chat completion.
+ * @param {string} model - Model ID
+ * @param {Array} messages - OpenAI-format messages array
+ * @param {number} maxTokens - Max response tokens
+ * @param {number} timeoutMs - Abort after this many ms
+ * @returns {Promise<string>} The assistant's reply text
+ */
+async function llmCall(model, messages, maxTokens = 800, timeoutMs = 30000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(LLM_URL + '/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages, stream: false, max_tokens: maxTokens }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`LLM ${resp.status}: ${errText.substring(0, 200)}`);
+    }
+    const data = await resp.json();
+    return data?.choices?.[0]?.message?.content || '(No response)';
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
+/**
+ * Load workspace context for the main agent (SOUL.md, MEMORY.md, TODO.md).
+ */
+function loadMainContext(workspace) {
+  const parts = [];
+  for (const file of ['SOUL.md', 'IDENTITY.md', 'MEMORY.md']) {
+    try {
+      const content = fs.readFileSync(path.join(workspace, file), 'utf8');
+      parts.push(`## ${file}\n${content.substring(0, 2000)}`);
+    } catch (e) {}
+  }
+  // Add current tasks
+  try {
+    const todo = fs.readFileSync(path.join(workspace, 'TODO.md'), 'utf8');
+    parts.push(`## Current Tasks\n${todo.substring(0, 1000)}`);
+  } catch (e) {}
+  return parts.join('\n\n');
+}
+
+// Helper to read JSON safely
+function readJSON(fp) {
+  try { return JSON.parse(fs.readFileSync(fp, 'utf8')); } catch(e) { return null; }
+}
+
+module.exports = async function chatRoutes(req, res, ctx) {
+  const { readBody, WORKSPACE } = ctx;
+  const SESSIONS_FILE = ctx.SESSIONS_FILE || process.env.HOME + '/.openclaw/agents/main/sessions/sessions.json';
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // POST /api/brainstorm — Team brainstorm via CLIProxyAPI
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (req.url.replace(/\?.*/, '') === '/api/brainstorm' && req.method === 'POST') {
     res.setHeader('Content-Type', 'application/json');
     const body = await readBody(req);
     const question = body?.question;
     const complexity = body?.complexity || 'quick';
-    console.log('[brainstorm] question:', (question||'').substring(0, 80), '| complexity:', complexity);
+    console.log('[brainstorm] question:', (question || '').substring(0, 80), '| complexity:', complexity);
+
     if (!question || typeof question !== 'string') {
       res.writeHead(400);
       res.end(JSON.stringify({ error: 'Missing question field' }));
       return true;
     }
+
+    const timeoutMs = complexity === 'quick' ? 20000 : complexity === 'deep' ? 45000 : 60000;
+    const maxTokens = complexity === 'quick' ? 600 : complexity === 'deep' ? 1200 : 2000;
+
+    // Build brainstorm system prompt with workspace context
+    const wsContext = loadMainContext(WORKSPACE);
+    const systemPrompt = `You are the CEO of a tech operation. Your team consists of specialists:
+- 📡 Echo (researcher) — finds relevant data and trends
+- 🔬 Forge (builder) — validates technical feasibility
+- 😈 Sentinel (challenger) — finds flaws and risks
+- 🎯 CEO (you) — synthesizes the best answer
+
+The user asks a question. Simulate a brief team debate internally, then deliver ONE clear, synthesized answer.
+Format: Start with the key insight, then supporting points. Be concise and actionable.
+Complexity level: ${complexity}
+
+${wsContext ? '## Your Context\n' + wsContext : ''}`;
+
     try {
-      // Route brainstorm to the main agent via gateway chat completions
-      // Use AbortController for timeout (15s for quick, 45s for deep/thorough)
-      const timeoutMs = complexity === 'quick' ? 15000 : 45000;
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      
-      const brainstormPrompt = question;
-      const resp = await fetch(OC_GATEWAY + '/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + OC_TOKEN,
-        },
-        body: JSON.stringify({
-          model: 'openclaw:main',
-          messages: [{ role: 'user', content: brainstormPrompt }],
-          stream: false,
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-      
-      if (!resp.ok) {
-        const errText = await resp.text();
-        console.error('[brainstorm] Gateway error:', resp.status, errText.substring(0, 200));
-        res.writeHead(502);
-        res.end(JSON.stringify({ error: 'Gateway error', status: resp.status }));
-        return true;
-      }
-      const data = await resp.json();
-      const answer = data?.choices?.[0]?.message?.content || '(No response from agent)';
+      const answer = await llmCall(LLM_BRAINSTORM_MODEL, [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: question },
+      ], maxTokens, timeoutMs);
+
       console.log('[brainstorm] Answer received:', answer.substring(0, 80));
-      // Save brainstorm to history file
+
+      // Save to server-side history
       const historyFile = path.join(WORKSPACE, '.spawnkit-brainstorms.json');
       let history = [];
-      try { history = JSON.parse(fs.readFileSync(historyFile, 'utf8')); } catch(e) {}
+      try { history = JSON.parse(fs.readFileSync(historyFile, 'utf8')); } catch (e) {}
       history.unshift({ question, answer, complexity, timestamp: new Date().toISOString() });
       if (history.length > 50) history = history.slice(0, 50);
       fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
-      
+
       res.writeHead(200);
       res.end(JSON.stringify({ ok: true, answer, complexity }));
     } catch (e) {
-      if (e.name === 'AbortError') {
-        console.warn('[brainstorm] Gateway timeout after', complexity === 'quick' ? '15s' : '45s');
-        // Save as pending brainstorm
-        const historyFile = path.join(WORKSPACE, '.spawnkit-brainstorms.json');
-        let history = [];
-        try { history = JSON.parse(fs.readFileSync(historyFile, 'utf8')); } catch(e2) {}
-        history.unshift({ question, answer: '⏳ Brainstorm timed out — the agent may still be processing. Try again or check the mission chat.', complexity, timestamp: new Date().toISOString(), status: 'timeout' });
-        if (history.length > 50) history = history.slice(0, 50);
-        fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
-        
-        res.writeHead(504);
-        res.end(JSON.stringify({ error: 'Brainstorm timed out', detail: 'Gateway did not respond in time. The agent may still be processing.' }));
-      } else {
-        console.error('[brainstorm] Error:', e.message);
-        res.writeHead(500);
-        res.end(JSON.stringify({ error: 'Brainstorm failed', detail: e.message }));
-      }
+      const isTimeout = e.name === 'AbortError';
+      console.error('[brainstorm]', isTimeout ? 'Timeout' : 'Error:', e.message);
+      res.writeHead(isTimeout ? 504 : 502);
+      res.end(JSON.stringify({
+        error: isTimeout ? 'Brainstorm timed out' : 'Brainstorm failed',
+        detail: e.message,
+      }));
     }
     return true;
   }
 
-  // POST /api/oc/chat — Send message to OpenClaw agent via gateway
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // POST /api/oc/chat — Chat with agent via CLIProxyAPI
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (req.url.replace(/\?.*/, '') === '/api/oc/chat' && req.method === 'POST') {
     res.setHeader('Content-Type', 'application/json');
     const body = await readBody(req);
     const message = body?.message;
-    const targetSession = body?.sessionKey; // Optional: route to sub-agent session
-    console.log('[chat-route] message:', (message||'').substring(0, 80), '| sessionKey:', targetSession || 'none');
+    console.log('[chat] message:', (message || '').substring(0, 80));
+
     if (!message || typeof message !== 'string') {
       res.writeHead(400);
       res.end(JSON.stringify({ error: 'Missing message field' }));
       return true;
     }
-    try {
 
-      // TEMPORARY FIX: For local testing, return a success response instead of routing through Gateway
-      // This allows the UI to work while we debug the Gateway integration
-      console.log('[chat] TEMP: Bypassing Gateway for message:', message.substring(0, 60));
-      
-      // Simulate a response as if the message was processed
-      const simulatedResponse = `Message received: "${message.substring(0, 50)}${message.length > 50 ? '...' : ''}"`;
-      
-      res.writeHead(200);
-      res.end(JSON.stringify({ 
-        ok: true, 
-        reply: simulatedResponse,
-        note: 'TEMP: Gateway bypass mode - message logged but not processed by OpenClaw'
-      }));
-      return true;
+    // Detect persona prefix: [Speaking to Hunter] message
+    const personaMatch = message.match(/^\[Speaking to (\w+)\]\s*(.*)/s);
 
-      // Detect persona prefix: [Speaking to Hunter] message
-      let agentMessage = message;
-      const personaMatch = message.match(/^\[Speaking to (\w+)\]\s*(.*)/s);
-      console.log('[chat-route] persona match:', personaMatch ? personaMatch[1] : 'none', '| raw message start:', message.substring(0, 60));
+    if (personaMatch) {
+      // ── Persona Chat ─────────────────────────────────────────────────
+      const personaName = personaMatch[1];
+      const userText = personaMatch[2];
 
-      if (personaMatch) {
-        // PERSONA CHAT — direct to LLM provider, bypassing OpenClaw gateway entirely
-        // CLIProxyAPI (port 8317) gives us clean, stateless completions with full context.
-        const personaName = personaMatch[1];
-        const userText = personaMatch[2];
-        const personaPath = path.join(__dirname, 'office-medieval', 'personalities', personaName.toLowerCase() + '.md');
-        let personaCtx = '';
-        try {
-          if (fs.existsSync(personaPath)) {
-            personaCtx = fs.readFileSync(personaPath, 'utf8');
-          }
-        } catch(e) {}
+      // Try loading personality file
+      const personaPath = path.join(__dirname, '..', 'office-medieval', 'personalities', personaName.toLowerCase() + '.md');
+      let personaCtx = '';
+      try { if (fs.existsSync(personaPath)) personaCtx = fs.readFileSync(personaPath, 'utf8'); } catch (e) {}
 
-        // Load agent-specific memory from their workspace
-        let memoryCtx = '';
-        const isSycopa = personaName.toLowerCase() === 'sycopa';
-        if (isSycopa) {
-          // Sycopa = main session = read main MEMORY.md
-          try { memoryCtx = fs.readFileSync(path.join(WORKSPACE, 'MEMORY.md'), 'utf8').substring(0, 3000); } catch(e) {}
-        } else {
-          // Other agents: read their own workspace MEMORY.md if it exists
-          const AGENTS_BASE = path.join(WORKSPACE, 'fleet', 'agents');
-          const agentMemPath = path.join(AGENTS_BASE, personaName.toLowerCase(), 'MEMORY.md');
-          try {
-            if (fs.existsSync(agentMemPath)) {
-              memoryCtx = fs.readFileSync(agentMemPath, 'utf8').substring(0, 2000);
-            }
-          } catch(e) {}
-        }
-
-        // Fallback role descriptions if no personality file
-        const KNIGHT_ROLES = {
-          sycopa: 'the Lord Commander and digital alter ego of Kira (the castle lord). Cool, direct, action-oriented. No fluff.',
-          forge:    'the Master Builder, responsible for code and infrastructure. Gruff, practical, proud of craftsmanship.',
-          atlas:    'the Navigator, handles research and analysis. Scholarly, curious, loves maps and knowledge.',
-          hunter:   'the Scout, market intelligence and opportunities. Sharp-eyed, competitive, always tracking prey.',
-          echo:     'the Communicator, handles channels and messaging. Swift, reliable, carries every word faithfully.',
-          sentinel: 'the Guardian, security and quality assurance. Vigilant, stern, trusts nothing without verification.',
-        };
-        const roleDesc = KNIGHT_ROLES[personaName.toLowerCase()] || 'a loyal knight of the castle';
-
-        let systemPrompt = personaCtx
-          ? `You are ${personaName}, a knight in a medieval castle. Respond FULLY IN CHARACTER using the personality below. Stay concise (2-5 sentences). Never break character, never mention AI.\n\n${personaCtx}`
-          : `You are ${personaName}, ${roleDesc}. You serve in a medieval castle. Respond in character — concise, never break character, never mention being an AI.`;
-
-        if (memoryCtx) {
-          systemPrompt += `\n\n## Your Memory (what you know)\n${memoryCtx}`;
-        }
-
-        console.log('[chat-persona] Direct LLM call for', personaName, '| has personality file:', !!personaCtx);
-
-        try {
-          // Direct call to CLIProxyAPI — clean stateless completion
-          const LLM_URL = process.env.LLM_PROXY_URL || 'http://127.0.0.1:8317';
-          const LLM_MODEL = process.env.LLM_PERSONA_MODEL || 'claude-sonnet-4-6';
-
-          const resp = await fetch(LLM_URL + '/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: LLM_MODEL,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userText },
-              ],
-              stream: false,
-              max_tokens: 300,
-            }),
-          });
-
-          if (!resp.ok) {
-            const errText = await resp.text();
-            console.error('[chat-persona] LLM error:', resp.status, errText.substring(0, 200));
-            res.writeHead(502);
-            res.end(JSON.stringify({ error: 'LLM provider error', status: resp.status }));
-            return true;
-          }
-
-          const data = await resp.json();
-          const reply = data?.choices?.[0]?.message?.content || '(The knight remains silent...)';
-          console.log('[chat-persona]', personaName, 'replied:', reply.substring(0, 60));
-          res.writeHead(200);
-          res.end(JSON.stringify({ ok: true, reply, persona: personaName }));
-          return true;
-        } catch (e) {
-          console.error('[chat-persona] Direct LLM failed:', e.message);
-          res.writeHead(502);
-          res.end(JSON.stringify({ error: 'LLM connection failed', details: e.message }));
-          return true;
-        }
+      // Load agent memory
+      let memoryCtx = '';
+      if (personaName.toLowerCase() === 'sycopa' || personaName.toLowerCase() === 'apomac') {
+        try { memoryCtx = fs.readFileSync(path.join(WORKSPACE, 'MEMORY.md'), 'utf8').substring(0, 3000); } catch (e) {}
+      } else {
+        const agentMemPath = path.join(WORKSPACE, 'fleet', 'agents', personaName.toLowerCase(), 'MEMORY.md');
+        try { if (fs.existsSync(agentMemPath)) memoryCtx = fs.readFileSync(agentMemPath, 'utf8').substring(0, 2000); } catch (e) {}
       }
 
-      // DEFAULT: No persona — send to main session (Sycopa)
-      const resp = await fetch(OC_GATEWAY + '/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + OC_TOKEN,
-        },
-        body: JSON.stringify({
-          model: 'openclaw:main',
-          messages: [{ role: 'user', content: agentMessage }],
-          stream: false,
-        }),
-      });
-      if (!resp.ok) {
-        const errText = await resp.text();
-        console.error('[chat] Gateway error:', resp.status, errText);
+      const ROLES = {
+        sycopa: 'the Lord Commander. Cool, direct, action-oriented.',
+        apomac: 'the CEO. Sharp, proactive, concise. Gets things done.',
+        forge: 'the Master Builder. Gruff, practical, proud of craftsmanship.',
+        atlas: 'the Navigator. Scholarly, curious, loves knowledge.',
+        hunter: 'the Scout. Sharp-eyed, competitive, always tracking prey.',
+        echo: 'the Communicator. Swift, reliable, carries every word.',
+        sentinel: 'the Guardian. Vigilant, stern, trusts nothing without verification.',
+      };
+      const roleDesc = ROLES[personaName.toLowerCase()] || 'a specialist agent';
+
+      let systemPrompt = personaCtx
+        ? `You are ${personaName}. Respond FULLY IN CHARACTER. Stay concise (2-5 sentences).\n\n${personaCtx}`
+        : `You are ${personaName}, ${roleDesc} Respond in character — concise and direct.`;
+      if (memoryCtx) systemPrompt += `\n\n## Your Memory\n${memoryCtx}`;
+
+      try {
+        const reply = await llmCall(LLM_MODEL, [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userText },
+        ], 300, 15000);
+
+        console.log('[chat-persona]', personaName, 'replied:', reply.substring(0, 60));
+        res.writeHead(200);
+        res.end(JSON.stringify({ ok: true, reply, persona: personaName }));
+      } catch (e) {
+        console.error('[chat-persona] Failed:', e.message);
         res.writeHead(502);
-        res.end(JSON.stringify({ error: 'Gateway error', status: resp.status }));
-        return true;
+        res.end(JSON.stringify({ error: 'LLM connection failed', detail: e.message }));
       }
-      const data = await resp.json();
-      const reply = data?.choices?.[0]?.message?.content || '(No response)';
+      return true;
+    }
+
+    // ── Default Chat (main agent / ApoMac) ──────────────────────────────
+    const wsContext = loadMainContext(WORKSPACE);
+    const systemPrompt = `You are ApoMac, a sharp and proactive AI assistant. You are the CEO of the operation.
+Be concise, helpful, and action-oriented. Answer in 2-5 sentences unless the user asks for detail.
+You have access to the user's workspace context below.
+
+${wsContext}`;
+
+    try {
+      const reply = await llmCall(LLM_MODEL, [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message },
+      ], 500, 20000);
+
+      console.log('[chat] Reply:', reply.substring(0, 80));
       res.writeHead(200);
       res.end(JSON.stringify({ ok: true, reply }));
     } catch (e) {
-      console.error('[chat] Gateway send error:', e.message);
-      res.writeHead(500);
-      res.end(JSON.stringify({ error: 'Failed to reach gateway', detail: e.message }));
+      console.error('[chat] Failed:', e.message);
+      res.writeHead(502);
+      res.end(JSON.stringify({ error: 'Chat failed', detail: e.message }));
     }
     return true;
   }
 
-  // ─── Mission Houses API ──────────────────────────────────
-  // Auth: reject requests from external origins (CSRF protection)
-  // GET /api/oc/chat/transcript?last=N — Sanitized transcript (text-only, no tool calls)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // GET /api/oc/chat/transcript?last=N — Sanitized transcript
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (req.url.startsWith('/api/oc/chat/transcript') && req.method === 'GET') {
     res.setHeader('Content-Type', 'application/json');
     const url = new URL(req.url, 'http://localhost');
@@ -263,34 +248,25 @@ module.exports = async function chatRoutes(req, res, ctx) {
           if (entry.type !== 'message') continue;
           const msg = entry.message;
           if (!msg || msg.role === 'system') continue;
-          // Extract text content only — skip tool calls/results
           let text = '';
           if (typeof msg.content === 'string') {
             text = msg.content;
           } else if (Array.isArray(msg.content)) {
-            text = msg.content
-              .filter(p => p.type === 'text' && typeof p.text === 'string')
-              .map(p => p.text)
-              .join(' ');
+            text = msg.content.filter(p => p.type === 'text' && typeof p.text === 'string').map(p => p.text).join(' ');
           }
-          if (!text.trim()) continue;
-          if (msg.role === 'toolResult') continue;
-          // Truncate long messages
+          if (!text.trim() || msg.role === 'toolResult') continue;
           if (text.length > 500) text = text.substring(0, 500) + '...';
           messages.unshift({ role: msg.role, text, ts: entry.timestamp });
-        } catch(e) {}
+        } catch (e) {}
       }
       res.writeHead(200);
       res.end(JSON.stringify({ messages: messages.slice(-last) }));
-    } catch(e) {
+    } catch (e) {
       res.writeHead(500);
       res.end(JSON.stringify({ error: e.message }));
     }
     return true;
   }
 
-  // ── Setup Wizard API ──────────────────────────────────────
-
-
-  return false; // no route matched
+  return false;
 };
