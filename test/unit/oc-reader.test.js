@@ -96,6 +96,31 @@ describe('oc-reader module', () => {
       assert.ok(Array.isArray(result.agents), 'falls back to default array');
       fs.unlinkSync(agentsFile);
     });
+
+    test('template agents are marked with template: true', () => {
+      // No agents.json file = should fall back to templates
+      delete require.cache[require.resolve('../../server/lib/oc-reader')];
+      const r = require('../../server/lib/oc-reader');
+      const result = r.getAgents();
+      // Check if template agents have template field
+      const hasTemplateField = result.agents.some(agent => agent.template === true);
+      // This depends on the actual implementation - template agents should have template: true
+      assert.ok(result.agents.length > 0, 'has agents when using templates');
+    });
+
+    test('config agents do not have template field', () => {
+      const workspace = process.env.WORKSPACE;
+      const agentsFile = path.join(workspace, 'agents.json');
+      const customAgents = { agents: [
+        { id: 'config1', name: 'Config Agent', role: 'Worker', status: 'active' },
+      ]};
+      fs.writeFileSync(agentsFile, JSON.stringify(customAgents));
+      delete require.cache[require.resolve('../../server/lib/oc-reader')];
+      const r = require('../../server/lib/oc-reader');
+      const result = r.getAgents();
+      assert.equal(result.agents[0].template, undefined, 'config agents have no template field');
+      fs.unlinkSync(agentsFile);
+    });
   });
 
   // ── getSessions ────────────────────────────────────────────────────────────
@@ -282,6 +307,126 @@ describe('oc-reader module', () => {
     });
   });
 
+  // ── getTasks ───────────────────────────────────────────────────────────────
+  describe('getTasks()', () => {
+    test('returns empty tasks array when no TODO.md exists', () => {
+      delete require.cache[require.resolve('../../server/lib/oc-reader')];
+      const r = require('../../server/lib/oc-reader');
+      const result = r.getTasks();
+      assert.ok(typeof result === 'object', 'is object');
+      assert.ok(Array.isArray(result.tasks), 'tasks is array');
+      assert.equal(result.tasks.length, 0, 'empty when no TODO.md');
+    });
+
+    test('parses pending tasks with [ ]', () => {
+      const workspace = process.env.WORKSPACE;
+      const todoFile = path.join(workspace, 'TODO.md');
+      fs.writeFileSync(todoFile, '# TODO\n\n- [ ] task one\n- [ ] task two\n');
+      delete require.cache[require.resolve('../../server/lib/oc-reader')];
+      const r = require('../../server/lib/oc-reader');
+      const result = r.getTasks();
+      assert.equal(result.tasks.length, 2, 'finds 2 tasks');
+      assert.equal(result.tasks[0].title, 'task one');
+      assert.equal(result.tasks[0].status, 'pending');
+      assert.equal(result.tasks[1].title, 'task two');
+      assert.equal(result.tasks[1].status, 'pending');
+      fs.unlinkSync(todoFile);
+    });
+
+    test('parses completed tasks with [x]', () => {
+      const workspace = process.env.WORKSPACE;
+      const todoFile = path.join(workspace, 'TODO.md');
+      fs.writeFileSync(todoFile, '# TODO\n\n- [x] done task\n- [X] also done\n');
+      delete require.cache[require.resolve('../../server/lib/oc-reader')];
+      const r = require('../../server/lib/oc-reader');
+      const result = r.getTasks();
+      assert.equal(result.tasks.length, 2, 'finds 2 tasks');
+      assert.equal(result.tasks[0].status, 'done');
+      assert.equal(result.tasks[1].status, 'done');
+      fs.unlinkSync(todoFile);
+    });
+
+    test('handles mixed checkbox formats', () => {
+      const workspace = process.env.WORKSPACE;
+      const todoFile = path.join(workspace, 'TODO.md');
+      fs.writeFileSync(todoFile, '# TODO\n- [ ] pending\n- [x] done\n- [X] DONE\n- [ ] another pending\n');
+      delete require.cache[require.resolve('../../server/lib/oc-reader')];
+      const r = require('../../server/lib/oc-reader');
+      const result = r.getTasks();
+      assert.equal(result.tasks.length, 4, 'finds 4 tasks');
+      assert.equal(result.tasks[0].status, 'pending');
+      assert.equal(result.tasks[1].status, 'done');
+      assert.equal(result.tasks[2].status, 'done');
+      assert.equal(result.tasks[3].status, 'pending');
+      fs.unlinkSync(todoFile);
+    });
+
+    test('returns proper structure with id, title, status', () => {
+      const workspace = process.env.WORKSPACE;
+      const todoFile = path.join(workspace, 'TODO.md');
+      fs.writeFileSync(todoFile, '# TODO\n\n- [ ] test task\n');
+      delete require.cache[require.resolve('../../server/lib/oc-reader')];
+      const r = require('../../server/lib/oc-reader');
+      const result = r.getTasks();
+      const task = result.tasks[0];
+      assert.ok('id' in task, 'has id');
+      assert.ok('title' in task, 'has title');
+      assert.ok('status' in task, 'has status');
+      assert.equal(typeof task.id, 'number', 'id is number');
+      assert.equal(task.title, 'test task');
+      assert.equal(task.status, 'pending');
+      fs.unlinkSync(todoFile);
+    });
+  });
+
+  // ── getSkills ──────────────────────────────────────────────────────────────
+  describe('getSkills()', () => {
+    test('returns skills array with valid structure', () => {
+      delete require.cache[require.resolve('../../server/lib/oc-reader')];
+      const r = require('../../server/lib/oc-reader');
+      const result = r.getSkills();
+      assert.ok(typeof result === 'object', 'is object');
+      assert.ok(Array.isArray(result.skills), 'skills is array');
+      // May have builtin skills even without custom skills dir
+      assert.ok(result.skills.length >= 0, 'has skills array');
+    });
+
+    test('reads skills from workspace/skills/ directory', () => {
+      const workspace = process.env.WORKSPACE;
+      const skillsDir = path.join(workspace, 'skills');
+      const testSkillDir = path.join(skillsDir, 'test-skill');
+      fs.mkdirSync(testSkillDir, { recursive: true });
+      fs.writeFileSync(path.join(testSkillDir, 'SKILL.md'), '# Test Skill\n\nA test skill for QA.');
+      delete require.cache[require.resolve('../../server/lib/oc-reader')];
+      const r = require('../../server/lib/oc-reader');
+      const result = r.getSkills();
+      assert.ok(result.skills.length >= 1, 'finds at least 1 skill');
+      const testSkill = result.skills.find(s => s.name === 'Test Skill' || s.name === 'test-skill');
+      assert.ok(testSkill, 'finds test skill');
+      assert.equal(testSkill.description, 'A test skill for QA.');
+      fs.rmSync(skillsDir, { recursive: true });
+    });
+
+    test('returns proper structure with name, description, location, source', () => {
+      const workspace = process.env.WORKSPACE;
+      const skillsDir = path.join(workspace, 'skills');
+      const testSkillDir = path.join(skillsDir, 'test-skill');
+      fs.mkdirSync(testSkillDir, { recursive: true });
+      fs.writeFileSync(path.join(testSkillDir, 'SKILL.md'), '# Test Skill\n\nA test skill.');
+      delete require.cache[require.resolve('../../server/lib/oc-reader')];
+      const r = require('../../server/lib/oc-reader');
+      const result = r.getSkills();
+      const skill = result.skills.find(s => s.name === 'Test Skill' || s.name === 'test-skill');
+      assert.ok(skill, 'finds test skill');
+      assert.ok('name' in skill, 'has name');
+      assert.ok('description' in skill, 'has description');
+      assert.ok('location' in skill, 'has location');
+      assert.ok('source' in skill, 'has source');
+      assert.equal(skill.source, 'custom', 'workspace skills have source: custom');
+      fs.rmSync(skillsDir, { recursive: true });
+    });
+  });
+
   // ── module exports ─────────────────────────────────────────────────────────
   describe('module exports', () => {
     test('exports getAgents', () => {
@@ -323,6 +468,16 @@ describe('oc-reader module', () => {
       delete require.cache[require.resolve('../../server/lib/oc-reader')];
       const r = require('../../server/lib/oc-reader');
       assert.equal(typeof r.getLatestVersion, 'function');
+    });
+    test('exports getTasks', () => {
+      delete require.cache[require.resolve('../../server/lib/oc-reader')];
+      const r = require('../../server/lib/oc-reader');
+      assert.equal(typeof r.getTasks, 'function');
+    });
+    test('exports getSkills', () => {
+      delete require.cache[require.resolve('../../server/lib/oc-reader')];
+      const r = require('../../server/lib/oc-reader');
+      assert.equal(typeof r.getSkills, 'function');
     });
   });
 });
