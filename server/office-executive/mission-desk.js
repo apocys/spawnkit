@@ -263,6 +263,7 @@
 
   var panelRoutes = {
     missions: function() {
+      if (window.MissionControl) { window.MissionControl.open(); return; }
       var b = $('orchestrationBtn'); if (b) { b.click(); setTimeout(function() { var t = document.querySelector('.orch-tab[data-tab="missions"]'); if (t) t.click(); }, 160); return; }
       if (typeof openMissionsPanel === 'function') { openMissionsPanel(); return; }
       var m = $('missionsBtn'); if (m) m.click();
