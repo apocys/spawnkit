@@ -4,33 +4,70 @@
 
 Watch your AI agents work, collaborate, and complete missions in a living virtual office. Three cinematic themes. One powerful engine.
 
-## 🎮 Themes
+## ⚠️ Canonical Codebase
 
-| Theme | Style | Vibe |
-|-------|-------|------|
-| **GameBoy** | Retro pixel art | Pokémon-style quests, chiptune music, 8-bit sprites |
-| **Cyberpunk** | Neon terminals | Mr. Robot aesthetics, live data feeds, hacker vibes |
-| **Executive** | Luxury boardroom | Succession energy, KPI dashboards, gold accents |
+**This is the ONLY SpawnKit codebase.** All other copies (`fleetkit-v2/`, `products/spawnkit-dashboard/`, etc.) are dead legacy versions and should be deleted on sight.
+
+- **Production URL**: https://app.spawnkit.ai
+- **Repo**: `apocys/spawnkit` on GitHub
+- **Deployed from**: Hetzner server (`/mnt/HC_Volume_104509196/home_apocyz_runner/spawnkit/`)
+- **Local dev clone**: `~/.openclaw/workspace/spawnkit/`
+
+## 🏗️ Architecture
+
+```
+spawnkit/
+├── server/                      # BACKEND + THEMES (production)
+│   ├── server.js                # Main Express server (108KB)
+│   ├── mission-orchestrator.js  # Mission system
+│   ├── dashboard-api.js         # Dashboard API endpoints
+│   ├── agent-templates.js       # Agent configuration
+│   ├── channel-verifier.js      # Channel verification
+│   ├── provision-server.js      # Server provisioning
+│   ├── lib/                     # Shared backend libraries
+│   ├── shared/                  # Shared frontend modules
+│   ├── skills/                  # Skill system
+│   ├── auth/                    # Authentication
+│   ├── blueprints/              # Agent blueprints
+│   ├── office-executive/        # Executive theme (production)
+│   │   ├── index.html           # Main entry point
+│   │   ├── app.js               # Application logic
+│   │   ├── oc-data-store.js     # Data store (OcStore)
+│   │   ├── mission-desk.js      # Mission desk UI
+│   │   ├── src/                 # Source modules
+│   │   │   └── data-bridge.js   # Data bridge (API integration)
+│   │   └── ...
+│   ├── office-medieval/         # Medieval theme
+│   ├── office-medieval-v2/      # Medieval v2 theme
+│   └── office-simcity-nature/   # SimCity Nature theme
+├── landing/                     # Marketing landing page
+├── arena/                       # Agent arena/sparring
+├── electron/                    # Desktop app wrapper
+├── test/                        # Playwright E2E tests
+├── scripts/                     # Utility scripts
+├── deploy.sh                    # Deployment script
+└── playwright.config.js         # Test configuration
+```
 
 ## ⚡ Quick Start
 
 ```bash
-# Open the theme selector
-open src/theme-selector.html
+# Start the server
+cd server
+node server.js
 
-# Or jump straight to a theme
-open office-gameboy/index.html
-open office-cyberpunk/index.html
-open office-executive/index.html
+# Run tests
+npx playwright test
 ```
 
-### Electron Desktop App
+## 🎮 Themes
 
-```bash
-cd electron
-npm install
-npm start
-```
+| Theme | Path | Status |
+|-------|------|--------|
+| **Executive** | `server/office-executive/` | ✅ Production |
+| **Medieval** | `server/office-medieval/` | ✅ Production |
+| **Medieval v2** | `server/office-medieval-v2/` | 🔄 In progress |
+| **SimCity Nature** | `server/office-simcity-nature/` | 🔄 In progress |
 
 ## ⌨️ Keyboard Shortcuts
 
@@ -45,52 +82,19 @@ npm start
 | `N` | Toggle sound |
 | `ESC` | Close any overlay |
 
-## 🏆 Features
+## 🚫 Dead Versions (DO NOT USE)
 
-- **3 Cinematic Boot Sequences** — Each theme has a unique startup animation
-- **15 Achievements** — Badges, streaks, and productivity scoring
-- **Command Palette** — Type anything, your team handles it
-- **Click + Keyboard** — FAB button for mouse users, shortcuts for power users
-- **Dynamic Favicons** — SVG favicons that match your theme
-- **Responsive** — Desktop, tablet, mobile
-- **Offline-Ready** — All assets bundled locally
-- **Zero Dependencies** — Pure JS/HTML/CSS, no frameworks
+The following directories are **obsolete** and should be deleted if found:
 
-## 📊 Stats
+- `fleetkit-v2/` — Old development repo, replaced by `spawnkit/`
+- `products/spawnkit-dashboard/` — Old standalone dashboard attempt
+- `products/spawnkit-quality-fix/` — Temporary fix attempt
+- `spawnkit-fixes/` — One-off fix directory
+- `spawnkit-mission-fix/` — One-off mission fix
+- `.spawnkit-missions/` — Legacy mission data
+- `fleetkit-packages/staging/spawnkit-*` — Old staging themes
 
-- **28,847 lines** of production code
-- **16 shared modules** in `src/`
-- **3 complete themes** with unique assets
-- **0 external runtime dependencies**
-
-## 🏗️ Architecture
-
-```
-src/                    # Shared modules (loaded by all themes)
-├── achievements.js     # 15 badges, streaks, stats dashboard
-├── boot-sequence.js    # 3 cinematic boot sequences  
-├── click-affordances.js # FAB, clickable agents, prompt bar
-├── data-bridge.js      # Universal data API + event bus
-├── favicon.js          # Dynamic SVG favicons
-├── meta-tags.js        # OG cards + Twitter cards
-├── mission-controller.js # Pokémon-style mission orchestration
-├── openclaw-helpers.js # Command palette, mission form, agent cards
-├── page-title.js       # Live document.title updates
-├── responsive.js       # Mobile viewport + touch controls
-├── sprites.js          # 16×16 pixel art characters
-├── theme-names.js      # Theme-specific agent names
-├── theme-selector.html # Entry point
-├── theme-switcher.js   # Gear icon for theme switching
-├── transitions.js      # Smooth page transitions
-└── ux-layer.js         # Keyboard overlay, onboarding, nav, errors
-
-office-gameboy/         # Pokémon RPG theme
-office-cyberpunk/       # Neuromancer/Mr. Robot theme  
-office-executive/       # Succession/Severance theme
-landing/                # Marketing landing page
-electron/               # Desktop app wrapper
-lib/                    # Bundled libraries (PixiJS)
-```
+**Rule**: If it's not in `spawnkit/`, it's not SpawnKit.
 
 ## 📄 License
 
