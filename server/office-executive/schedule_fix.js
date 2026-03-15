@@ -1,0 +1,10 @@
+
+      case 'schedule':
+        // Call the existing panel route function for scheduled tasks
+        if (typeof openPanel === 'function') {
+          openPanel('schedule');
+        } else if (typeof window.openCronsPanel === 'function') {
+          window.openCronsPanel();
+        }
+        break;
+        

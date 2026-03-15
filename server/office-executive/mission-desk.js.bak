@@ -305,8 +305,8 @@
   function handleAgentClick(agentId) {
     // BUG-005 FIX: Agent clicks open 1:1 chat, not dashboard
     // Open Mission Control with agent pre-selected for chat
-    if (window.MissionControl && typeof window.MissionControl.open === 'function') {
-      window.MissionControl.open();
+    if (typeof window.openMissionControl === 'function') {
+      window.openMissionControl();
       // Select the agent in Mission Control chat after it opens
       setTimeout(function() {
         if (typeof window.McSelectAgent === 'function') {
@@ -1113,8 +1113,8 @@ document.addEventListener('DOMContentLoaded', function() {
     switch(action) {
       case 'missions':
         // Open missions overlay
-        if (window.MissionControl && typeof window.MissionControl.open === 'function') {
-          window.MissionControl.open();
+        if (typeof window.openMissionsPanel === 'function') {
+          window.openMissionsPanel();
         } else {
           // Fallback: open missions overlay directly
           var overlay = document.getElementById('missionsOverlay');

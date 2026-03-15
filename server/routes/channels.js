@@ -4,7 +4,19 @@ const path = require('path');
 const { verifyChannel } = require('../channel-verifier');
 
 module.exports = async function channelsRoutes(req, res, ctx) {
-  const { readBody, WORKSPACE } = ctx;
+  const { readBody, WORKSPACE, getConfig } = ctx;
+
+  // ─── Channel Storage Functions ──────────────────────────────
+  const CHANNELS_FILE = path.join(WORKSPACE, '.spawnkit-channels.json');
+
+  function readChannels() {
+    try { return JSON.parse(fs.readFileSync(CHANNELS_FILE, 'utf8')); }
+    catch(e) { return {}; }
+  }
+
+  function writeChannels(data) {
+    fs.writeFileSync(CHANNELS_FILE, JSON.stringify(data, null, 2));
+  }
 
   // Verify a channel's credentials by calling its real API
 
