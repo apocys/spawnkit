@@ -5,16 +5,23 @@
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
-    "test": "node --test test/unit/*.test.js test/integration/*.test.js 2>&1",
+    "test": "node --test test/unit/*.test.js test/integration/*.test.js test/csl/*.test.js 2>&1",
     "test:unit": "node --test test/unit/*.test.js 2>&1",
     "test:integration": "node --test test/integration/*.test.js 2>&1",
     "test:smoke": "node --test test/smoke/*.test.js 2>&1",
+    "test:csl": "node test/csl/run-csl-tests.js",
+    "test:csl:core": "node --test test/csl/consciousness-simple.test.js 2>&1",
+    "test:csl:village": "node --test test/csl/village-customizer.test.js 2>&1",
+    "test:csl:integration": "node --test test/csl/integration.test.js 2>&1",
+    "test:csl:performance": "node --test test/csl/performance.test.js 2>&1",
+    "test:csl:coverage": "node --test test/csl/coverage.test.js 2>&1",
     "lint": "node scripts/lint.js"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2"
+    "@playwright/test": "^1.58.2",
+    "jsdom": "^29.0.0"
   }
 }
