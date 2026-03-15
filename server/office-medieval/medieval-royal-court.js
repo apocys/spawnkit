@@ -187,42 +187,8 @@
   };
 
   injectStyles();
-  if (window.RoyalCourt.isFirstVisit()) {
-    // Show only after auth overlay is gone from the DOM (event-driven, no timeouts)
-    function showWhenReady() {
-      // If no auth overlay exists, show immediately
-      if (!document.getElementById('skAuthOverlay')) {
-        window.RoyalCourt.show();
-        return;
-      }
-      // Auth overlay present — watch for its removal
-      var authEl = document.getElementById('skAuthOverlay');
-      if (authEl && typeof MutationObserver !== 'undefined') {
-        var parent = authEl.parentNode || document.body;
-        var obs = new MutationObserver(function (mutations) {
-          if (!document.getElementById('skAuthOverlay')) {
-            obs.disconnect();
-            window.RoyalCourt.show();
-          }
-        });
-        obs.observe(parent, { childList: true });
-      } else if (window.ThemeAuth && typeof window.ThemeAuth.onAuth === 'function') {
-        // Fallback: use onAuth callback + verify overlay gone
-        window.ThemeAuth.onAuth(function () {
-          var check = setInterval(function () {
-            if (!document.getElementById('skAuthOverlay')) {
-              clearInterval(check);
-              window.RoyalCourt.show();
-            }
-          }, 100);
-        });
-      }
-    }
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', showWhenReady);
-    } else {
-      showWhenReady();
-    }
-  }
+  
+  // Auto-show logic is now handled by loading-sequence-fix.js to prevent race conditions
+  // This ensures Royal Court only shows after full initialization is complete
 
 })();
